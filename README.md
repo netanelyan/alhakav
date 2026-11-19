@@ -1,0 +1,72 @@
+# על הקו
+
+A WhatsApp follow-up for missed calls, for plumbers, electricians, AC technicians and locksmiths. This repo has two
+things:
+
+- `index.html`, the landing page.
+- `server/`, the admin's lead desk, built like openfrequency's `/admin/leads`: it finds tradespeople by itself, scores
+  them, and writes to them on WhatsApp from the business number when you press send.
+
+## How the lead desk works
+
+1. **Finding.** Each morning (and whenever you press "למצוא עוד") it searches the Brave Search API for a trade in a city
+   ("אינסטלטור באשדוד"), rotating trades and cities by day. Directories, social networks and news sites are dropped. Each
+   remaining site is read (its home page, and its contact page when the home page has no mobile). You can also add a
+   site by its address.
+2. **Scoring.** Out of 100, with the evidence kept for each factor (`server/score.js`): one of the four trades, a mobile
+   on the site, a WhatsApp link, one area, Hebrew, a recent year, a person writing about their own work; minus points for
+   a call centre or a chain. A directory, a site that is not one of the trades, or a site with no mobile is never a lead.
+   55 and up is "מתאימים".
+3. **Writing.** On a lead you see the message exactly as they will read it, and one button sends it from the business
+   number as an approved template (`docs/whatsapp-templates.md`). One reminder becomes available four days later, only
+   if they have not answered. Until Meta is set up, the page offers copy-and-open on your own phone, and "שלחתי".
+4. **Answers.** Meta's webhook tells the desk how far each message got (sent, delivered, read, not delivered) and what
+   they wrote. "כן, שלחו" gets the explanation at once; "לא, תודה" or "הסר" stops everything for that number; any other
+   answer opens 24 hours in which you answer from the lead's page. Someone who writes to the business number on their
+   own becomes a lead too.
+
+The guardrails are openfrequency-toran's, because the business number's rating is what everything rides on: nothing
+sends by itself, at most `OUTREACH_DAILY` (10) first messages and reminders a day, never 20:00 to 09:00 or on Shabbat
+and holidays, the number's quality read from Meta before each send, and one first message and one reminder per lead.
+The first message asks permission, says who writes and how to stop, following the reading of the Communications Law's
+section 30A that openfrequency uses (one approach to a business). Check that reading with a lawyer before sending at
+scale.
+
+## Running it on a server
+
+Node 22.13 or newer, nothing to install (`node:sqlite` is built in).
+
+```sh
+git clone https://github.com/netanelyan/alhakav /srv/alhakav && cd /srv/alhakav
+mkdir -p private && cp .env.example private/.env
+npm run admin:password          # prints ADMIN_PASSWORD_HASH and SESSION_SECRET for private/.env
+sudo cp deploy/alhakav.service /etc/systemd/system/ && sudo systemctl enable --now alhakav
+```
+
+Then put `deploy/Caddyfile.example`'s block, with the real domain, in Caddy's config. The admin is at
+`https://<domain>/admin`.
+
+**Brave Search.** A key from api-search.brave.com in `BRAVE_API_KEY`. `DISCOVER_QUERIES` searches run each morning
+after 07:00 (0 turns that off).
+
+**WhatsApp (Cloud API).** In a Meta app with WhatsApp added, on the business number:
+`META_TOKEN` (a system user token), `META_PHONE_ID`, `META_WABA_ID`. For answers, set the app's webhook to
+`https://<domain>/meta/webhook` with `META_VERIFY_TOKEN` as the verify token, subscribe to `messages`, and put the
+app's secret in `META_APP_SECRET`. Submit the two templates in `docs/whatsapp-templates.md` and set `SENDER_LINE` to
+their last line. A number on the Cloud API stops working in the WhatsApp Business app on the phone, unless it is
+connected with coexistence.
+
+**Backups.** Everything is in `private/leads.db`. `sqlite3 private/leads.db ".backup private/leads-$(date +%F).db"`
+copies it safely while the server runs.
+
+## Commands
+
+```sh
+npm start                                   # the server, on 127.0.0.1:4760
+npm run discover -- --trade plumber --city אשדוד
+npm run discover -- --url avi-plumbing.co.il
+npm run leads                               # the newest 20 leads
+npm test
+```
+
+On a laptop, `ENV_FILE=path/to/.env npm start` and open http://127.0.0.1:4760/admin.

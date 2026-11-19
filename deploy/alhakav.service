@@ -1,0 +1,22 @@
+# /etc/systemd/system/alhakav.service
+# sudo systemctl daemon-reload && sudo systemctl enable --now alhakav
+[Unit]
+Description=על הקו: landing page and lead desk
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=alhakav
+WorkingDirectory=/srv/alhakav
+ExecStart=/usr/bin/node server/main.js serve
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/srv/alhakav/private
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,17 @@
+{
+  "name": "alhakav",
+  "private": true,
+  "description": "על הקו: the landing page, and the admin's lead desk that finds tradespeople and writes to them on WhatsApp",
+  "type": "module",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node server/main.js serve",
+    "test": "node --test --test-concurrency=1 \"test/*.test.js\"",
+    "admin:password": "node server/main.js password",
+    "discover": "node server/main.js discover",
+    "leads": "node server/main.js list"
+  }
+}

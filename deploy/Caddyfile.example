@@ -1,0 +1,10 @@
+# Everything goes to the Node server on this machine: it serves the landing page at /, the admin at /admin, Meta's
+# webhook at /meta/webhook and /api/health, and answers 404 to anything else. Do not point a file_server at the repo:
+# private/ (the database and .env) lives inside it.
+#
+# Replace the domain with the real one.
+
+alhakav.example {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:4760
+}
