@@ -79,3 +79,57 @@ lead's page says so.
 - **לא, תודה** (or "לא", "הסר", "די" in any short form, at any time): the number goes into `stops`, one line says it
   was removed, the lead closes, and no message goes to it again.
 - Anything else they write marks them as answering and opens 24 hours in which you can answer from the lead's page.
+
+## The assistant numbers (the service itself)
+
+Three **Utility** templates on the WhatsApp Business Account the assistant numbers belong to (`TELNYX_WABA_ID`),
+submitted through Telnyx or WhatsApp Manager. The bodies are the same text `server/copy.js` (`SVC`) shows on the admin
+page; a variable's value never has a line break in it (Meta refuses that).
+
+### alhakav_caller, to the caller, as their call ends
+
+| | |
+|---|---|
+| Category | Utility |
+| Variables (sample) | `{{1}}` = `אבי אינסטלציה` |
+
+```
+שלום, כאן העוזר של {{1}}. ראינו שהתקשרת ולא הצליחו לענות. מה קרה, ואיפה? הפרטים יעברו אליהם, והם יחזרו אליך כשיתפנו.
+
+לא רלוונטי? אפשר לכתוב "הסר".
+```
+
+### alhakav_summary, to the customer
+
+| | |
+|---|---|
+| Category | Utility |
+| Variables (sample) | `{{1}}` = `10:41`, `{{2}}` = `נזילה חזקה מתחת לכיור`, `{{3}}` = `הרצל 15, אשדוד, קומה 3`, `{{4}}` = `דחוף, המים זורמים`, `{{5}}` = `054-123-4567` |
+
+```
+פנייה חדשה משיחה שלא נענתה ב־{{1}}
+
+מה: {{2}}
+איפה: {{3}}
+דחיפות: {{4}}
+טלפון: {{5}}
+
+אפשר לחזור ללקוח בטלפון או בוואטסאפ.
+```
+
+### alhakav_call_note, to the customer, when there is no conversation to sum up
+
+| | |
+|---|---|
+| Category | Utility |
+| Variables (sample) | `{{1}}` = `מ־054-123-4567`, `{{2}}` = `10:41`, `{{3}}` = `שלחנו הודעה בוואטסאפ ועוד אין תשובה.` |
+
+```
+שיחה שלא נענתה {{1}} ב־{{2}}.
+{{3}}
+
+נעדכן כשיהיה משהו חדש.
+```
+
+While the customer wrote to their assistant in the last 24 hours, the summary and the note go as plain text instead,
+with the same words.

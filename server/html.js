@@ -31,7 +31,7 @@ export const empty = (title, lead = '') => `<div class="card empty"><b>${esc(tit
 export function layout({ title, body, csrf = '', active = '', reload = 0, signedIn = true }) {
   const link = (href, label, on) => `<a href="${href}"${on ? ' aria-current="page"' : ''}>${esc(label)}</a>`;
   const nav = signedIn
-    ? `<nav class="nav" aria-label="${esc(T.brand)}">${link('/admin/leads', T.nav.leads, active === 'leads')}${link('/admin/leads/reached', T.nav.reached, active === 'reached')}</nav>${button('/admin/logout', T.nav.logout, csrf, { kind: 'quiet' })}`
+    ? `<nav class="nav" aria-label="${esc(T.brand)}">${link('/admin/leads', T.nav.leads, active === 'leads')}${link('/admin/leads/reached', T.nav.reached, active === 'reached')}${link('/admin/customers', T.nav.customers, active === 'customers')}</nav>${button('/admin/logout', T.nav.logout, csrf, { kind: 'quiet' })}`
     : '';
   return `<!doctype html>
 <html lang="he" dir="rtl">

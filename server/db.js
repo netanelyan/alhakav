@@ -97,6 +97,82 @@ CREATE TABLE kv (
   value TEXT NOT NULL
 );
 `,
+  // The service itself (docs/connecting.md): each customer has an assistant number on Telnyx that their unanswered
+  // calls are forwarded to; it writes to each caller on WhatsApp, talks with them, and sends the summary to the
+  // customer's own WhatsApp.
+  `
+CREATE TABLE customers (
+  id INTEGER PRIMARY KEY,
+  lead_id INTEGER,
+  name TEXT NOT NULL,
+  business TEXT NOT NULL,
+  trade TEXT,
+  phone TEXT NOT NULL,
+  assistant TEXT UNIQUE,
+  wa_status TEXT NOT NULL DEFAULT 'none' CHECK (wa_status IN ('none', 'verifying', 'connected')),
+  otp_recording TEXT,
+  otp_at TEXT,
+  status TEXT NOT NULL DEFAULT 'setup' CHECK (status IN ('setup', 'active', 'paused', 'stopped')),
+  stopped_at TEXT,
+  last_call_at TEXT,
+  owner_in_at TEXT,
+  notes TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE chats (
+  id INTEGER PRIMARY KEY,
+  customer_id INTEGER NOT NULL REFERENCES customers (id) ON DELETE CASCADE,
+  caller TEXT NOT NULL,
+  state TEXT NOT NULL DEFAULT 'waiting' CHECK (state IN ('waiting', 'talking', 'done', 'stopped', 'failed')),
+  calls INTEGER NOT NULL DEFAULT 1,
+  what TEXT NOT NULL DEFAULT '',
+  place TEXT NOT NULL DEFAULT '',
+  urgency TEXT NOT NULL DEFAULT '',
+  summary_at TEXT,
+  note_at TEXT,
+  last_in_at TEXT,
+  last_out_at TEXT,
+  opened_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX chats_caller ON chats (customer_id, caller, opened_at);
+
+CREATE TABLE calls (
+  id INTEGER PRIMARY KEY,
+  customer_id INTEGER NOT NULL REFERENCES customers (id) ON DELETE CASCADE,
+  chat_id INTEGER REFERENCES chats (id) ON DELETE SET NULL,
+  caller TEXT,
+  call_id TEXT UNIQUE,
+  outcome TEXT NOT NULL,
+  at TEXT NOT NULL
+);
+CREATE INDEX calls_customer ON calls (customer_id, at);
+
+CREATE TABLE chat_messages (
+  id INTEGER PRIMARY KEY,
+  chat_id INTEGER REFERENCES chats (id) ON DELETE CASCADE,
+  customer_id INTEGER NOT NULL REFERENCES customers (id) ON DELETE CASCADE,
+  peer TEXT NOT NULL,
+  dir TEXT NOT NULL CHECK (dir IN ('in', 'out')),
+  kind TEXT NOT NULL,
+  body TEXT NOT NULL,
+  msg_id TEXT UNIQUE,
+  status TEXT,
+  error TEXT,
+  at TEXT NOT NULL
+);
+CREATE INDEX chat_messages_chat ON chat_messages (chat_id, at);
+
+CREATE TABLE skips (
+  customer_id INTEGER NOT NULL REFERENCES customers (id) ON DELETE CASCADE,
+  phone TEXT NOT NULL,
+  why TEXT NOT NULL,
+  at TEXT NOT NULL,
+  PRIMARY KEY (customer_id, phone)
+);
+`,
 ];
 
 export class Db {

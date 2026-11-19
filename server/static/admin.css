@@ -133,3 +133,11 @@ ul.score li.bad b { color: var(--bad); }
   h1 { font-size: 1.4rem; }
   .nav { margin-inline-start: 0; }
 }
+
+/* A customer's page: the setup as numbered steps, a step that is done in green; the customer's fields in a column. */
+ol.steps { margin: 0; padding-inline-start: 1.4rem; display: grid; gap: 1rem; }
+ol.steps > li > b { display: block; margin-bottom: .3rem; }
+ol.steps > li.done::marker { color: var(--g); font-weight: 800; }
+ol.steps textarea { font-family: ui-monospace, Consolas, monospace; }
+form.fields { display: grid; gap: .75rem; max-width: 28rem; margin-top: .75rem; }
+form.fields button { justify-self: start; }

@@ -12,12 +12,19 @@ import { metaSettings, signatureOk } from './meta.js';
 import { markByHand, onWebhook, reply, sendPitch, stopped } from './outreach.js';
 import { leadPage, leadsPage, loginPage, notFoundPage, reachedPage } from './pages.js';
 import { fromUrls } from './sources.js';
+import { makeClaude } from './claude.js';
+import { addSkip, createCustomer, customerFromLead, getCustomer, listCustomers, recentCalls, recentChats, registerWa, removeCustomer, removeSkip, setStatus, skipsOf, updateCustomer, verifyWa } from './customers.js';
+import { customerPage, customersPage } from './customerPages.js';
+import { onCall, onWhatsApp, serviceState, track } from './service.js';
+import { readEvent, signatureOk as telnyxSigned, telnyxSettings } from './telnyx.js';
 
 // The one HTTP server, behind Caddy on 127.0.0.1:
 //
 //   /admin/...      the admin's pages and forms (signed in, every POST with its CSRF token and from this origin)
 //   /meta/webhook   Meta's webhook: GET to verify it once (META_VERIFY_TOKEN), POST for every message and status,
-//                   signed with META_APP_SECRET
+//                   signed with META_APP_SECRET (the outreach number)
+//   /telnyx/webhook Telnyx's webhook for the customers' assistant numbers: their calls and their WhatsApp, signed
+//                   with Ed25519 (TELNYX_PUBLIC_KEY), answered at once and handled after (service.js)
 //   /api/health     "ok" while the process runs
 //   /               the landing page, for running it on a laptop; on the server Caddy serves it as a file
 
@@ -46,8 +53,22 @@ const HEADERS = {
 };
 
 /** Everything the server works with, so the tests can hand it a database, fake sites and a fake Meta. */
-export function makeApp({ db, env = {}, fetchSite, apiFetch = fetch, graphFetch, log = (m) => console.log(m), searchPause } = {}) {
-  return { db, env, fetchSite: fetchSite || makeFetcher(), apiFetch, graphFetch: graphFetch || apiFetch, log, secret: sessionSecret(env), logins: limiter(), discovery: { running: null, done: null }, searchPause };
+export function makeApp({ db, env = {}, fetchSite, apiFetch = fetch, graphFetch, telnyxFetch, claude, log = (m) => console.log(m), searchPause } = {}) {
+  return {
+    db,
+    env,
+    fetchSite: fetchSite || makeFetcher(),
+    apiFetch,
+    graphFetch: graphFetch || apiFetch,
+    telnyxFetch: telnyxFetch || apiFetch,
+    claude: claude === undefined ? makeClaude(env) : claude,
+    log,
+    secret: sessionSecret(env),
+    logins: limiter(),
+    discovery: { running: null, done: null },
+    service: serviceState(),
+    searchPause,
+  };
 }
 
 // ---- responses
@@ -122,6 +143,7 @@ async function route(app, req, res) {
   const p = url.pathname.replace(/\/+$/, '') || '/';
   if (p === '/api/health') return send(res, 200, 'text/plain; charset=utf-8', 'ok');
   if (p === '/meta/webhook') return webhook(app, req, res, url);
+  if (p === '/telnyx/webhook') return telnyxWebhook(app, req, res);
   if (PUBLIC[p] && req.method === 'GET') {
     const [file, type] = PUBLIC[p];
     return send(res, 200, type, readFileSync(path.join(ROOT, file)), { 'content-security-policy': "frame-ancestors 'none'", 'cache-control': 'public, max-age=300' });
@@ -165,6 +187,17 @@ async function route(app, req, res) {
     const lastIns = new Map(rows.map((x) => [x.id, lastIn(app.db, x.id)]));
     const { flash, bad } = takeFlash(res, req, c);
     return send(res, 200, HTML, reachedPage({ csrf, flash, bad, env: app.env, tab, q, rows, counts: countsReached(app.db, q), funnel: funnel(app.db), lastIns, at }));
+  }
+  if (p === '/admin/customers') {
+    const { flash, bad } = takeFlash(res, req, c);
+    return send(res, 200, HTML, customersPage(app, { csrf, flash, bad, rows: listCustomers(app.db, at), at }));
+  }
+  const cust = /^\/admin\/customers\/(\d+)$/.exec(p);
+  if (cust) {
+    const cu = getCustomer(app.db, Number(cust[1]));
+    if (!cu) return send(res, 404, HTML, notFoundPage(csrf));
+    const { flash, bad } = takeFlash(res, req, c);
+    return send(res, 200, HTML, customerPage(app, { csrf, flash, bad, c: cu, skips: skipsOf(app.db, cu.id), chats: recentChats(app.db, cu.id), calls: recentCalls(app.db, cu.id), at }));
   }
   const one = /^\/admin\/leads\/(\d+)$/.exec(p);
   if (one) {
@@ -237,6 +270,12 @@ async function post(app, req, res, p, form, token) {
     const started = startDiscovery(app, { trade, city, queries: trade && city ? 2 : 3 });
     return see(res, req, '/admin/leads', started ? T.leads.started : T.leads.busy, !started);
   }
+  if (p === '/admin/customers/new') {
+    const r = createCustomer(app.db, form);
+    return see(res, req, r.ok ? `/admin/customers/${r.id}` : '/admin/customers', r.flash, !r.ok);
+  }
+  const cm = /^\/admin\/customers\/(\d+)\/([a-z-]+)$/.exec(p);
+  if (cm) return customerAction(app, req, res, Number(cm[1]), cm[2], form, token);
   const m = /^\/admin\/leads\/(\d+)\/([a-z-]+)$/.exec(p);
   const lead = m && getLead(app.db, Number(m[1]));
   if (!lead) return send(res, 404, HTML, notFoundPage(csrfFor(token, app.secret)));
@@ -259,8 +298,11 @@ async function post(app, req, res, p, form, token) {
       return done(saveName(app.db, lead, form.name), false, 'send');
     case 'replied':
       return done(markReplied(app.db, lead), false, 'stands');
-    case 'customer':
-      return done(markCustomer(app.db, lead), false, 'stands');
+    case 'customer': {
+      const flash = markCustomer(app.db, lead);
+      const id = customerFromLead(app.db, lead);
+      return id ? see(res, req, `/admin/customers/${id}`, flash) : done(flash, false, 'stands');
+    }
     case 'later':
       return done(later(app.db, lead, form.days, (t) => whenHe(t)), false, 'stands');
     case 'lost':
@@ -303,4 +345,50 @@ async function webhook(app, req, res, url) {
   }
   await onWebhook(app, body);
   return send(res, 200, 'text/plain; charset=utf-8', 'ok');
+}
+
+async function customerAction(app, req, res, id, action, form, token) {
+  const c = getCustomer(app.db, id);
+  if (!c) return send(res, 404, HTML, notFoundPage(csrfFor(token, app.secret)));
+  const back = (r, anchor = 'setup') => see(res, req, `/admin/customers/${c.id}#${anchor}`, r.flash, !r.ok);
+  switch (action) {
+    case 'edit':
+      return back(updateCustomer(app.db, c, form), 'details');
+    case 'wa-register':
+      return back(await registerWa(app, c));
+    case 'wa-code':
+      return back(await verifyWa(app, c, form.code));
+    case 'activate':
+    case 'pause':
+    case 'stop':
+      return back(setStatus(app.db, c, action));
+    case 'skip-add':
+      return back(addSkip(app.db, c, form.phone), 'skips');
+    case 'skip-remove':
+      return back(removeSkip(app.db, c, form.phone), 'skips');
+    case 'delete':
+      return see(res, req, '/admin/customers', removeCustomer(app.db, c));
+    default:
+      return send(res, 404, HTML, notFoundPage(csrfFor(token, app.secret)));
+  }
+}
+
+/** Telnyx: checked, answered at once (it waits 2 seconds at most), then handled. */
+async function telnyxWebhook(app, req, res) {
+  if (req.method !== 'POST') return send(res, 405, 'text/plain; charset=utf-8', 'method not allowed');
+  const raw = await readBody(req, 1024 * 1024);
+  const t = telnyxSettings(app.env);
+  if (!telnyxSigned(t.publicKey, raw, req.headers['telnyx-signature-ed25519'], req.headers['telnyx-timestamp'], now())) {
+    app.log('[telnyx] refused: the signature does not match TELNYX_PUBLIC_KEY');
+    return send(res, 401, 'text/plain; charset=utf-8', 'bad signature');
+  }
+  let ev;
+  try {
+    ev = readEvent(JSON.parse(raw));
+  } catch {
+    return send(res, 400, 'text/plain; charset=utf-8', 'not json');
+  }
+  send(res, 200, 'text/plain; charset=utf-8', 'ok');
+  if (ev.kind === 'call') track(app, onCall(app, ev));
+  else if (ev.kind === 'whatsapp') track(app, onWhatsApp(app, ev));
 }

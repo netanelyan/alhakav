@@ -13,5 +13,8 @@
     "admin:password": "node server/main.js password",
     "discover": "node server/main.js discover",
     "leads": "node server/main.js list"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.11.0"
   }
 }

@@ -1,0 +1,135 @@
+import { DAY, now, nowIso } from './clock.js';
+import { TC } from './copy.js';
+import { isMobile, local, normalize } from './phones.js';
+import { assignProfile, registerNumber, telnyxSettings, verifyNumber } from './telnyx.js';
+
+// The customers, as the admin sets them up and looks after them. A customer starts in "setup": the assistant number
+// is bought at Telnyx and pasted here, registered on WhatsApp (Meta reads a code aloud in a call to the number; the
+// call is recorded and the admin types the code), the customer dials the forwarding codes, and the admin turns the
+// assistant on.
+
+export const getCustomer = (db, id) => db.get('SELECT * FROM customers WHERE id = ?', id);
+
+export function listCustomers(db, at = now()) {
+  return db.all(
+    "SELECT c.*, (SELECT count(*) FROM calls WHERE customer_id = c.id AND at > ? AND outcome != 'otp') AS calls_week FROM customers c ORDER BY CASE c.status WHEN 'active' THEN 0 WHEN 'setup' THEN 1 WHEN 'paused' THEN 2 ELSE 3 END, c.id DESC",
+    nowIso(at - 7 * DAY)
+  );
+}
+
+const clean = (s, n = 80) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, n);
+
+/** The fields from a form, checked: a name, a business name, and the customer's own mobile. */
+function fieldsOf(f) {
+  const phone = normalize(f.phone);
+  const assistant = f.assistant ? normalize(f.assistant) : null;
+  const v = { name: clean(f.name), business: clean(f.business), trade: ['plumber', 'electrician', 'ac', 'locksmith'].includes(f.trade) ? f.trade : null, phone, assistant };
+  if (!v.name || !v.business || !isMobile(phone) || (f.assistant && !assistant)) return null;
+  return v;
+}
+
+export function createCustomer(db, f, leadId = null) {
+  const v = fieldsOf(f);
+  if (!v) return { ok: false, flash: TC.bad };
+  if (v.assistant && db.get('SELECT 1 FROM customers WHERE assistant = ?', v.assistant)) return { ok: false, flash: TC.bad };
+  const at = nowIso();
+  const id = Number(
+    db.run('INSERT INTO customers (lead_id, name, business, trade, phone, assistant, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', leadId, v.name, v.business, v.trade, v.phone, v.assistant, at, at).lastInsertRowid
+  );
+  return { ok: true, id, flash: TC.created };
+}
+
+/** A lead that became a customer: the customer, set up from what the lead page knew. */
+export function customerFromLead(db, lead) {
+  const have = db.get('SELECT id FROM customers WHERE lead_id = ?', lead.id);
+  if (have) return have.id;
+  if (!isMobile(lead.mobile)) return null;
+  const r = createCustomer(db, { name: lead.name, business: lead.msg_name || lead.name, trade: lead.trade, phone: lead.mobile }, lead.id);
+  return r.ok ? r.id : null;
+}
+
+export function updateCustomer(db, c, f) {
+  const v = fieldsOf(f);
+  if (!v) return { ok: false, flash: TC.bad };
+  if (v.assistant && v.assistant !== c.assistant && db.get('SELECT 1 FROM customers WHERE assistant = ? AND id != ?', v.assistant, c.id)) return { ok: false, flash: TC.bad };
+  const moved = v.assistant !== c.assistant;
+  db.run(
+    `UPDATE customers SET name = ?, business = ?, trade = ?, phone = ?, assistant = ?${moved ? ", wa_status = 'none', otp_recording = NULL" : ''}, updated_at = ? WHERE id = ?`,
+    v.name,
+    v.business,
+    v.trade,
+    v.phone,
+    v.assistant,
+    nowIso(),
+    c.id
+  );
+  return { ok: true, flash: TC.saved };
+}
+
+export function setStatus(db, c, status) {
+  const to = { activate: 'active', pause: 'paused', stop: 'stopped' }[status];
+  if (!to) return { ok: false, flash: '?' };
+  db.run(`UPDATE customers SET status = ?, stopped_at = ${to === 'stopped' ? '?' : 'NULL'}, updated_at = ? WHERE id = ?`, ...[to, ...(to === 'stopped' ? [nowIso()] : []), nowIso(), c.id]);
+  return { ok: true, flash: { active: TC.steps.activated, paused: TC.steps.paused, stopped: TC.steps.stopped }[to] };
+}
+
+export async function registerWa(app, c) {
+  const t = telnyxSettings(app.env);
+  if (!t.ready) return { ok: false, flash: TC.setup.telnyx };
+  if (!t.waba) return { ok: false, flash: TC.setup.waba };
+  if (!c.assistant) return { ok: false, flash: TC.bad };
+  // Calls to the number are recorded from now on, so Meta's code is heard (service.js onCall).
+  app.db.run("UPDATE customers SET wa_status = 'verifying', otp_recording = NULL, otp_at = NULL, updated_at = ? WHERE id = ?", nowIso(), c.id);
+  try {
+    await registerNumber(t, app.telnyxFetch, c.assistant);
+  } catch (e) {
+    app.db.run("UPDATE customers SET wa_status = 'none' WHERE id = ?", c.id);
+    return { ok: false, flash: TC.errors.wa(e.message) };
+  }
+  return { ok: true, flash: TC.steps.registered };
+}
+
+export async function verifyWa(app, c, code) {
+  const t = telnyxSettings(app.env);
+  try {
+    await verifyNumber(t, app.telnyxFetch, c.assistant, code);
+    await assignProfile(t, app.telnyxFetch, c.assistant);
+  } catch (e) {
+    return { ok: false, flash: TC.errors.wa(e.message) };
+  }
+  app.db.run("UPDATE customers SET wa_status = 'connected', updated_at = ? WHERE id = ?", nowIso(), c.id);
+  return { ok: true, flash: TC.steps.verified };
+}
+
+export const skipsOf = (db, id) => db.all('SELECT * FROM skips WHERE customer_id = ? ORDER BY at DESC', id);
+
+export function addSkip(db, c, raw) {
+  const phone = normalize(raw);
+  if (!phone) return { ok: false, flash: TC.bad };
+  db.run("INSERT INTO skips (customer_id, phone, why, at) VALUES (?, ?, 'admin', ?) ON CONFLICT (customer_id, phone) DO NOTHING", c.id, phone, nowIso());
+  return { ok: true, flash: TC.saved };
+}
+
+export function removeSkip(db, c, raw) {
+  db.run('DELETE FROM skips WHERE customer_id = ? AND phone = ?', c.id, normalize(raw) || String(raw || ''));
+  return { ok: true, flash: TC.saved };
+}
+
+/** The last conversations, newest first, each with its messages. */
+export function recentChats(db, id, limit = 20) {
+  const chats = db.all('SELECT * FROM chats WHERE customer_id = ? ORDER BY opened_at DESC, id DESC LIMIT ?', id, limit);
+  return chats.map((x) => ({ ...x, messages: db.all('SELECT * FROM chat_messages WHERE chat_id = ? ORDER BY at, id', x.id) }));
+}
+
+export const recentCalls = (db, id, limit = 10) => db.all('SELECT * FROM calls WHERE customer_id = ? ORDER BY at DESC, id DESC LIMIT ?', id, limit);
+
+/** The four codes the customer dials, with their assistant's number in them, local form. */
+export function forwardCodes(assistant) {
+  const n = local(assistant).replace(/-/g, '');
+  return [`**61*${n}**20#`, `**67*${n}#`, `**62*${n}#`, '*#61#'];
+}
+
+export function removeCustomer(db, c) {
+  db.run('DELETE FROM customers WHERE id = ?', c.id);
+  return TC.end.done;
+}
