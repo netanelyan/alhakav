@@ -6,6 +6,9 @@ things:
 - `index.html`, the landing page.
 - `server/`, the admin's lead desk, built like openfrequency's `/admin/leads`: it finds tradespeople by itself, scores
   them, and writes to them on WhatsApp from the business number when you press send.
+- `terms.html`, `privacy.html`, `accessibility.html`, the legal pages.
+- `docs/connecting.md`, the plan for the service itself: how a customer's missed calls reach us (call forwarding),
+  how the caller gets WhatsApp from the customer's own number, and what is left to decide.
 
 ## How the lead desk works
 
