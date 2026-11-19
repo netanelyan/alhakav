@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>על הקו - וואטסאפ אוטומטי לשיחות שלא עניתם עליהן</title>
+<meta name="description" content="כשאתם באמצע עבודה ולא עונים, מי שהתקשר מקבל הודעה בוואטסאפ ואתם מקבלים סיכום של מה שהוא צריך. 149 ₪ לחודש.">
+<meta property="og:title" content="על הקו">
+<meta property="og:description" content="כשאתם באמצע עבודה ולא עונים, מי שהתקשר מקבל הודעה בוואטסאפ ואתם מקבלים סיכום של מה שהוא צריך.">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="he_IL">
+<meta name="theme-color" content="#0a7d4f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;800&amp;display=swap">
+<style>
+:root{--g:#0a7d4f;--gd:#086640;--gl:#e8f4ee;--ink:#15201a;--txt:#2b3830;--mute:#56645c;--line:#e2e8e4}
+*{box-sizing:border-box}
+body{margin:0;background:#fff;color:var(--ink);font:400 1.125rem/1.6 Assistant,system-ui,"Segoe UI","Arial Hebrew",Arial,sans-serif;direction:rtl;-webkit-text-size-adjust:100%}
+.wrap{max-width:40rem;margin:0 auto;padding:0 1.25rem}
+h1,h2,h3,p{margin:0}
+h1,h2,h3{line-height:1.2;font-weight:800}
+.hero{padding:1.5rem 0 3rem}
+.brand{display:flex;align-items:center;gap:.5rem;font-weight:800;font-size:1.3rem;color:var(--g)}
+.brand::before{content:"";width:.7rem;height:.7rem;border-radius:50%;background:var(--g)}
+.for{margin-top:2.25rem;color:var(--mute);font-size:1rem}
+h1{margin-top:.5rem;font-size:clamp(2.1rem,8vw,3.25rem);letter-spacing:-.01em}
+.lead{margin-top:1rem;font-size:1.2rem;color:var(--txt)}
+.btn{display:flex;align-items:center;justify-content:center;width:100%;max-width:22rem;min-height:3.4rem;margin-top:1.75rem;padding:.75rem 1.5rem;border-radius:999px;background:var(--g);color:#fff;font-weight:800;font-size:1.25rem;text-decoration:none}
+.btn:hover{background:var(--gd)}
+.btn:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.note{margin-top:.6rem;font-size:.95rem;color:var(--mute)}
+section{padding:3rem 0;border-top:1px solid var(--line)}
+h2{font-size:clamp(1.7rem,6vw,2.3rem)}
+.steps{list-style:none;margin:2rem 0 0;padding:0;counter-reset:s}
+.step{counter-increment:s}
+.step+.step{margin-top:2.75rem}
+h3{display:flex;align-items:center;gap:.65rem;font-size:1.35rem}
+h3::before{content:counter(s);flex:none;display:grid;place-items:center;width:2.1rem;height:2.1rem;border-radius:50%;background:var(--g);color:#fff;font-size:1.05rem}
+.step p{margin-top:.5rem;color:var(--txt)}
+figure{margin:1.25rem 0 0}
+figcaption{margin-bottom:.5rem;font-size:.95rem;color:var(--mute)}
+.notif{display:flex;align-items:center;gap:.8rem;max-width:21rem;margin-top:1.25rem;padding:.8rem 1rem;border:1px solid var(--line);border-radius:1.1rem;background:#f5f7f6;line-height:1.35}
+.step .notif p{margin:0;color:var(--ink);font-size:1rem}
+.notif small{display:block;color:var(--mute);font-size:.9rem}
+.notif time{align-self:flex-start;margin-inline-start:auto;color:var(--mute);font-size:.85rem}
+.ic{flex:none;display:grid;place-items:center;width:2.4rem;height:2.4rem;border-radius:50%;background:#fff;border:1px solid var(--line);font-size:1.2rem}
+.phone{width:100%;max-width:21rem;border:8px solid #1c2420;border-radius:1.6rem;overflow:hidden;background:#efeae2}
+.wa{display:flex;align-items:center;gap:.6rem;padding:.55rem .8rem;background:var(--g);color:#fff;font-weight:600;font-size:1.05rem}
+.av{flex:none;display:grid;place-items:center;width:2.2rem;height:2.2rem;border-radius:50%;background:#dfe5e7;color:#3b4a54;font-weight:800}
+.chat{list-style:none;margin:0;padding:.7rem .6rem 1rem;display:flex;flex-direction:column;gap:.3rem}
+.chat li{align-self:flex-start;max-width:85%;padding:.35rem .55rem .2rem;border-radius:.6rem;background:#fff;box-shadow:0 1px .5px #0b141a22;font-size:1rem;line-height:1.4}
+.chat .o{align-self:flex-end;background:#d9fdd3}
+.chat .day{align-self:center;padding:.1rem .6rem;background:#fffd;box-shadow:none;color:#54656f;font-size:.8rem}
+.chat .sum{max-width:94%}
+.chat time{display:block;text-align:end;color:#667781;font-size:.72rem}
+.o time::after{content:" ✓✓"/"";color:#53bdeb}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.price{display:flex;align-items:baseline;flex-wrap:wrap;gap:.25rem .6rem;margin-top:1.5rem}
+.price b{font-size:3.25rem;line-height:1;color:var(--g)}
+.price small{font-size:.55em}
+.price span{font-size:1.25rem;font-weight:600}
+.price .ph{font-size:.9rem;font-weight:400}
+.ph{padding:0 .3rem;border-radius:.25rem;background:#fff1b8;color:#5c4400}
+.pitch p:last-child{margin-top:1rem;color:var(--txt)}
+.last{padding-top:0;border:0}
+.box{padding:2rem 1.5rem;border-radius:1.5rem;background:var(--gl)}
+.box p{margin-top:.6rem;color:var(--txt)}
+@media (min-width:54rem){
+.hero{padding-top:2.5rem}
+.wrap{max-width:62rem}
+.hero h1,.hero p,.pitch p,.box p{max-width:40rem}
+.step{display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:start}
+.step figure,.step .notif{margin-top:0}
+}
+</style>
+</head>
+<body>
+<header class="hero">
+<div class="wrap">
+<p class="brand">על הקו</p>
+<p class="for">לאינסטלטורים, חשמלאים, טכנאי מזגנים ומנעולנים</p>
+<h1>לקוח שלא עניתם לו מתקשר למי שמופיע אחריכם בגוגל</h1>
+<p class="lead">כשאתם באמצע עבודה ולא עונים, אנחנו שולחים למי שהתקשר הודעה בוואטסאפ ומבררים איתו מה קרה, איפה, ואם זה בוער או יכול לחכות למחר. אתם מקבלים סיכום קצר וחוזרים אליו כשאתם מתפנים.</p>
+<a class="btn" href="https://wa.me/972XXXXXXXXX">אני רוצה לנסות</a>
+<p class="note">הכפתור פותח איתנו שיחה בוואטסאפ</p>
+</div>
+</header>
+<main>
+<section class="how" aria-labelledby="how">
+<div class="wrap">
+<h2 id="how">מה קורה אחרי שיחה שפספסתם</h2>
+<ol class="steps">
+<li class="step">
+<div>
+<h3>פספסתם שיחה</h3>
+<p>אתם על סולם או מתחת לכיור, הטלפון מצלצל בכיס, והשיחה נגמרת לפני שהספקתם לנגב את הידיים.</p>
+</div>
+<div class="notif" role="img" aria-label="התראה בטלפון שלכם, שיחה שלא נענתה בשעה 10:41">
+<span class="ic">↙</span>
+<p><b>שיחה שלא נענתה</b><small><span dir="ltr">054-XXX-XX38</span></small></p>
+<time>10:41</time>
+</div>
+</li>
+<li class="step">
+<div>
+<h3>מי שהתקשר מקבל הודעה בוואטסאפ</h3>
+<p>ההודעה יוצאת מיד כשהשיחה נגמרת. מערכת AI שלנו שואלת אותו כמה שאלות קצרות ורושמת את התשובות. היא רק אוספת פרטים, את המחיר ואת השעה אתם סוגרים איתו בעצמכם.</p>
+</div>
+<figure>
+<figcaption>ככה זה נראה בטלפון של מי שהתקשר</figcaption>
+<div class="phone">
+<p class="wa"><span class="av" aria-hidden="true">א</span>אבי אינסטלציה</p>
+<ol class="chat">
+<li class="day">היום</li>
+<li><span class="sr">העסק:</span>היי, ראינו שהתקשרת. אבי באמצע עבודה ולא יכול לענות כרגע. מה קרה? ככה הוא יחזור אליך כבר עם כל הפרטים<time>10:42</time></li>
+<li class="o"><span class="sr">הלקוח:</span>היי מה קורה, יש לי נזילה במטבח, רחוב הרצל 15 אשדוד<time>10:42</time></li>
+<li class="o"><span class="sr">הלקוח:</span>מתחת לכיור<time>10:42</time></li>
+<li><span class="sr">העסק:</span>אוי, לא כיף. זה מטפטף או ממש זורם? ובאיזו קומה?<time>10:43</time></li>
+<li class="o"><span class="sr">הלקוח:</span>זורם די חזק, סגרתי את הברז הראשי. קומה 3 בלי מעלית<time>10:43</time></li>
+<li><span class="sr">העסק:</span>סגור, העברתי לאבי שזה דחוף. הוא יתקשר אליך ברגע שהוא מתפנה<time>10:44</time></li>
+<li class="o"><span class="sr">הלקוח:</span>אוקיי תודה רבה<time>10:44</time></li>
+</ol>
+</div>
+</figure>
+</li>
+<li class="step">
+<div>
+<h3>הסיכום מגיע אליכם לוואטסאפ</h3>
+<p>מקבלים הודעה אחת עם הבעיה, הכתובת, כמה זה דחוף והמספר שלו. ככה כשאתם חוזרים אליו, אתם כבר יודעים לאן נוסעים ואיזה חלקים להביא.</p>
+</div>
+<figure>
+<figcaption>וזה מה שמגיע אליכם</figcaption>
+<div class="phone">
+<p class="wa"><span class="av" aria-hidden="true">ע</span>על הקו</p>
+<ol class="chat">
+<li class="sum"><b>פנייה חדשה משיחה שלא נענתה ב-10:41</b><br>מה: נזילה חזקה מתחת לכיור במטבח, הלקוח כבר סגר את הברז הראשי<br>איפה: הרצל 15, אשדוד. קומה 3, אין מעלית<br>דחיפות: גבוהה, המים זורמים<br>טלפון: <span dir="ltr">054-XXX-XX38</span><time>10:44</time></li>
+</ol>
+</div>
+</figure>
+</li>
+</ol>
+</div>
+</section>
+<section class="pitch" aria-labelledby="price">
+<div class="wrap">
+<h2 id="price">עבודה אחת שחזרה אליכם מכסה את כל החודש</h2>
+<p class="price"><b>149 <small>₪</small></b><span>לחודש</span><span class="ph">[כולל מע״מ / לפני מע״מ]</span></p>
+<p>תחשבו כמה אתם גובים על ביקור קטן, נגיד החלפת ברז או שקע, ותשוו ל-149. אין דמי הקמה, ומשלמים חודש בחודש. אם אחרי חודש-חודשיים לא ראיתם עבודות שחזרו אליכם בזכותנו, מפסיקים.</p>
+</div>
+</section>
+<section class="last" aria-labelledby="try">
+<div class="wrap">
+<div class="box">
+<h2 id="try">רוצים לנסות את זה על המספר שלכם?</h2>
+<p>שלחו לנו הודעה בוואטסאפ ונסביר מה צריך לעשות כדי שזה יתחיל לעבוד אצלכם.</p>
+<a class="btn" href="https://wa.me/972XXXXXXXXX">אני רוצה לנסות</a>
+</div>
+</div>
+</section>
+</main>
+</body>
+</html>
