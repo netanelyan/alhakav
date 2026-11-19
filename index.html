@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>על הקו - וואטסאפ אוטומטי לשיחות שלא עניתם עליהן</title>
-<meta name="description" content="כשאתם באמצע עבודה ולא עונים, מי שהתקשר מקבל הודעה בוואטסאפ ואתם מקבלים סיכום של מה שהוא צריך. 149 ₪ לחודש.">
+<meta name="description" content="כשאתם באמצע עבודה ולא עונים, מי שהתקשר מקבל הודעה בוואטסאפ ואתם מקבלים סיכום של מה שהוא צריך. 149 ₪ לחודש, לא כולל מע״מ.">
 <meta property="og:title" content="על הקו">
 <meta property="og:description" content="כשאתם באמצע עבודה ולא עונים, מי שהתקשר מקבל הודעה בוואטסאפ ואתם מקבלים סיכום של מה שהוא צריך.">
 <meta property="og:type" content="website">
@@ -14,33 +14,56 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;800&amp;display=swap">
 <style>
-:root{--g:#0a7d4f;--gd:#086640;--gl:#e8f4ee;--ink:#15201a;--txt:#2b3830;--mute:#56645c;--line:#e2e8e4}
+:root{--g:#0a7d4f;--gd:#086640;--gl:#e8f4ee;--ink:#15201a;--txt:#2b3830;--mute:#56645c;--line:#e2e8e4;--soft:#f5f7f6;--hot:#a8231b;--hotl:#fdeceb}
 *{box-sizing:border-box}
+html{scroll-behavior:smooth}
 body{margin:0;background:#fff;color:var(--ink);font:400 1.125rem/1.6 Assistant,system-ui,"Segoe UI","Arial Hebrew",Arial,sans-serif;direction:rtl;-webkit-text-size-adjust:100%}
 .wrap{max-width:40rem;margin:0 auto;padding:0 1.25rem}
 h1,h2,h3,p{margin:0}
 h1,h2,h3{line-height:1.2;font-weight:800}
-.hero{padding:1.5rem 0 3rem}
-.brand{display:flex;align-items:center;gap:.5rem;font-weight:800;font-size:1.3rem;color:var(--g)}
+[id]{scroll-margin-top:1.5rem}
+a{color:var(--g)}
+.skip{position:absolute;inset-inline-start:1rem;top:-4rem;z-index:10;padding:.5rem 1rem;border-radius:.5rem;background:var(--ink);color:#fff}
+.skip:focus{top:1rem}
+.top{padding:1rem 0}
+.bar{display:flex;align-items:center;gap:1.5rem}
+.brand{display:flex;align-items:center;gap:.5rem;font-weight:800;font-size:1.3rem;color:var(--g);text-decoration:none}
 .brand::before{content:"";width:.7rem;height:.7rem;border-radius:50%;background:var(--g)}
-.for{margin-top:2.25rem;color:var(--mute);font-size:1rem}
+.top nav{display:none;gap:1.75rem;margin-inline-start:auto}
+.top nav a{color:var(--txt);font-size:1rem;font-weight:600;text-decoration:none}
+.top nav a:hover{color:var(--g)}
+.btn{display:flex;align-items:center;justify-content:center;min-height:3.4rem;padding:.75rem 1.5rem;border:2px solid var(--g);border-radius:999px;background:var(--g);color:#fff;font-weight:800;font-size:1.25rem;text-decoration:none}
+.btn:hover{background:var(--gd);border-color:var(--gd)}
+.btn:focus-visible,.top nav a:focus-visible,.foot a:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.btn.ghost{background:#fff;color:var(--g)}
+.btn.ghost:hover{background:var(--gl);border-color:var(--g)}
+.btn.sm{min-height:2.6rem;margin-inline-start:auto;padding:.35rem 1.1rem;font-size:1rem}
+.hero{padding:.5rem 0 3rem}
+.for{margin-top:1.5rem;color:var(--mute);font-size:1rem}
 h1{margin-top:.5rem;font-size:clamp(2.1rem,8vw,3.25rem);letter-spacing:-.01em}
 .lead{margin-top:1rem;font-size:1.2rem;color:var(--txt)}
-.btn{display:flex;align-items:center;justify-content:center;width:100%;max-width:22rem;min-height:3.4rem;margin-top:1.75rem;padding:.75rem 1.5rem;border-radius:999px;background:var(--g);color:#fff;font-weight:800;font-size:1.25rem;text-decoration:none}
-.btn:hover{background:var(--gd)}
-.btn:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
-.note{margin-top:.6rem;font-size:.95rem;color:var(--mute)}
+.ctas{display:flex;flex-wrap:wrap;gap:.75rem;margin-top:1.75rem}
+.ctas .btn{flex:1 1 12rem;max-width:22rem}
+.note{margin-top:.75rem;font-size:.95rem;color:var(--mute)}
+.lock-fig{margin:2.75rem 0 0}
+.lock{max-width:20rem;padding:1.25rem .9rem 1.6rem;border:8px solid #1c2420;border-radius:2rem;background:linear-gradient(165deg,#0c4631 0%,#0a7d4f 58%,#79c19c 100%);color:#fff}
+.lock-time{margin:.4rem 0 1.4rem;text-align:center;font-size:3.6rem;font-weight:600;line-height:1}
+.n{padding:.65rem .85rem;border-radius:1rem;background:#ffffffed;color:var(--ink);font-size:.95rem;line-height:1.35;box-shadow:0 4px 14px #00000030}
+.n+.n{margin-top:.55rem}
+.n-h{display:flex;justify-content:space-between;margin-bottom:.15rem;color:var(--mute);font-size:.8rem}
+.lock-fig figcaption{max-width:20rem;margin-top:.6rem;font-size:.9rem;color:var(--mute)}
 section{padding:3rem 0;border-top:1px solid var(--line)}
 h2{font-size:clamp(1.7rem,6vw,2.3rem)}
+.sub{margin-top:.75rem;color:var(--txt)}
 .steps{list-style:none;margin:2rem 0 0;padding:0;counter-reset:s}
 .step{counter-increment:s}
 .step+.step{margin-top:2.75rem}
-h3{display:flex;align-items:center;gap:.65rem;font-size:1.35rem}
-h3::before{content:counter(s);flex:none;display:grid;place-items:center;width:2.1rem;height:2.1rem;border-radius:50%;background:var(--g);color:#fff;font-size:1.05rem}
+.step h3{display:flex;align-items:center;gap:.65rem;font-size:1.35rem}
+.step h3::before{content:counter(s);flex:none;display:grid;place-items:center;width:2.1rem;height:2.1rem;border-radius:50%;background:var(--g);color:#fff;font-size:1.05rem}
 .step p{margin-top:.5rem;color:var(--txt)}
 figure{margin:1.25rem 0 0}
-figcaption{margin-bottom:.5rem;font-size:.95rem;color:var(--mute)}
-.notif{display:flex;align-items:center;gap:.8rem;max-width:21rem;margin-top:1.25rem;padding:.8rem 1rem;border:1px solid var(--line);border-radius:1.1rem;background:#f5f7f6;line-height:1.35}
+.step figcaption,.cap{margin-bottom:.5rem;font-size:.95rem;color:var(--mute)}
+.notif{display:flex;align-items:center;gap:.8rem;max-width:21rem;margin-top:1.25rem;padding:.8rem 1rem;border:1px solid var(--line);border-radius:1.1rem;background:var(--soft);line-height:1.35}
 .step .notif p{margin:0;color:var(--ink);font-size:1rem}
 .notif small{display:block;color:var(--mute);font-size:.9rem}
 .notif time{align-self:flex-start;margin-inline-start:auto;color:var(--mute);font-size:.85rem}
@@ -56,37 +79,120 @@ figcaption{margin-bottom:.5rem;font-size:.95rem;color:var(--mute)}
 .chat time{display:block;text-align:end;color:#667781;font-size:.72rem}
 .o time::after{content:" ✓✓"/"";color:#53bdeb}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.picker{margin-top:2rem}
+.inbox{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:1.1rem;overflow:hidden;background:#fff}
+.inbox button{display:flex;align-items:center;gap:.75rem;width:100%;padding:.8rem 1rem;border:0;border-top:1px solid var(--line);background:none;color:inherit;font:inherit;text-align:start;cursor:pointer}
+.inbox button:first-child{border-top:0}
+.inbox button:hover{background:var(--soft)}
+.inbox button[aria-selected=true]{background:var(--gl)}
+.inbox button[aria-selected=true] .av{background:var(--g);color:#fff}
+.inbox button:focus-visible{outline:3px solid var(--ink);outline-offset:-3px}
+.row{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
+.row b{font-size:1.05rem}
+.pv{overflow:hidden;color:var(--mute);font-size:.95rem;white-space:nowrap;text-overflow:ellipsis}
+.meta{display:flex;flex-direction:column;align-items:flex-end;gap:.3rem;color:var(--mute);font-size:.8rem}
+.chip{padding:.05rem .55rem;border-radius:999px;background:var(--soft);color:var(--txt);font-size:.78rem;font-weight:600;white-space:nowrap}
+.chip.hot{background:var(--hotl);color:var(--hot)}
+.panel{margin-top:1.75rem}
+.panel+.panel{margin-top:2.5rem}
+.sumcard{max-width:21rem;padding:.9rem 1rem;border:1px solid var(--line);border-radius:1rem;background:var(--soft);font-size:1rem;line-height:1.5}
+.sumcard p+p{margin-top:.2rem}
+.panel .cap{margin-top:1.25rem}
+.fine{margin-top:1.5rem;font-size:.9rem;color:var(--mute)}
+.cols{display:grid;gap:1.25rem;margin-top:2rem}
+.col{padding:1.5rem;border:1px solid var(--line);border-radius:1.25rem}
+.col.us{border-color:transparent;background:var(--gl)}
+.col h3{font-size:1.3rem}
+.col ul{list-style:none;margin:.75rem 0 0;padding:0}
+.col li{position:relative;margin-top:.6rem;padding-inline-start:1.6rem;color:var(--txt)}
+.col li::before{content:"";position:absolute;inset-inline-start:0;top:.5em;width:.7rem;height:.7rem;border-radius:50%;background:var(--g)}
+.col.you li::before{background:none;border:2px solid var(--g)}
+.after{margin-top:1.5rem;color:var(--txt)}
 .price{display:flex;align-items:baseline;flex-wrap:wrap;gap:.25rem .6rem;margin-top:1.5rem}
 .price b{font-size:3.25rem;line-height:1;color:var(--g)}
 .price small{font-size:.55em}
 .price span{font-size:1.25rem;font-weight:600}
-.price .ph{font-size:.9rem;font-weight:400}
+.price .vat{font-size:1rem;font-weight:400;color:var(--mute)}
+.pitch .price+p{margin-top:1rem;color:var(--txt)}
+.calc{margin-top:2.25rem;padding:1.5rem;border:1px solid var(--line);border-radius:1.25rem}
+.calc h3{font-size:1.3rem}
+.fields{display:grid;gap:1rem;margin-top:1.1rem}
+.fields label{display:flex;flex-direction:column;gap:.4rem;color:var(--txt);font-size:1rem;font-weight:600;line-height:1.35}
+.fields input{width:100%;max-width:9rem;min-height:3rem;padding:.4rem .8rem;border:1px solid #aebab3;border-radius:.6rem;background:#fff;color:var(--ink);font:inherit;font-size:1.3rem;font-weight:800}
+.fields input:focus-visible{outline:3px solid var(--g);outline-offset:1px;border-color:var(--g)}
+.calc output{display:block;margin-top:1.25rem;padding:1rem 1.1rem;border-radius:.9rem;background:var(--gl);color:var(--ink);font-weight:600}
+.faq{margin-top:1.75rem;border-top:1px solid var(--line)}
+.faq details{border-bottom:1px solid var(--line)}
+.faq summary{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.1rem 0;font-size:1.15rem;font-weight:600;cursor:pointer;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";flex:none;display:grid;place-items:center;width:1.9rem;height:1.9rem;border-radius:50%;background:var(--gl);color:var(--g);font-weight:800}
+.faq details[open] summary::after{content:"−"}
+.faq summary:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+.faq details p{padding:0 0 1.25rem;color:var(--txt)}
 .ph{padding:0 .3rem;border-radius:.25rem;background:#fff1b8;color:#5c4400}
-.pitch p:last-child{margin-top:1rem;color:var(--txt)}
 .last{padding-top:0;border:0}
 .box{padding:2rem 1.5rem;border-radius:1.5rem;background:var(--gl)}
 .box p{margin-top:.6rem;color:var(--txt)}
+.box .btn{max-width:22rem;margin-top:1.5rem}
+.foot{padding:2.5rem 0 6.5rem;border-top:1px solid var(--line);color:var(--mute);font-size:1rem}
+.foot p+p{margin-top:.4rem}
+.foot .brand{margin-bottom:.6rem;font-size:1.15rem}
+.fab{position:fixed;inset-inline-end:1rem;bottom:1rem;z-index:5;display:flex;align-items:center;gap:.5rem;min-height:3.2rem;padding:.5rem 1.2rem .5rem 1rem;border-radius:999px;background:var(--g);color:#fff;font-weight:800;text-decoration:none;box-shadow:0 6px 20px #0a3d2766;transition:opacity .2s,transform .2s,visibility .2s}
+.fab:hover{background:var(--gd)}
+.fab:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.fab svg{width:1.35rem;height:1.35rem;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}
+.js .fab:not(.on){visibility:hidden;opacity:0;transform:translateY(1rem)}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.fab{transition:none}}
 @media (min-width:54rem){
-.hero{padding-top:2.5rem}
 .wrap{max-width:62rem}
-.hero h1,.hero p,.pitch p,.box p{max-width:40rem}
+.top nav{display:flex}
+.btn.sm{margin-inline-start:0}
+.hero{padding-top:1.5rem}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.7fr);gap:3.5rem;align-items:center}
+.lock-fig{margin:0}
+.pitch p,.box p,.sub,.after{max-width:40rem}
 .step{display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:start}
 .step figure,.step .notif{margin-top:0}
+.picker{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:3rem;align-items:start}
+.inbox{position:sticky;top:1.5rem}
+.panel{margin-top:0}
+.cols{grid-template-columns:1fr 1fr}
+.fields{grid-template-columns:1fr 1fr;align-items:end}
 }
 </style>
 </head>
 <body>
-<header class="hero">
-<div class="wrap">
-<p class="brand">על הקו</p>
+<a class="skip" href="#main">לדלג לתוכן</a>
+<header class="top">
+<div class="wrap bar">
+<a class="brand" href="#main">על הקו</a>
+<nav aria-label="ניווט באתר"><a href="#how">איך זה עובד</a><a href="#price">מחיר</a><a href="#faq">שאלות</a></nav>
+<a class="btn sm" href="https://wa.me/972XXXXXXXXX?text=%D7%94%D7%99%D7%99%2C%20%D7%A8%D7%90%D7%99%D7%AA%D7%99%20%D7%90%D7%AA%20%D7%94%D7%90%D7%AA%D7%A8%20%D7%95%D7%90%D7%A0%D7%99%20%D7%A8%D7%95%D7%A6%D7%94%20%D7%9C%D7%A0%D7%A1%D7%95%D7%AA">לכתוב לנו</a>
+</div>
+</header>
+<main id="main">
+<div class="hero">
+<div class="wrap hero-grid">
+<div>
 <p class="for">לאינסטלטורים, חשמלאים, טכנאי מזגנים ומנעולנים</p>
 <h1>לקוח שלא עניתם לו מתקשר למי שמופיע אחריכם בגוגל</h1>
 <p class="lead">כשאתם באמצע עבודה ולא עונים, אנחנו שולחים למי שהתקשר הודעה בוואטסאפ ומבררים איתו מה קרה, איפה, ואם זה בוער או יכול לחכות למחר. אתם מקבלים סיכום קצר וחוזרים אליו כשאתם מתפנים.</p>
-<a class="btn" href="https://wa.me/972XXXXXXXXX">אני רוצה לנסות</a>
-<p class="note">הכפתור פותח איתנו שיחה בוואטסאפ</p>
+<div class="ctas">
+<a class="btn" href="https://wa.me/972XXXXXXXXX?text=%D7%94%D7%99%D7%99%2C%20%D7%A8%D7%90%D7%99%D7%AA%D7%99%20%D7%90%D7%AA%20%D7%94%D7%90%D7%AA%D7%A8%20%D7%95%D7%90%D7%A0%D7%99%20%D7%A8%D7%95%D7%A6%D7%94%20%D7%9C%D7%A0%D7%A1%D7%95%D7%AA">אני רוצה לנסות</a>
+<a class="btn ghost" href="#how">איך זה עובד</a>
 </div>
-</header>
-<main>
+<p class="note">149 ₪ לחודש, לא כולל מע״מ. הכפתור פותח איתנו שיחה בוואטסאפ.</p>
+</div>
+<figure class="lock-fig">
+<div class="lock" role="img" aria-label="דוגמה למסך הנעילה שלכם. שיחה שלא נענתה מ-054-XXX-XX38 בשעה 10:41, ובשעה 10:44 הודעה בוואטסאפ מעל הקו: פנייה חדשה, דחוף, נזילה חזקה מתחת לכיור בהרצל 15 אשדוד">
+<p class="lock-time">10:44</p>
+<div class="n"><p class="n-h"><span>טלפון</span><span>10:41</span></p><p><b>שיחה שלא נענתה</b></p><p><span dir="ltr">054-XXX-XX38</span></p></div>
+<div class="n"><p class="n-h"><span>וואטסאפ</span><span>10:44</span></p><p><b>על הקו</b></p><p>פנייה חדשה, דחוף. נזילה חזקה מתחת לכיור, הרצל 15 אשדוד. הלקוח כבר סגר את הברז הראשי.</p></div>
+</div>
+<figcaption>דוגמה. השיחה נכנסה ב-10:41, והסיכום הגיע אליכם ב-10:44.</figcaption>
+</figure>
+</div>
+</div>
 <section class="how" aria-labelledby="how">
 <div class="wrap">
 <h2 id="how">מה קורה אחרי שיחה שפספסתם</h2>
@@ -142,11 +248,159 @@ figcaption{margin-bottom:.5rem;font-size:.95rem;color:var(--mute)}
 </ol>
 </div>
 </section>
+<section aria-labelledby="trades">
+<div class="wrap">
+<h2 id="trades">ככה זה נראה במקצוע שלכם</h2>
+<p class="sub">בחרו מקצוע ותראו שיחה לדוגמה, ואת הסיכום שהיה מגיע אליכם אחריה.</p>
+<div class="picker">
+<div class="inbox" role="tablist" aria-label="מקצוע" aria-orientation="vertical">
+<button type="button" role="tab" id="t-plumb" aria-controls="p-plumb" aria-selected="true"><span class="av" aria-hidden="true">א</span><span class="row"><b>אינסטלטור</b><span class="pv">האסלה סתומה והמים עולים כשמורידים</span></span><span class="meta"><span>08:12</span><span class="chip">עד הצהריים</span></span></button>
+<button type="button" role="tab" id="t-elec" aria-controls="p-elec" aria-selected="false"><span class="av" aria-hidden="true">ח</span><span class="row"><b>חשמלאי</b><span class="pv">קפץ החשמל במטבח ובסלון ולא חוזר</span></span><span class="meta"><span>17:26</span><span class="chip">עד הערב</span></span></button>
+<button type="button" role="tab" id="t-ac" aria-controls="p-ac" aria-selected="false"><span class="av" aria-hidden="true">מ</span><span class="row"><b>טכנאי מזגנים</b><span class="pv">המזגן בסלון מטפטף מים על הרצפה</span></span><span class="meta"><span>13:05</span><span class="chip">השבוע</span></span></button>
+<button type="button" role="tab" id="t-lock" aria-controls="p-lock" aria-selected="false"><span class="av" aria-hidden="true">נ</span><span class="row"><b>מנעולן</b><span class="pv">ננעלתי בחוץ והמפתחות בפנים</span></span><span class="meta"><span>21:48</span><span class="chip hot">דחוף</span></span></button>
+</div>
+<div class="panels">
+<div class="panel" role="tabpanel" id="p-plumb" aria-labelledby="t-plumb" tabindex="0">
+<p class="cap">השיחה בוואטסאפ עם מי שהתקשר</p>
+<div class="phone">
+<p class="wa"><span class="av" aria-hidden="true">א</span>אבי אינסטלציה</p>
+<ol class="chat">
+<li><span class="sr">העסק:</span>היי, ראינו שהתקשרת. אבי באמצע עבודה ולא יכול לענות כרגע. מה קרה?<time>08:13</time></li>
+<li class="o"><span class="sr">הלקוח:</span>בוקר טוב, האסלה סתומה והמים עולים כשמורידים<time>08:13</time></li>
+<li><span class="sr">העסק:</span>יש בבית עוד שירותים שעובדים? ומה הכתובת?<time>08:14</time></li>
+<li class="o"><span class="sr">הלקוח:</span>יש עוד אחד והוא בסדר. סוקולוב 40 חולון, דירה 12. אפשר גם בצהריים, לא חייב עכשיו<time>08:15</time></li>
+<li><span class="sr">העסק:</span>רשמתי הכל. אבי יחזור אליך כשיתפנה<time>08:15</time></li>
+</ol>
+</div>
+<p class="cap">והסיכום שמגיע אליכם</p>
+<div class="sumcard">
+<p><b>מה:</b> סתימה באסלה, המים עולים כשמורידים. יש בבית עוד שירותים תקינים</p>
+<p><b>איפה:</b> סוקולוב 40, חולון. דירה 12</p>
+<p><b>דחיפות:</b> בינונית, הלקוח אמר שאפשר עד הצהריים</p>
+<p><b>טלפון:</b> <span dir="ltr">052-XXX-XX17</span></p>
+</div>
+</div>
+<div class="panel" role="tabpanel" id="p-elec" aria-labelledby="t-elec" tabindex="0">
+<p class="cap">השיחה בוואטסאפ עם מי שהתקשרה</p>
+<div class="phone">
+<p class="wa"><span class="av" aria-hidden="true">ר</span>רון חשמל</p>
+<ol class="chat">
+<li><span class="sr">העסק:</span>היי, ראינו שהתקשרת. רון באמצע עבודה ולא יכול לענות כרגע. מה קרה?<time>17:27</time></li>
+<li class="o"><span class="sr">הלקוחה:</span>קפץ החשמל במטבח ובסלון ואני לא מצליחה להחזיר אותו<time>17:27</time></li>
+<li><span class="sr">העסק:</span>יש ריח של שרוף, או שקע או מפסק שמרגישים חמים? ומה הכתובת?<time>17:28</time></li>
+<li class="o"><span class="sr">הלקוחה:</span>אין שום ריח. ויצמן 8 גבעתיים, אני בבית עד הערב<time>17:29</time></li>
+<li><span class="sr">העסק:</span>תודה, העברתי לרון. הוא יחזור אלייך כשיתפנה<time>17:29</time></li>
+</ol>
+</div>
+<p class="cap">והסיכום שמגיע אליכם</p>
+<div class="sumcard">
+<p><b>מה:</b> אין חשמל במטבח ובסלון, המפסק לא חוזר. אין ריח שרוף</p>
+<p><b>איפה:</b> ויצמן 8, גבעתיים</p>
+<p><b>דחיפות:</b> הלקוחה בבית עד הערב</p>
+<p><b>טלפון:</b> <span dir="ltr">050-XXX-XX64</span></p>
+</div>
+</div>
+<div class="panel" role="tabpanel" id="p-ac" aria-labelledby="t-ac" tabindex="0">
+<p class="cap">השיחה בוואטסאפ עם מי שהתקשר</p>
+<div class="phone">
+<p class="wa"><span class="av" aria-hidden="true">ש</span>שי מיזוג אוויר</p>
+<ol class="chat">
+<li><span class="sr">העסק:</span>היי, ראינו שהתקשרת. שי באמצע עבודה ולא יכול לענות כרגע. מה קרה?<time>13:06</time></li>
+<li class="o"><span class="sr">הלקוח:</span>המזגן בסלון מטפטף מים על הרצפה<time>13:06</time></li>
+<li><span class="sr">העסק:</span>איזה מזגן זה, ובן כמה בערך? ומה הכתובת?<time>13:07</time></li>
+<li class="o"><span class="sr">הלקוח:</span>עילי, בן 6 בערך. בן גוריון 22 בת ים, קומה 5<time>13:08</time></li>
+<li><span class="sr">העסק:</span>זה דחוף, או שיכול לחכות כמה ימים?<time>13:08</time></li>
+<li class="o"><span class="sr">הלקוח:</span>כיביתי אותו בינתיים. עדיף השבוע<time>13:09</time></li>
+<li><span class="sr">העסק:</span>רשמתי. שי יחזור אליך כשיתפנה<time>13:09</time></li>
+</ol>
+</div>
+<p class="cap">והסיכום שמגיע אליכם</p>
+<div class="sumcard">
+<p><b>מה:</b> מזגן עילי בסלון מטפטף מים, בן 6 בערך. כרגע כבוי</p>
+<p><b>איפה:</b> בן גוריון 22, בת ים. קומה 5</p>
+<p><b>דחיפות:</b> נמוכה, הלקוח ביקש השבוע</p>
+<p><b>טלפון:</b> <span dir="ltr">054-XXX-XX90</span></p>
+</div>
+</div>
+<div class="panel" role="tabpanel" id="p-lock" aria-labelledby="t-lock" tabindex="0">
+<p class="cap">השיחה בוואטסאפ עם מי שהתקשרה</p>
+<div class="phone">
+<p class="wa"><span class="av" aria-hidden="true">מ</span>משה מנעולן</p>
+<ol class="chat">
+<li><span class="sr">העסק:</span>היי, ראינו שהתקשרת. משה באמצע עבודה ולא יכול לענות כרגע. מה קרה?<time>21:49</time></li>
+<li class="o"><span class="sr">הלקוחה:</span>ננעלתי מחוץ לבית והמפתחות בפנים<time>21:49</time></li>
+<li><span class="sr">העסק:</span>אוי. איזו דלת, רגילה או דלת ביטחון? ומה הכתובת?<time>21:50</time></li>
+<li class="o"><span class="sr">הלקוחה:</span>דלת ביטחון. הרא״ה 101 רמת גן, אני מחכה למטה עם הילדים<time>21:50</time></li>
+<li><span class="sr">העסק:</span>העברתי למשה שזה דחוף. הוא יתקשר אלייך ברגע שהוא מתפנה<time>21:51</time></li>
+</ol>
+</div>
+<p class="cap">והסיכום שמגיע אליכם</p>
+<div class="sumcard">
+<p><b>מה:</b> ננעלה מחוץ לבית, המפתחות בפנים. דלת ביטחון</p>
+<p><b>איפה:</b> הרא״ה 101, רמת גן</p>
+<p><b>דחיפות:</b> גבוהה, מחכה בחוץ עם ילדים</p>
+<p><b>טלפון:</b> <span dir="ltr">053-XXX-XX05</span></p>
+</div>
+</div>
+</div>
+</div>
+<p class="fine">השמות, הכתובות והמספרים בשיחות האלה מומצאים.</p>
+</div>
+</section>
+<section aria-labelledby="split">
+<div class="wrap">
+<h2 id="split">מה אנחנו עושים, ומה נשאר לכם</h2>
+<div class="cols">
+<div class="col us">
+<h3>אנחנו</h3>
+<ul>
+<li>שולחים הודעה בוואטסאפ למי שהתקשר, מיד כשהשיחה נגמרת</li>
+<li>שואלים מה קרה ואיפה, ואם זה בוער או יכול לחכות למחר</li>
+<li>אומרים לו שתחזרו אליו כשתתפנו</li>
+<li>שולחים לכם סיכום אחד עם הפרטים והמספר שלו</li>
+</ul>
+</div>
+<div class="col you">
+<h3>אתם</h3>
+<ul>
+<li>חוזרים ללקוח כשאתם מתפנים</li>
+<li>סוגרים איתו מחיר</li>
+<li>קובעים מתי מגיעים</li>
+<li>מחליטים אם בכלל לקחת את העבודה</li>
+</ul>
+</div>
+</div>
+<p class="after">אנחנו רק אוספים פרטים. על מחיר ועל שעה אנחנו לא מתחייבים מול הלקוח, את זה אתם סוגרים איתו בטלפון, כמו היום.</p>
+</div>
+</section>
 <section class="pitch" aria-labelledby="price">
 <div class="wrap">
 <h2 id="price">עבודה אחת שחזרה אליכם מכסה את כל החודש</h2>
-<p class="price"><b>149 <small>₪</small></b><span>לחודש</span><span class="ph">[כולל מע״מ / לפני מע״מ]</span></p>
+<p class="price"><b>149 <small>₪</small></b><span>לחודש</span><span class="vat">לא כולל מע״מ</span></p>
 <p>תחשבו כמה אתם גובים על ביקור קטן, נגיד החלפת ברז או שקע, ותשוו ל-149. אין דמי הקמה, ומשלמים חודש בחודש. אם אחרי חודש-חודשיים לא ראיתם עבודות שחזרו אליכם בזכותנו, מפסיקים.</p>
+<div class="calc">
+<h3>החשבון עם המספרים שלכם</h3>
+<div class="fields">
+<label for="c-calls">כמה שיחות אתם מפספסים בשבוע, בערך<input id="c-calls" type="number" inputmode="numeric" min="0" max="500" value="5"></label>
+<label for="c-job">כמה אתם גובים על ביקור קטן, בשקלים לפני מע״מ<input id="c-job" type="number" inputmode="numeric" min="0" step="10" value="250"></label>
+</div>
+<output id="c-out" for="c-calls c-job" aria-live="polite">זה בערך 22 שיחות בחודש. מספיק שאחת מהן תחזור אליכם כעבודה כדי לכסות את ה-149 ₪, ונשארים לכם עוד 101 ₪.</output>
+</div>
+</div>
+</section>
+<section aria-labelledby="faq">
+<div class="wrap">
+<h2 id="faq">שאלות לפני שמתחילים</h2>
+<p class="sub">יש שאלה שלא מופיעה פה? אפשר לשאול אותנו בוואטסאפ.</p>
+<div class="faq">
+<details><summary>צריך להחליף את המספר של העסק?</summary><p><span class="ph">[איך מחברים את המספר הקיים של העסק, ואם צריך להחליף מספר]</span></p></details>
+<details><summary>מה אם הלקוח שואל כמה זה יעלה?</summary><p>אנחנו רק אוספים פרטים. את המחיר ואת השעה אתם סוגרים איתו בעצמכם, כשאתם חוזרים אליו.</p></details>
+<details><summary>איך אתם יודעים מה דחוף?</summary><p>שואלים את הלקוח. בנזילה, למשל, שאלנו אם זה מטפטף או זורם, והלקוח ענה שזורם חזק ושהוא כבר סגר את הברז הראשי. בסיכום תראו מה הוא אמר, ואתם מחליטים למי לחזור קודם.</p></details>
+<details><summary>גם אמא שלי תקבל הודעה כשאני לא עונה לה?</summary><p><span class="ph">[מה קורה עם שיחות ממשפחה, מספקים ומלקוחות קבועים, ואם אפשר להחריג מספרים]</span></p></details>
+<details><summary>כמה זה עולה?</summary><p>149 ₪ לחודש, לא כולל מע״מ. אין דמי הקמה, ומשלמים חודש בחודש.</p></details>
+<details><summary>ואם אחרי חודש אני רואה שזה לא שווה לי?</summary><p>אז מפסיקים. משלמים חודש בחודש, ואם אחרי חודש או חודשיים לא חזרו אליכם עבודות בזכותנו, לא ממשיכים לחודש הבא.</p></details>
+<details><summary>מה צריך לעשות כדי להתחיל?</summary><p>לשלוח לנו הודעה בוואטסאפ. נסביר מה צריך לעשות כדי שזה יעבוד על המספר שלכם.</p></details>
+</div>
 </div>
 </section>
 <section class="last" aria-labelledby="try">
@@ -154,10 +408,57 @@ figcaption{margin-bottom:.5rem;font-size:.95rem;color:var(--mute)}
 <div class="box">
 <h2 id="try">רוצים לנסות את זה על המספר שלכם?</h2>
 <p>שלחו לנו הודעה בוואטסאפ ונסביר מה צריך לעשות כדי שזה יתחיל לעבוד אצלכם.</p>
-<a class="btn" href="https://wa.me/972XXXXXXXXX">אני רוצה לנסות</a>
+<a class="btn" href="https://wa.me/972XXXXXXXXX?text=%D7%94%D7%99%D7%99%2C%20%D7%A8%D7%90%D7%99%D7%AA%D7%99%20%D7%90%D7%AA%20%D7%94%D7%90%D7%AA%D7%A8%20%D7%95%D7%90%D7%A0%D7%99%20%D7%A8%D7%95%D7%A6%D7%94%20%D7%9C%D7%A0%D7%A1%D7%95%D7%AA">אני רוצה לנסות</a>
 </div>
 </div>
 </section>
 </main>
+<footer class="foot">
+<div class="wrap">
+<p class="brand">על הקו</p>
+<p>הודעה בוואטסאפ לכל מי שהתקשר ולא עניתם לו, וסיכום של מה שהוא צריך אליכם.</p>
+<p><a href="https://wa.me/972XXXXXXXXX?text=%D7%94%D7%99%D7%99%2C%20%D7%A8%D7%90%D7%99%D7%AA%D7%99%20%D7%90%D7%AA%20%D7%94%D7%90%D7%AA%D7%A8%20%D7%95%D7%90%D7%A0%D7%99%20%D7%A8%D7%95%D7%A6%D7%94%20%D7%9C%D7%A0%D7%A1%D7%95%D7%AA">לכתוב לנו בוואטסאפ</a></p>
+<p>© 2026 על הקו</p>
+</div>
+</footer>
+<a class="fab" href="https://wa.me/972XXXXXXXXX?text=%D7%94%D7%99%D7%99%2C%20%D7%A8%D7%90%D7%99%D7%AA%D7%99%20%D7%90%D7%AA%20%D7%94%D7%90%D7%AA%D7%A8%20%D7%95%D7%90%D7%A0%D7%99%20%D7%A8%D7%95%D7%A6%D7%94%20%D7%9C%D7%A0%D7%A1%D7%95%D7%AA" aria-label="לכתוב לנו בוואטסאפ"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 18.8L4 20z"/></svg><span>וואטסאפ</span></a>
+<script>
+document.documentElement.classList.add('js');
+(function(){
+var tabs=[].slice.call(document.querySelectorAll('.inbox [role=tab]'));
+function pick(t,focus){
+tabs.forEach(function(x){var on=x===t;x.setAttribute('aria-selected',on);x.tabIndex=on?0:-1;document.getElementById(x.getAttribute('aria-controls')).hidden=!on});
+if(focus)t.focus();
+}
+tabs.forEach(function(t,i){
+t.addEventListener('click',function(){pick(t)});
+t.addEventListener('keydown',function(e){
+var j={ArrowDown:i+1,ArrowUp:i-1,Home:0,End:tabs.length-1}[e.key];
+if(j===undefined)return;
+e.preventDefault();
+pick(tabs[(j+tabs.length)%tabs.length],true);
+});
+});
+if(tabs.length)pick(tabs[0]);
+
+var calls=document.getElementById('c-calls'),job=document.getElementById('c-job'),out=document.getElementById('c-out'),PRICE=149;
+function fmt(n){return n.toLocaleString('he-IL')}
+function calc(){
+var w=Math.max(0,Math.floor(+calls.value||0)),v=Math.max(0,+job.value||0),n=Math.round(w*4.33);
+if(!w){out.textContent='אם אתם כמעט לא מפספסים שיחות, כנראה שאתם לא צריכים אותנו.';return}
+if(!v){out.textContent='כתבו כמה אתם גובים על ביקור קטן, ונראה כמה עבודות צריכות לחזור.';return}
+var k=Math.ceil(PRICE/v),s='זה בערך '+fmt(n)+' שיחות בחודש. ';
+if(k===1)s+=v>PRICE?'מספיק שאחת מהן תחזור אליכם כעבודה כדי לכסות את ה-149 ₪, ונשארים לכם עוד '+fmt(v-PRICE)+' ₪.':'מספיק שאחת מהן תחזור אליכם כעבודה כדי לכסות את ה-149 ₪.';
+else if(k<=n)s+='צריך ש-'+k+' מהן יחזרו אליכם כעבודות כדי לכסות את ה-149 ₪.';
+else s+='כדי לכסות 149 ₪ צריך ש-'+k+' עבודות יחזרו אליכם, יותר מהשיחות שאתם מפספסים. במקרה כזה זה כנראה לא ישתלם לכם.';
+out.textContent=s;
+}
+calls.addEventListener('input',calc);job.addEventListener('input',calc);calc();
+
+var fab=document.querySelector('.fab'),hero=document.querySelector('.hero');
+if('IntersectionObserver' in window)new IntersectionObserver(function(e){fab.classList.toggle('on',!e[e.length-1].isIntersecting)}).observe(hero);
+else fab.classList.add('on');
+})();
+</script>
 </body>
 </html>
