@@ -116,7 +116,7 @@ blockquote.msg { margin: .5rem 0; padding: .75rem 1rem; max-width: 34rem; border
 .b.failed { outline: 1px solid var(--bad); }
 .b p { white-space: pre-wrap; }
 .b .k { display: block; color: var(--mute); font-size: .75rem; font-weight: 600; }
-.b time { display: block; color: #667781; font-size: .72rem; text-align: end; }
+.b time { display: block; color: #54656f; font-size: .72rem; text-align: end; }
 .b small.bad { display: block; font-size: .78rem; }
 .reply, .notes { display: grid; gap: .5rem; margin-top: .75rem; justify-items: start; }
 .reply label, .notes label { width: 100%; }

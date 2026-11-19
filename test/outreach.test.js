@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, test } from 'node:test';
 import { DAY, HOUR, setNow } from '../server/clock.js';
-import { countsNew, countsReached, funnel, listReached } from '../server/leads.js';
+import { countsNew, countsReached, funnel, listReached, purgeLeads } from '../server/leads.js';
 import { forgetQuality, markByHand, messageText, onWebhook, reminderDue, reply, sendPitch } from '../server/outreach.js';
 import { ENV, addLead, hook, testApp } from './helpers.js';
 
@@ -193,4 +193,32 @@ test('without Meta set up, the message is copied to the phone and marked by hand
   // "לא" typed back to a message sent by hand stops us too.
   await onWebhook(app, hook({ messages: [{ id: 'wamid.no', from: '972541234567', type: 'text', text: { body: 'לא' } }] }));
   assert.equal(leadOf(db, lead.id).closed_why, 'stopped');
+});
+
+test('a lead that is not a customer is deleted six months after anything last happened, and is never found again', () => {
+  const { db } = testApp();
+  const old = addLead(db, 'plumber', { domain: 'old', mobile: '972501010101' });
+  const fresh = addLead(db, 'plumber', { domain: 'fresh', mobile: '972502020202' });
+  const customer = addLead(db, 'plumber', { domain: 'customer', mobile: '972503030303' });
+  db.run("UPDATE leads SET stage = 'closed', closed_why = 'customer' WHERE id = ?", customer.id);
+  db.run('UPDATE leads SET updated_at = ? WHERE id IN (?, ?)', '2026-04-01T00:00:00.000Z', old.id, customer.id);
+  db.run("INSERT INTO messages (lead_id, phone, dir, kind, body, day, at) VALUES (?, ?, 'out', 'first', 'x', '2026-04-01', '2026-04-01T00:00:00.000Z')", old.id, old.mobile);
+  assert.equal(purgeLeads(db, 6, SUNDAY), 1);
+  assert.equal(leadOf(db, old.id), undefined);
+  assert.equal(msgs(db, old.id).length, 0, 'its messages go with it');
+  assert.ok(leadOf(db, fresh.id));
+  assert.ok(leadOf(db, customer.id), 'a customer is kept');
+  assert.equal(db.get('SELECT status FROM seen WHERE domain = ?', old.domain).status, 'expired');
+});
+
+test('"ביקשו שלא נכתוב להם" on the page stops the number like "לא, תודה" does', async () => {
+  const { app, db } = testApp();
+  const lead = addLead(db);
+  const { stopLead } = await import('../server/leads.js');
+  stopLead(db, lead);
+  assert.ok(db.get('SELECT 1 FROM stops WHERE phone = ?', lead.mobile));
+  assert.equal(leadOf(db, lead.id).closed_why, 'stopped');
+  const r = await sendPitch(app, leadOf(db, lead.id), 'first');
+  assert.ok(!r.ok);
+  assert.match(r.flash, /ביקשו להסיר/);
 });

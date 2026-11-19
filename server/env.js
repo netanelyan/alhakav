@@ -6,7 +6,13 @@ import { existsSync, readFileSync } from 'node:fs';
 export function loadEnv(file, base = process.env) {
   const out = { ...base };
   if (!file || !existsSync(file)) return out;
-  for (const raw of readFileSync(file, 'utf8').split(/\r?\n/)) {
+  let text;
+  try {
+    text = readFileSync(file, 'utf8');
+  } catch {
+    return out; // a file only root may read: systemd's EnvironmentFile has already put it in the environment
+  }
+  for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
     if (!line || line.startsWith('#')) continue;
     const m = /^([A-Z][A-Z0-9_]*)\s*=\s*(.*)$/.exec(line);

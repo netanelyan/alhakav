@@ -34,17 +34,16 @@ scale.
 
 ## Running it on a server
 
-Node 22.13 or newer, nothing to install (`node:sqlite` is built in).
+Node 22.13 or newer, nothing to install (`node:sqlite` is built in). On the VPS it runs like openfrequency-web's lead
+server: `deploy/alhakav.service` has the steps (the code in /opt/alhakav, the settings in /etc/alhakav/alhakav.env,
+the database in /var/lib/alhakav). The admin password's hash, and a session secret:
 
 ```sh
-git clone https://github.com/netanelyan/alhakav /srv/alhakav && cd /srv/alhakav
-mkdir -p private && cp .env.example private/.env
-npm run admin:password          # prints ADMIN_PASSWORD_HASH and SESSION_SECRET for private/.env
-sudo cp deploy/alhakav.service /etc/systemd/system/ && sudo systemctl enable --now alhakav
+cd /opt/alhakav && ENV_FILE=/nonexistent /opt/node24/bin/node server/main.js password
 ```
 
-Then put `deploy/Caddyfile.example`'s block, with the real domain, in Caddy's config. The admin is at
-`https://<domain>/admin`.
+Then add `deploy/Caddyfile.example`'s block, with the real domain, to /etc/caddy/Caddyfile and reload Caddy. The admin
+is at `https://<domain>/admin`.
 
 **Brave Search.** A key from api-search.brave.com in `BRAVE_API_KEY`. `DISCOVER_QUERIES` searches run each morning
 after 07:00 (0 turns that off).
@@ -56,7 +55,7 @@ app's secret in `META_APP_SECRET`. Submit the two templates in `docs/whatsapp-te
 their last line. A number on the Cloud API stops working in the WhatsApp Business app on the phone, unless it is
 connected with coexistence.
 
-**Backups.** Everything is in `private/leads.db`. `sqlite3 private/leads.db ".backup private/leads-$(date +%F).db"`
+**Backups.** Everything is in one SQLite file (`/var/lib/alhakav/leads.db` on the VPS). `sqlite3 <file> ".backup <copy>"`
 copies it safely while the server runs.
 
 ## Commands

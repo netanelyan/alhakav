@@ -1,22 +1,38 @@
 # /etc/systemd/system/alhakav.service
-# sudo systemctl daemon-reload && sudo systemctl enable --now alhakav
+#
+# על הקו on the VPS, the way openfrequency-web's lead server runs there: a user systemd makes for it, the settings in
+# /etc/alhakav/alhakav.env (mode 600, read by systemd), the database in /var/lib/alhakav, Node 24 from /opt/node24.
+#
+#   sudo git clone https://github.com/netanelyan/alhakav /opt/alhakav
+#   sudo install -d -m 700 /etc/alhakav && sudo cp /opt/alhakav/.env.example /etc/alhakav/alhakav.env
+#   sudo chmod 600 /etc/alhakav/alhakav.env      # then fill it in (README.md)
+#   sudo cp /opt/alhakav/deploy/alhakav.service /etc/systemd/system/ && sudo systemctl daemon-reload
+#   sudo systemctl enable --now alhakav
+#
+# An update: cd /opt/alhakav && sudo git pull && sudo systemctl restart alhakav
+
 [Unit]
-Description=על הקו: landing page and lead desk
+Description=על הקו: the landing page, the legal pages and the lead desk
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=alhakav
-WorkingDirectory=/srv/alhakav
-ExecStart=/usr/bin/node server/main.js serve
+DynamicUser=yes
+StateDirectory=alhakav
+WorkingDirectory=/opt/alhakav
+EnvironmentFile=/etc/alhakav/alhakav.env
+Environment=NODE_ENV=production
+Environment=ENV_FILE=/etc/alhakav/alhakav.env
+Environment=DB_FILE=/var/lib/alhakav/leads.db
+ExecStart=/opt/node24/bin/node server/main.js serve
 Restart=on-failure
 RestartSec=5
+TimeoutStopSec=10
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
 PrivateTmp=true
-ReadWritePaths=/srv/alhakav/private
 
 [Install]
 WantedBy=multi-user.target

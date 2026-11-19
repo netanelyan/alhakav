@@ -127,3 +127,34 @@ export function removeLead(db, lead) {
   });
   return T.end.done;
 }
+
+/**
+ * Keeping leads (the privacy policy, privacy.html#p-keep): a lead that is not a customer is deleted LEAD_KEEP_MONTHS
+ * (6) after anything last happened with it: a message either way, a status, or a change by the admin. Its site stays
+ * in `seen` and a number that asked us to stop stays in `stops`, so a search never adds it again and no one writes to
+ * it again. The same six months as openfrequency-web's leads (site.config.json legal.leadMonths).
+ */
+export function purgeLeads(db, months = 6, at = now()) {
+  const before = nowIso(at - months * 30 * DAY);
+  const rows = db.all("SELECT id, domain FROM leads WHERE updated_at < ? AND coalesce(closed_why, '') != 'customer'", before);
+  db.tx(() => {
+    for (const r of rows) {
+      if (r.domain) db.run("INSERT INTO seen (domain, status, reason, at) VALUES (?, 'expired', NULL, ?) ON CONFLICT (domain) DO UPDATE SET status = 'expired', at = excluded.at", r.domain, nowIso(at));
+      db.run('DELETE FROM leads WHERE id = ?', r.id);
+    }
+  });
+  return rows.length;
+}
+
+/**
+ * They asked us, by mail or on the phone, not to write to them: the number joins `stops`, as a "לא, תודה" on WhatsApp
+ * does (outreach.js), and every lead with it closes. The privacy policy promises it (privacy.html#p-outreach).
+ */
+export function stopLead(db, lead) {
+  const at = nowIso();
+  db.tx(() => {
+    if (lead.mobile) db.run('INSERT OR IGNORE INTO stops (phone, why, at) VALUES (?, ?, ?)', lead.mobile, 'ביקשו מאיתנו ישירות', at);
+    db.run("UPDATE leads SET stage = 'closed', closed_why = 'stopped', out_state = 'stopped', later_until = NULL, updated_at = ? WHERE id = ? OR (mobile IS NOT NULL AND mobile = ?)", at, lead.id, lead.mobile);
+  });
+  return T.stands.done.stop;
+}

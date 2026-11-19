@@ -203,10 +203,11 @@ function standsCard(csrf, x, at) {
   const lost = `<details class="sure"><summary>${esc(T.stands.lost)}</summary><form method="post" action="/admin/leads/${x.id}/lost" class="row">${csrfField(csrf)}<select name="reason" aria-label="${esc(T.stands.lostWhy)}">${Object.entries(LOST)
     .map(([k, v]) => `<option value="${k}">${esc(v)}</option>`)
     .join('')}</select><button class="danger">${esc(T.stands.lostSave)}</button></form></details>`;
+  const stop = x.mobile && x.closed_why !== 'stopped' ? `<details class="sure"><summary>${esc(T.stands.stop)}</summary><p class="muted">${esc(T.stands.stopHint)}</p>${leadButton(csrf, x.id, 'stop', T.stands.stopSure, 'danger')}</details>` : '';
   let acts;
-  if (x.stage === 'closed') acts = x.closed_why === 'stopped' ? '' : ops('reopen', T.stands.reopen);
-  else if (x.stage === 'new') acts = `${ops('skip', T.stands.skip)}${ops('later', T.stands.tomorrow, { days: 1 })}`;
-  else acts = `${x.replied_at ? '' : ops('replied', T.stands.replied)}${ops('customer', T.stands.customer)}${ops('later', T.stands.tomorrow, { days: 1 })}${ops('later', T.stands.week, { days: 7 })}${lost}`;
+  if (x.stage === 'closed') acts = x.closed_why === 'stopped' ? '' : ops('reopen', T.stands.reopen) + stop;
+  else if (x.stage === 'new') acts = `${ops('skip', T.stands.skip)}${ops('later', T.stands.tomorrow, { days: 1 })}${stop}`;
+  else acts = `${x.replied_at ? '' : ops('replied', T.stands.replied)}${ops('customer', T.stands.customer)}${ops('later', T.stands.tomorrow, { days: 1 })}${ops('later', T.stands.week, { days: 7 })}${lost}${stop}`;
   const state = [
     tag(T.stage[x.stage], 'where'),
     x.stage === 'closed' && x.closed_why ? tag(CLOSED[x.closed_why] || x.closed_why, x.closed_why === 'customer' ? '' : 'wait') : '',

@@ -4,10 +4,11 @@ import path from 'node:path';
 import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import { MIN_PASSWORD, hashPassword } from './auth.js';
-import { MINUTE, dayNumber } from './clock.js';
+import { DAY, MINUTE, dayNumber, now, nowIso } from './clock.js';
 import { Db } from './db.js';
 import { dailyDiscovery, discover } from './discover.js';
 import { loadEnv, num } from './env.js';
+import { purgeLeads } from './leads.js';
 import { handler, makeApp } from './app.js';
 import { brave, fromUrls, queriesFor, seeds } from './sources.js';
 
@@ -40,7 +41,9 @@ async function serve() {
   const tick = () => {
     try {
       if (dailyDiscovery(app)) log('[serve] the daily search started');
-      db.run("DELETE FROM sessions WHERE seen_at < datetime('now', '-14 days')");
+      db.run('DELETE FROM sessions WHERE seen_at < ?', nowIso(now() - 14 * DAY));
+      const gone = purgeLeads(db, num(env.LEAD_KEEP_MONTHS, 6));
+      if (gone) log(`[serve] ${gone} leads past LEAD_KEEP_MONTHS deleted`);
     } catch (e) {
       log(`[serve] the daily tick failed: ${e.message}`);
     }

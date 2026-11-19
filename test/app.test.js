@@ -118,6 +118,9 @@ test("Meta's webhook: verified once, and refused unless signed", async () => {
 test('health, and nothing outside the routes', async () => {
   assert.equal(await (await fetch(`${base}/api/health`)).text(), 'ok');
   assert.equal((await fetch(`${base}/etc/passwd`)).status, 404);
+  assert.equal((await fetch(`${base}/package.json`)).status, 404, 'the repo is not served, only the pages');
+  assert.equal((await fetch(`${base}/private/leads.db`)).status, 404);
+  for (const p of ['/', '/privacy', '/terms.html', '/accessibility', '/legal.css']) assert.equal((await fetch(`${base}${p}`)).status, 200, p);
   assert.equal((await fetch(`${base}/admin/static/..%2fapp.js`, { redirect: 'manual' })).status, 404);
   assert.equal((await fetch(`${base}/admin/static/admin.css`)).headers.get('content-type'), 'text/css; charset=utf-8');
 });

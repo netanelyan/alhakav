@@ -7,7 +7,7 @@ import { T } from './copy.js';
 import { siteKey } from './detect.js';
 import { discover, lastRun, startDiscovery } from './discover.js';
 import { makeFetcher } from './fetcher.js';
-import { REACHED_TABS, countsNew, countsReached, funnel, getLead, lastIn, later, listNew, listReached, lose, markCustomer, markReplied, messagesOf, removeLead, reopen, saveName, saveNotes, skip } from './leads.js';
+import { REACHED_TABS, countsNew, countsReached, funnel, getLead, lastIn, later, listNew, listReached, lose, markCustomer, markReplied, messagesOf, removeLead, reopen, saveName, saveNotes, skip, stopLead } from './leads.js';
 import { metaSettings, signatureOk } from './meta.js';
 import { markByHand, onWebhook, reply, sendPitch, stopped } from './outreach.js';
 import { leadPage, leadsPage, loginPage, notFoundPage, reachedPage } from './pages.js';
@@ -25,6 +25,18 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const STATIC_DIR = path.join(ROOT, 'server', 'static');
 const STATIC = { 'admin.css': 'text/css; charset=utf-8', 'admin.js': 'text/javascript; charset=utf-8' };
 const HTML = 'text/html; charset=utf-8';
+// The public site: the landing page and the legal pages, by name only (the repo's other files are never served).
+const PUBLIC = {
+  '/': ['index.html', HTML],
+  '/index.html': ['index.html', HTML],
+  '/terms.html': ['terms.html', HTML],
+  '/terms': ['terms.html', HTML],
+  '/privacy.html': ['privacy.html', HTML],
+  '/privacy': ['privacy.html', HTML],
+  '/accessibility.html': ['accessibility.html', HTML],
+  '/accessibility': ['accessibility.html', HTML],
+  '/legal.css': ['legal.css', 'text/css; charset=utf-8'],
+};
 
 const HEADERS = {
   'x-content-type-options': 'nosniff',
@@ -110,7 +122,10 @@ async function route(app, req, res) {
   const p = url.pathname.replace(/\/+$/, '') || '/';
   if (p === '/api/health') return send(res, 200, 'text/plain; charset=utf-8', 'ok');
   if (p === '/meta/webhook') return webhook(app, req, res, url);
-  if (p === '/' && req.method === 'GET') return send(res, 200, HTML, readFileSync(path.join(ROOT, 'index.html')), { 'content-security-policy': "frame-ancestors 'none'", 'cache-control': 'public, max-age=300' });
+  if (PUBLIC[p] && req.method === 'GET') {
+    const [file, type] = PUBLIC[p];
+    return send(res, 200, type, readFileSync(path.join(ROOT, file)), { 'content-security-policy': "frame-ancestors 'none'", 'cache-control': 'public, max-age=300' });
+  }
   if (p.startsWith('/admin/static/')) {
     const name = p.slice('/admin/static/'.length);
     if (!STATIC[name]) return send(res, 404, 'text/plain; charset=utf-8', 'not found');
@@ -252,6 +267,8 @@ async function post(app, req, res, p, form, token) {
       return done(lose(app.db, lead, form.reason), false, 'stands');
     case 'skip':
       return done(skip(app.db, lead), false, 'stands');
+    case 'stop':
+      return done(stopLead(app.db, lead), false, 'stands');
     case 'reopen':
       return done(reopen(app.db, lead), false, 'stands');
     case 'notes':
