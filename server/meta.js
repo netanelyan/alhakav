@@ -7,6 +7,8 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 //               hours (the first message and the one reminder), plain text inside those 24 hours (the explanation
 //               after "כן, שלחו", the line after "לא, תודה", and the admin's own answers)
 //   quality     GET /<phone id>?fields=quality_rating: GREEN, YELLOW, RED or UNKNOWN, read before each first message
+//   media       GET /<media id> for its address, then the file from there with the same token: a customer's picture of
+//               their bank transfer (pay.js)
 //   webhook     what Meta posts to /meta/webhook, signed with the app secret (X-Hub-Signature-256): the messages people
 //               send us, and how far each of ours got (sent, delivered, read, failed)
 //
@@ -72,6 +74,27 @@ export async function numberQuality(m, f) {
   return String(out?.quality_rating || 'UNKNOWN').toUpperCase();
 }
 
+// The token goes only to Meta's own hosts, never to one named only in an answer.
+const META_HOST = /(^|\.)(fbsbx\.com|facebook\.com|fbcdn\.net|whatsapp\.net)$/i;
+
+/** A file someone sent us: { data (a Buffer), mime }. Throws GraphError, also when it is over `max` bytes. */
+export async function downloadMedia(m, f, mediaId, max) {
+  const info = await graph(m, f, 'GET', encodeURIComponent(mediaId));
+  if (Number(info?.file_size) > max) throw new GraphError('too large', 413, null);
+  let u;
+  try {
+    u = new URL(String(info?.url || ''));
+  } catch {
+    throw new GraphError('no address for the file', 0, null);
+  }
+  if (u.protocol !== 'https:' || !(META_HOST.test(u.hostname) || u.host === new URL(m.base).host)) throw new GraphError('the file is not on Meta', 0, null);
+  const res = await f(u.href, { headers: { authorization: `Bearer ${m.token}` }, signal: AbortSignal.timeout(30_000) });
+  if (!res.ok) throw new GraphError(`HTTP ${res.status}`, res.status, null);
+  const data = Buffer.from(await res.arrayBuffer());
+  if (data.length > max) throw new GraphError('too large', 413, null);
+  return { data, mime: String(info?.mime_type || '') };
+}
+
 /** Did Meta sign this body? (X-Hub-Signature-256: sha256=<HMAC-SHA256 of the raw body under the app secret>) */
 export function signatureOk(appSecret, raw, header) {
   if (!appSecret) return false;
@@ -105,6 +128,7 @@ export function parseWebhook(body) {
           at: Number(msg.timestamp) ? Number(msg.timestamp) * 1000 : null,
           type: button ? 'button' : String(msg.type || ''),
           text: String(text || ''),
+          media: ['image', 'document'].includes(msg.type) && msg[msg.type]?.id ? { id: String(msg[msg.type].id), mime: String(msg[msg.type].mime_type || ''), name: String(msg[msg.type].filename || '') } : null,
           name: names[String(msg.from)] || '',
         });
       }

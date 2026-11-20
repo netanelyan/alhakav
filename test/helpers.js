@@ -18,11 +18,16 @@ export const detected = (name, url = `https://${name}.example/`) => analyze([rea
  * send answer that error. calls holds what was sent.
  */
 export function fakeGraph() {
-  const g = { calls: [], quality: 'GREEN', fail: null, n: 0 };
+  const g = { calls: [], quality: 'GREEN', fail: null, n: 0, media: {} };
   g.f = async (url, init = {}) => {
     const body = init.body ? JSON.parse(init.body) : null;
-    g.calls.push({ url: String(url), method: init.method, body });
+    g.calls.push({ url: String(url), method: init.method, body, auth: init.headers?.authorization });
     if (String(url).includes('fields=quality_rating')) return Response.json({ quality_rating: g.quality, id: '123' });
+    // A file someone sent: its address first, then its bytes from there (g.media: id -> { mime, bytes }).
+    const media = /\/v23\.0\/([\w.-]+)$/.exec(String(url));
+    if (media && g.media[media[1]]) return Response.json({ url: `https://graph.test/files/${media[1]}`, mime_type: g.media[media[1]].mime, file_size: g.media[media[1]].bytes.length, id: media[1] });
+    const file = /^https:\/\/graph\.test\/files\/([\w.-]+)$/.exec(String(url));
+    if (file) return g.media[file[1]] ? new Response(g.media[file[1]].bytes) : new Response('gone', { status: 404 });
     if (g.fail) {
       const error = g.fail;
       g.fail = null;

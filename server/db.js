@@ -173,6 +173,53 @@ CREATE TABLE skips (
   PRIMARY KEY (customer_id, phone)
 );
 `,
+  // Paying (docs/payments.md): each customer pays ahead for each month by bank transfer, sends the transfer's picture
+  // to the business number, and the admin checks the bank and records it; Morning issues the invoice-receipt.
+  `
+ALTER TABLE customers ADD COLUMN price REAL NOT NULL DEFAULT 149;
+ALTER TABLE customers ADD COLUMN free INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE customers ADD COLUMN paid_until TEXT;
+ALTER TABLE customers ADD COLUMN ends_on TEXT;
+ALTER TABLE customers ADD COLUMN invoice_name TEXT;
+ALTER TABLE customers ADD COLUMN tax_id TEXT;
+ALTER TABLE customers ADD COLUMN address TEXT;
+ALTER TABLE customers ADD COLUMN email TEXT;
+
+CREATE TABLE receipts (
+  id INTEGER PRIMARY KEY,
+  customer_id INTEGER REFERENCES customers (id) ON DELETE SET NULL,
+  business TEXT NOT NULL,
+  source TEXT NOT NULL CHECK (source IN ('whatsapp', 'manual')),
+  phone TEXT NOT NULL DEFAULT '',
+  msg_id TEXT UNIQUE,
+  type TEXT,
+  size INTEGER NOT NULL DEFAULT 0,
+  sha256 TEXT,
+  file BLOB,
+  owed_json TEXT,
+  decision TEXT CHECK (decision IN ('paid', 'not_paid')),
+  decided_at TEXT,
+  bill_json TEXT,
+  morning_state TEXT,
+  morning_at TEXT,
+  morning_error_json TEXT,
+  morning_doc_id TEXT UNIQUE,
+  morning_number TEXT,
+  morning_url TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX receipts_customer ON receipts (customer_id, created_at);
+CREATE INDEX receipts_waiting ON receipts (decided_at, created_at);
+
+CREATE TABLE pay_notices (
+  customer_id INTEGER NOT NULL REFERENCES customers (id) ON DELETE CASCADE,
+  until TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  status TEXT NOT NULL,
+  at TEXT NOT NULL,
+  PRIMARY KEY (customer_id, until, kind)
+);
+`,
 ];
 
 export class Db {

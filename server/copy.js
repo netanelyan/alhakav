@@ -198,7 +198,7 @@ export const T = {
     empty: 'אין מה לשלוח.',
     auto: 'הודעה אוטומטית מהטלפון שלהם',
     status: { sent: 'נשלחה', delivered: 'הגיעה', read: 'נקראה', failed: 'לא הגיעה', hand: 'נשלחה מהטלפון' },
-    kind: { first: 'ההודעה הראשונה', reminder: 'התזכורת', pitch: 'ההסבר, אחרי שאמרו כן', stopped: 'אחרי שביקשו להסיר', reply: '' },
+    kind: { first: 'ההודעה הראשונה', reminder: 'התזכורת', pitch: 'ההסבר, אחרי שאמרו כן', stopped: 'אחרי שביקשו להסיר', reply: '', pay: 'בקשת תשלום', receipt: 'אחרי אישור העברה', paid: 'אחרי שהתשלום נרשם' },
   },
   stands: {
     title: 'איפה זה עומד',
@@ -279,7 +279,7 @@ export const SVC = {
 export const CUST_STATUS = { setup: 'בהקמה', active: 'פעיל', paused: 'עצור', stopped: 'הפסיק' };
 export const WA_STATUS = { none: 'לא רשום בוואטסאפ', verifying: 'מחכה לקוד', connected: 'מחובר לוואטסאפ' };
 export const CHAT_STATE = { waiting: 'מחכה לתשובה', talking: 'בשיחה', done: 'נשלח סיכום', stopped: 'ביקשו להסיר', failed: 'לא הגיעה' };
-export const CALL_OUTCOME = { messaged: 'נשלחה הודעה', again: 'התקשר שוב', hidden: 'מספר חסוי', skipped: 'ברשימת "לא לשלוח"', test: 'שיחת בדיקה', failed: 'השליחה נכשלה', inactive: 'העוזר לא פעיל', otp: 'קוד אימות' };
+export const CALL_OUTCOME = { messaged: 'נשלחה הודעה', again: 'התקשר שוב', hidden: 'מספר חסוי', skipped: 'ברשימת "לא לשלוח"', test: 'שיחת בדיקה', failed: 'השליחה נכשלה', inactive: 'העוזר לא פעיל', unpaid: 'לא שולם', otp: 'קוד אימות' };
 
 export const TC = {
   nav: 'לקוחות',
@@ -328,6 +328,121 @@ export const TC = {
   },
   skips: { title: 'לא לשלוח אל', hint: 'מספרים שהעוזר לא כותב אליהם: משפחה, ספקים, מי שביקש להסיר. הלקוח יכול גם לכתוב לעוזר "לא לשלוח ל־05X...".', add: 'להוסיף', remove: 'להוציא', none: 'אין מספרים ברשימה.', why: { owner: 'הלקוח ביקש', admin: 'הוספתי', stopped: 'ביקשו להסיר' } },
   chats: { title: 'שיחות אחרונות', none: 'עוד אין שיחות.', calls: (n) => (n > 1 ? `${n} שיחות` : 'שיחה אחת') },
-  end: { title: 'מחיקה', remove: 'למחוק את הלקוח', sure: 'כן, למחוק', hint: 'הלקוח, השיחות וההודעות שלו נמחקים. את המספר ב־Telnyx מבטלים שם.', done: 'הלקוח נמחק.' },
+  end: { title: 'מחיקה', remove: 'למחוק את הלקוח', sure: 'כן, למחוק', hint: 'הלקוח, השיחות וההודעות שלו נמחקים, וגם צילומי ההעברות. רישומי התשלום נשארים 7 שנים, כמו שחוק המס מחייב. את המספר ב־Telnyx מבטלים שם.', done: 'הלקוח נמחק.' },
   errors: { wa: (why) => `לא הצלחתי: ${why}` },
+};
+
+// ---- Paying (docs/payments.md): to the customer from the business number, and the admin's pages.
+//
+// PAY.message is the template alhakav_payment's body, filled in (docs/whatsapp-templates.md); its {{1}} is one of
+// PAY.lines, {{2}} the amount, {{3}} PAYMENT_DETAILS. A variable never has a line break in it.
+
+export const PAY = {
+  message: ({ line, amount, details }) => `שלום, כאן על הקו. ${line}\n\nלתשלום: ${amount} ₪ כולל מע״מ, בהעברה בנקאית: ${details}\n\nאחרי ההעברה שולחים כאן צילום מסך או PDF של האישור, ונעדכן כשהתשלום הגיע.`,
+  lines: {
+    first: ({ business, from, until }) => `זה התשלום על החודש הראשון של העוזר של ${business}, מ־${from} עד ${until}.`,
+    soon: ({ business, paidUntil, from, until }) => `העוזר של ${business} משולם עד ${paidUntil}. זה התשלום על החודש הבא, מ־${from} עד ${until}.`,
+    due: ({ business, paidUntil, graceUntil }) => `החודש ששולם על העוזר של ${business} נגמר ב־${paidUntil}. העוזר ממשיך לעבוד עד סוף ${graceUntil}, ואם התשלום לא יגיע עד אז, הוא ייעצר עד שיגיע.`,
+    last: ({ business }) => `העוזר של ${business} עובד עד סוף היום. אם התשלום על החודש החדש לא יגיע עד אז, הוא ייעצר עד שיגיע.`,
+    stopped: ({ business, since }) => `העוזר של ${business} עצור מ־${since}, כי התשלום על החודש החדש לא הגיע. כשהתשלום יגיע, העוזר יחזור לעבוד.`,
+  },
+  received: 'קיבלנו את האישור, תודה. נבדוק מול הבנק ונעדכן כאן.',
+  again: 'את האישור הזה כבר קיבלנו. נעדכן כאן כשנבדוק מול הבנק.',
+  againPaid: 'את האישור הזה כבר קיבלנו, והתשלום נרשם.',
+  unreadable: 'לא הצלחנו לפתוח את הקובץ. אפשר לשלוח אותו שוב, כתמונה או כקובץ PDF?',
+  tooLarge: 'הקובץ גדול מדי. אפשר לשלוח צילום מסך של האישור?',
+  paid: ({ business, until, url }) => `התשלום הגיע, תודה. העוזר של ${business} משולם עד ${until}.${url ? `\n\nהחשבונית: ${url}` : ''}`,
+  invoice: {
+    description: 'על הקו, עוזר לשיחות שלא נענו',
+    row: (from, until) => `על הקו, ${from} עד ${until}`,
+    email: 'קיבלנו את התשלום על החודש, והחשבונית מצורפת.',
+  },
+  state: {
+    new: 'עוד לא שילמו',
+    paid: (until) => `משולם עד ${until}`,
+    grace: (until) => `החודש נגמר. עובד עד סוף ${until}`,
+    lapsed: 'עצור: לא שולם',
+    free: 'בלי תשלום',
+    ending: (until) => `מפסיק אחרי ${until}`,
+    ended: 'הפסיק',
+  },
+  admin: {
+    title: 'תשלום',
+    noDetails: '[פרטי החשבון]',
+    sum: ({ total, net, vat, from, until }) => `${total} ₪ כולל מע״מ (${net} ₪ ועוד ${vat} ₪ מע״מ), על ${from} עד ${until}`,
+    owed: (sum) => `לתשלום עכשיו: ${sum}.`,
+    nothing: 'אין מה לשלם עכשיו.',
+    offNew: 'העוזר לא כותב למתקשרים עד שהתשלום הראשון נרשם.',
+    offLapsed: 'העוזר לא כותב למתקשרים עד שהתשלום נרשם.',
+    preview: 'ההודעה שתישלח',
+    ask: 'לשלוח בקשת תשלום בוואטסאפ',
+    asked: 'בקשת התשלום נשלחה.',
+    manual: 'התקבל תשלום',
+    manualHint: 'רושם את החודש שלמעלה בלי צילום, כשהכסף הגיע בדרך אחרת. בדקו בבנק לפני.',
+    manualDone: (until) => `התשלום נרשם. משולם עד ${until}.`,
+    end: 'להפסיק בסוף החודש ששולם',
+    endHint: 'כמו בתנאי השימוש: העוזר עובד עד סוף החודש ששולם, ואז נעצר, ולא נשלחות יותר בקשות תשלום.',
+    ended: (until) => `העוזר יפסיק אחרי ${until}.`,
+    unend: 'לבטל את ההפסקה',
+    unended: 'ההפסקה בוטלה.',
+    receipts: 'תשלומים ואישורים',
+    noReceipts: 'עוד אין.',
+    notices: 'הודעות התשלום שנשלחו',
+    noticeKind: { ask: 'בקשה ששלחתי', soon: 'לפני סוף החודש', due: 'אחרי סוף החודש', last: 'היום האחרון', stopped: 'אחרי שנעצר' },
+    noticeStatus: { sent: 'נשלחה', failed: 'לא נשלחה' },
+    chat: 'השיחה בוואטסאפ של העסק',
+    billing: 'פרטים לחשבונית',
+    fields: { price: 'מחיר לחודש, לפני מע״מ', invoice_name: 'השם בחשבונית', tax_id: 'מספר עוסק או ח״פ', address: 'כתובת', email: 'מייל לחשבונית', free: 'בלי תשלום (פיילוט)' },
+    billingBad: 'המחיר או המייל לא תקינים.',
+    blocked: { meta: 'המספר של העסק לא מחובר (META_TOKEN ו־META_PHONE_ID).', details: 'חסרים פרטי החשבון להעברה (PAYMENT_DETAILS).', nothing: 'אין מה לשלם עכשיו.', stopped: 'הם ביקשו שלא נכתוב להם מהמספר של העסק.', failed: 'Meta לא שלח את ההודעה.' },
+    errors: { already_paid: 'התשלום כבר נרשם, מכאן או מאישור אחר. רעננתי את הדף.', nothing_due: 'אין חודש לרשום עכשיו.', decided: 'כבר החלטתם על האישור הזה.', no_receipt: 'האישור הזה לא קיים.', no_customer: 'הלקוח של האישור הזה נמחק.' },
+  },
+  receipt: {
+    title: 'אישור העברה',
+    waiting: 'אישורי העברה שמחכים',
+    from: (phone) => `נשלח מ־${phone}`,
+    manual: 'נרשם ידנית, בלי צילום',
+    owedThen: (sum) => `כשהגיע, היה לתשלום ${sum}.`,
+    owedNow: (sum) => `לתשלום היום: ${sum}.`,
+    pending: 'מחכה לבדיקה',
+    check: 'בדקו בבנק שההעברה הגיעה לפני שמאשרים.',
+    paid: 'התשלום הגיע',
+    notPaid: 'לא הגיע',
+    notPaidHint: 'לא נרשם כלום, ולא נשלחת הודעה. גם כשזה לא אישור העברה, או אישור של תשלום שכבר נרשם.',
+    decided: { paid: (until) => `התשלום נרשם. משולם עד ${until}.`, not_paid: 'סומן שלא הגיע. לא נרשם תשלום.' },
+    noFile: 'הקובץ נמחק, 90 יום אחרי שהגיע.',
+    openPdf: 'לפתוח את ה־PDF',
+    image: 'צילום האישור',
+  },
+  morning: {
+    off: 'החשבונית לא הופקה אוטומטית: Morning לא מחובר (MORNING_CLIENT_ID ו־MORNING_CLIENT_SECRET).',
+    issuing: 'Morning מפיק עכשיו את החשבונית. רעננו את הדף בעוד רגע.',
+    issued: (number) => `Morning הפיק חשבונית מס קבלה ${number}.`,
+    open: 'לפתוח ב־Morning',
+    failed: (why, code) => `לא הצלחנו להפיק חשבונית. ${why} (קוד ${code})`,
+    said: (text) => `Morning כתב: ${text}`,
+    blocked: (why) => `לא הפקנו חשבונית. ${why} התשלום כבר נרשם.`,
+    retry: 'להפיק חשבונית שוב',
+    maybe: 'ייתכן שהחשבונית בכל זאת הופקה. בדקו ב־Morning לפני שמפיקים שוב.',
+    why: {
+      timeout: 'Morning לא ענה בזמן.',
+      unreachable: 'לא הצלחנו להגיע ל־Morning.',
+      invalid_client: 'Morning לא קיבל את המפתחות (MORNING_CLIENT_ID ו־MORNING_CLIENT_SECRET).',
+      invalid_grant: 'Morning לא קיבל את המפתחות (MORNING_CLIENT_ID ו־MORNING_CLIENT_SECRET).',
+      unauthorized_client: 'בחבילה של Morning אין גישה ל־API. צריך חבילה שכוללת אותה.',
+      1006: 'צריך לחדש את המנוי ב־Morning.',
+      1010: 'Morning קיבל את הבקשה הזאת פעמיים. בדקו שם אם החשבונית כבר הופקה.',
+      1012: 'הפעולה הזאת צריכה חבילה גבוהה יותר ב־Morning.',
+      1018: 'Morning לא קיבל את כתובת המייל של הלקוח.',
+      1019: 'Morning לא קיבל את כתובת המייל של הלקוח.',
+      bad_answer: 'Morning ענה תשובה שלא הבנו.',
+      other: 'Morning החזיר שגיאה.',
+    },
+    blockedWhy: {
+      exempt: 'ב־Morning העסק מוגדר כפטור ממע״מ, אבל בתשלום נוסף מע״מ. מתקנים את ההגדרה ב־Morning, ואז מפיקים שוב.',
+      vat_rate: (rate) => `שיעור המע״מ ב־Morning הוא ${rate}, ואצלנו 18%. מתקנים את ההגדרה ב־Morning, ואז מפיקים שוב.`,
+      vat_unknown: 'Morning לא אמר מה שיעור המע״מ אצלו, אז אי אפשר לבדוק שהחשבונית תהיה נכונה.',
+    },
+    flash: { issued: (n) => `Morning הפיק חשבונית מס קבלה ${n}.`, failed: 'החשבונית לא הופקה. הפרטים בדף של האישור.' },
+  },
 };

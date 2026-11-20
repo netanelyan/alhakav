@@ -1,7 +1,7 @@
 # WhatsApp templates
 
 A business can write first to someone who has not written to it in the last 24 hours only with a template Meta
-approved. על הקו uses two, both **Marketing**, in **Hebrew (he)**, the same shape as openfrequency's
+approved. The outreach to tradespeople uses two, both **Marketing**, in **Hebrew (he)**, the same shape as openfrequency's
 `openfrequency_ask`: they ask before sending anything, say who writes, and carry the way out as a button.
 
 Before submitting, replace the last line of each body with the real identification line: the business name, your full
@@ -133,3 +133,29 @@ page; a variable's value never has a line break in it (Meta refuses that).
 
 While the customer wrote to their assistant in the last 24 hours, the summary and the note go as plain text instead,
 with the same words.
+
+## The payment message (the business number)
+
+One more **Utility** template, on the business number's WhatsApp Business Account (`META_WABA_ID`, the same as the
+outreach templates), for the payment requests and reminders (docs/payments.md). Inside the 24 hours after the
+customer's last message the same words go as plain text.
+
+### alhakav_payment
+
+| | |
+|---|---|
+| Category | Utility |
+| Language | Hebrew (he) |
+| Buttons | none |
+| Variables (sample) | `{{1}}` = `העוזר של אבי אינסטלציה משולם עד 24.11.2026. זה התשלום על החודש הבא, מ־25.11.2026 עד 24.12.2026.`, `{{2}}` = `175.82`, `{{3}}` = `בנק הפועלים (12), סניף 345, חשבון 678901, על שם נתנאל יאנצבסקי` |
+
+```
+שלום, כאן על הקו. {{1}}
+
+לתשלום: {{2}} ₪ כולל מע״מ, בהעברה בנקאית: {{3}}
+
+אחרי ההעברה שולחים כאן צילום מסך או PDF של האישור, ונעדכן כשהתשלום הגיע.
+```
+
+`{{1}}` is one of five lines in `server/copy.js` (`PAY.lines`): the first month, the next month, the month ended, the
+last day, stopped. `{{3}}` is `PAYMENT_DETAILS`.

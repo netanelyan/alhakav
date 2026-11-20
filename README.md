@@ -7,8 +7,10 @@ things:
 - `server/`, the admin's lead desk, built like openfrequency's `/admin/leads`: it finds tradespeople by itself, scores
   them, and writes to them on WhatsApp from the business number when you press send.
 - `terms.html`, `privacy.html`, `accessibility.html`, the legal pages.
-- `docs/connecting.md`, the plan for the service itself: how a customer's missed calls reach us (call forwarding),
-  how the caller gets WhatsApp from the customer's own number, and what is left to decide.
+- `docs/connecting.md`, the service itself: each customer's assistant number, how their missed calls reach it (call
+  forwarding), the conversation with the caller and the summary, and what to check on the first customer.
+- `docs/payments.md`, paying: the bank transfer's picture on WhatsApp, the admin's check, Morning's invoice-receipt,
+  the reminders and the 72 hours.
 
 ## How the lead desk works
 
@@ -57,6 +59,9 @@ after 07:00 (0 turns that off).
 app's secret in `META_APP_SECRET`. Submit the two templates in `docs/whatsapp-templates.md` and set `SENDER_LINE` to
 their last line. A number on the Cloud API stops working in the WhatsApp Business app on the phone, unless it is
 connected with coexistence.
+
+**Payments.** `PAYMENT_DETAILS`, the template `alhakav_payment` (docs/whatsapp-templates.md) submitted on the business
+number, and Morning's API keys in `MORNING_CLIENT_ID` and `MORNING_CLIENT_SECRET` (docs/payments.md).
 
 **Backups.** Everything is in one SQLite file (`/var/lib/alhakav/leads.db` on the VPS). `sqlite3 <file> ".backup <copy>"`
 copies it safely while the server runs.

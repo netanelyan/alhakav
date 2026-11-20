@@ -48,7 +48,9 @@ every one of them against a fake Telnyx and a fake Claude.
    voicemail, and that `##002#` undoes it.
 5. **A test:** someone calls the customer and they don't answer. The page shows the call, and the caller gets the
    message. "להפעיל" turns the assistant on (until then a forwarded call gets no message).
-6. Payment: bank transfer and a Morning invoice, as openfrequency-accounts does it (not built here yet).
+6. **Payment** (docs/payments.md): fill in the invoice details on the customer's page, press "לשלוח בקשת תשלום
+   בוואטסאפ", and when their transfer's picture comes, check the bank and press "התשלום הגיע". The assistant writes to
+   callers only once the first month is recorded (or "בלי תשלום" is ticked, for a pilot).
 
 ## Check on the first number
 

@@ -1,5 +1,6 @@
-import { DAY, now, nowIso } from './clock.js';
-import { TC } from './copy.js';
+import { billingOf, dateHe } from './billing.js';
+import { DAY, israelDate, now, nowIso } from './clock.js';
+import { PAY, TC } from './copy.js';
 import { isMobile, local, normalize } from './phones.js';
 import { assignProfile, registerNumber, telnyxSettings, verifyNumber } from './telnyx.js';
 
@@ -69,7 +70,8 @@ export function updateCustomer(db, c, f) {
 export function setStatus(db, c, status) {
   const to = { activate: 'active', pause: 'paused', stop: 'stopped' }[status];
   if (!to) return { ok: false, flash: '?' };
-  db.run(`UPDATE customers SET status = ?, stopped_at = ${to === 'stopped' ? '?' : 'NULL'}, updated_at = ? WHERE id = ?`, ...[to, ...(to === 'stopped' ? [nowIso()] : []), nowIso(), c.id]);
+  // Turned on again after it stopped: a stop at the month's end that already passed is over too.
+  db.run(`UPDATE customers SET status = ?, stopped_at = ${to === 'stopped' ? '?' : 'NULL'}${to === 'active' && c.status === 'stopped' ? ', ends_on = NULL' : ''}, updated_at = ? WHERE id = ?`, ...[to, ...(to === 'stopped' ? [nowIso()] : []), nowIso(), c.id]);
   return { ok: true, flash: { active: TC.steps.activated, paused: TC.steps.paused, stopped: TC.steps.stopped }[to] };
 }
 
@@ -129,7 +131,43 @@ export function forwardCodes(assistant) {
   return [`**61*${n}**20#`, `**67*${n}#`, `**62*${n}#`, '*#61#'];
 }
 
+/** The invoice's details and the price (docs/payments.md). */
+export function updateBilling(db, c, f) {
+  const price = Number(String(f.price ?? '').replace(/[^\d.]/g, ''));
+  const email = clean(f.email, 120);
+  if (!(price >= 0 && price <= 100000) || String(f.price ?? '').trim() === '' || (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) return { ok: false, flash: PAY.admin.billingBad };
+  db.run(
+    'UPDATE customers SET price = ?, free = ?, invoice_name = ?, tax_id = ?, address = ?, email = ?, updated_at = ? WHERE id = ?',
+    Math.round(price * 100) / 100,
+    f.free ? 1 : 0,
+    clean(f.invoice_name) || null,
+    clean(f.tax_id, 20) || null,
+    clean(f.address, 120) || null,
+    email || null,
+    nowIso(),
+    c.id
+  );
+  return { ok: true, flash: TC.saved };
+}
+
+/** "להפסיק בסוף החודש ששולם": the assistant works to the end of the paid month, then stops (pay.js payTick). */
+export function endAtMonthEnd(db, c) {
+  const b = billingOf(c);
+  const last = b.paidUntil && b.paidUntil >= israelDate() ? b.paidUntil : israelDate();
+  db.run('UPDATE customers SET ends_on = ?, updated_at = ? WHERE id = ?', last, nowIso(), c.id);
+  return { ok: true, flash: PAY.admin.ended(dateHe(last)) };
+}
+
+export function unend(db, c) {
+  db.run('UPDATE customers SET ends_on = NULL, updated_at = ? WHERE id = ?', nowIso(), c.id);
+  return { ok: true, flash: PAY.admin.unended };
+}
+
+/** The customer and everything of theirs, but the payment records, which the tax law keeps for 7 years. */
 export function removeCustomer(db, c) {
-  db.run('DELETE FROM customers WHERE id = ?', c.id);
+  db.tx(() => {
+    db.run('UPDATE receipts SET file = NULL WHERE customer_id = ?', c.id);
+    db.run('DELETE FROM customers WHERE id = ?', c.id);
+  });
   return TC.end.done;
 }

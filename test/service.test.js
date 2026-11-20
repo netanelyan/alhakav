@@ -59,7 +59,7 @@ function setup({ claude = null, env = TENV } = {}) {
   ctx.app.claude = claude;
   const r = createCustomer(ctx.db, { name: 'אבי כהן', business: 'אבי אינסטלציה', trade: 'plumber', phone: '054-111-2222', assistant: '077-123-4567' });
   assert.ok(r.ok, r.flash);
-  ctx.db.run("UPDATE customers SET status = 'active', wa_status = 'connected' WHERE id = ?", r.id);
+  ctx.db.run("UPDATE customers SET status = 'active', wa_status = 'connected', paid_until = '2026-12-21' WHERE id = ?", r.id);
   return { ...ctx, tx, cid: r.id };
 }
 

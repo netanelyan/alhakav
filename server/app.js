@@ -13,14 +13,20 @@ import { markByHand, onWebhook, reply, sendPitch, stopped } from './outreach.js'
 import { leadPage, leadsPage, loginPage, notFoundPage, reachedPage } from './pages.js';
 import { fromUrls } from './sources.js';
 import { makeClaude } from './claude.js';
-import { addSkip, createCustomer, customerFromLead, getCustomer, listCustomers, recentCalls, recentChats, registerWa, removeCustomer, removeSkip, setStatus, skipsOf, updateCustomer, verifyWa } from './customers.js';
+import { addSkip, createCustomer, customerFromLead, endAtMonthEnd, getCustomer, listCustomers, recentCalls, recentChats, registerWa, removeCustomer, removeSkip, setStatus, skipsOf, unend, updateBilling, updateCustomer, verifyWa } from './customers.js';
 import { customerPage, customersPage } from './customerPages.js';
+import { dateHe } from './billing.js';
+import { PAY } from './copy.js';
+import { morningClient, morningConfig } from './morning.js';
+import { PayError, decideReceipt, manualPayment, noticesOf, receiptById, receiptFile, receiptsOf, receiptsWaiting, retryInvoice, sendPayment } from './pay.js';
+import { receiptPage } from './payPages.js';
 import { onCall, onWhatsApp, serviceState, track } from './service.js';
 import { readEvent, signatureOk as telnyxSigned, telnyxSettings } from './telnyx.js';
 
 // The one HTTP server, behind Caddy on 127.0.0.1:
 //
-//   /admin/...      the admin's pages and forms (signed in, every POST with its CSRF token and from this origin)
+//   /admin/...      the admin's pages and forms (signed in, every POST with its CSRF token and from this origin),
+//                   the transfer receipts among them (/admin/receipts/<id>, docs/payments.md)
 //   /meta/webhook   Meta's webhook: GET to verify it once (META_VERIFY_TOKEN), POST for every message and status,
 //                   signed with META_APP_SECRET (the outreach number)
 //   /telnyx/webhook Telnyx's webhook for the customers' assistant numbers: their calls and their WhatsApp, signed
@@ -53,7 +59,7 @@ const HEADERS = {
 };
 
 /** Everything the server works with, so the tests can hand it a database, fake sites and a fake Meta. */
-export function makeApp({ db, env = {}, fetchSite, apiFetch = fetch, graphFetch, telnyxFetch, claude, log = (m) => console.log(m), searchPause } = {}) {
+export function makeApp({ db, env = {}, fetchSite, apiFetch = fetch, graphFetch, telnyxFetch, morningFetch, claude, log = (m) => console.log(m), searchPause } = {}) {
   return {
     db,
     env,
@@ -62,6 +68,7 @@ export function makeApp({ db, env = {}, fetchSite, apiFetch = fetch, graphFetch,
     graphFetch: graphFetch || apiFetch,
     telnyxFetch: telnyxFetch || apiFetch,
     claude: claude === undefined ? makeClaude(env) : claude,
+    morning: morningClient(morningConfig(env), morningFetch || apiFetch),
     log,
     secret: sessionSecret(env),
     logins: limiter(),
@@ -190,14 +197,26 @@ async function route(app, req, res) {
   }
   if (p === '/admin/customers') {
     const { flash, bad } = takeFlash(res, req, c);
-    return send(res, 200, HTML, customersPage(app, { csrf, flash, bad, rows: listCustomers(app.db, at), at }));
+    return send(res, 200, HTML, customersPage(app, { csrf, flash, bad, rows: listCustomers(app.db, at), waiting: receiptsWaiting(app.db), at }));
   }
   const cust = /^\/admin\/customers\/(\d+)$/.exec(p);
   if (cust) {
     const cu = getCustomer(app.db, Number(cust[1]));
     if (!cu) return send(res, 404, HTML, notFoundPage(csrf));
     const { flash, bad } = takeFlash(res, req, c);
-    return send(res, 200, HTML, customerPage(app, { csrf, flash, bad, c: cu, skips: skipsOf(app.db, cu.id), chats: recentChats(app.db, cu.id), calls: recentCalls(app.db, cu.id), at }));
+    return send(res, 200, HTML, customerPage(app, { csrf, flash, bad, c: cu, skips: skipsOf(app.db, cu.id), chats: recentChats(app.db, cu.id), calls: recentCalls(app.db, cu.id), receipts: receiptsOf(app.db, cu.id), notices: noticesOf(app.db, cu.id), at }));
+  }
+  const rcpt = /^\/admin\/receipts\/(\d+)(\/file)?$/.exec(p);
+  if (rcpt) {
+    if (rcpt[2]) {
+      const f = receiptFile(app.db, Number(rcpt[1]));
+      if (!f) return send(res, 404, 'text/plain; charset=utf-8', 'not found');
+      return send(res, 200, f.type, f.file, { 'content-security-policy': "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'", 'content-disposition': 'inline' });
+    }
+    const r = receiptById(app.db, Number(rcpt[1]));
+    if (!r) return send(res, 404, HTML, notFoundPage(csrf));
+    const { flash, bad } = takeFlash(res, req, c);
+    return send(res, 200, HTML, receiptPage({ csrf, flash, bad, r, c: r.customer_id ? getCustomer(app.db, r.customer_id) : null }));
   }
   const one = /^\/admin\/leads\/(\d+)$/.exec(p);
   if (one) {
@@ -276,6 +295,8 @@ async function post(app, req, res, p, form, token) {
   }
   const cm = /^\/admin\/customers\/(\d+)\/([a-z-]+)$/.exec(p);
   if (cm) return customerAction(app, req, res, Number(cm[1]), cm[2], form, token);
+  const rm = /^\/admin\/receipts\/(\d+)\/(paid|not-paid|invoice)$/.exec(p);
+  if (rm) return receiptAction(app, req, res, Number(rm[1]), rm[2], form);
   const m = /^\/admin\/leads\/(\d+)\/([a-z-]+)$/.exec(p);
   const lead = m && getLead(app.db, Number(m[1]));
   if (!lead) return send(res, 404, HTML, notFoundPage(csrfFor(token, app.secret)));
@@ -362,6 +383,24 @@ async function customerAction(app, req, res, id, action, form, token) {
     case 'pause':
     case 'stop':
       return back(setStatus(app.db, c, action));
+    case 'billing':
+      return back(updateBilling(app.db, c, form), 'billing');
+    case 'pay-ask': {
+      const r = await sendPayment(app, c, 'ask');
+      return back({ ok: r.ok, flash: r.ok ? PAY.admin.asked : `${PAY.admin.blocked[r.why] || r.why}${r.detail ? ` ${r.detail}` : ''}` }, 'pay');
+    }
+    case 'pay-manual':
+      try {
+        const r = await manualPayment(app, c, form.expect);
+        return back({ ok: true, flash: `${PAY.admin.manualDone(dateHe(r.bill.until))} ${invoiceFlash(r.invoice)}`.trim() }, 'pay');
+      } catch (e) {
+        if (e instanceof PayError) return back({ ok: false, flash: PAY.admin.errors[e.code] || e.code }, 'pay');
+        throw e;
+      }
+    case 'end':
+      return back(endAtMonthEnd(app.db, c), 'pay');
+    case 'unend':
+      return back(unend(app.db, c), 'pay');
     case 'skip-add':
       return back(addSkip(app.db, c, form.phone), 'skips');
     case 'skip-remove':
@@ -370,6 +409,29 @@ async function customerAction(app, req, res, id, action, form, token) {
       return see(res, req, '/admin/customers', removeCustomer(app.db, c));
     default:
       return send(res, 404, HTML, notFoundPage(csrfFor(token, app.secret)));
+  }
+}
+
+/** What became of the invoice, in one line for the flash. */
+function invoiceFlash(inv) {
+  if (!inv || ['off', 'nothing', 'already'].includes(inv.state)) return '';
+  return inv.state === 'issued' ? PAY.morning.flash.issued(inv.number) : PAY.morning.flash.failed;
+}
+
+/** "התשלום הגיע", "לא הגיע" and "להפיק חשבונית שוב" on a receipt's page. */
+async function receiptAction(app, req, res, id, action, form) {
+  const back = (flash, bad = false) => see(res, req, `/admin/receipts/${id}`, flash, bad);
+  if (!receiptById(app.db, id)) return back(PAY.admin.errors.no_receipt, true);
+  if (action === 'invoice') {
+    const inv = await retryInvoice(app, id);
+    return back(invoiceFlash(inv) || PAY.morning.off, inv.state !== 'issued');
+  }
+  try {
+    const r = await decideReceipt(app, id, action === 'paid' ? 'paid' : 'not_paid', form.expect);
+    return back(r.bill ? `${PAY.receipt.decided.paid(dateHe(r.bill.until))} ${invoiceFlash(r.invoice)}`.trim() : PAY.receipt.decided.not_paid);
+  } catch (e) {
+    if (e instanceof PayError) return back(PAY.admin.errors[e.code] || e.code, true);
+    throw e;
   }
 }
 

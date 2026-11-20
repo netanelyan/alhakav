@@ -1,3 +1,4 @@
+import { billingOf } from './billing.js';
 import { intakeTurn } from './claude.js';
 import { DAY, HOUR, MINUTE, hhmm, now, nowIso } from './clock.js';
 import { SVC } from './copy.js';
@@ -19,6 +20,8 @@ import { TelnyxError, callAction, sendTemplate, sendText, telnyxSettings } from 
 //   "הסר", "די"        the number joins the customer's "לא לשלוח" list, one line says so, and the customer is told
 //   the customer       writing to their own assistant: "לא לשלוח ל־05X", "לשלוח ל־05X", "לעצור", "להמשיך"
 //   no Claude          the caller is thanked and what they wrote goes to the customer as it is
+//   not paid           before the first payment, and after the 72 hours past the paid month (billing.js), a forwarded
+//                      call gets no message; a test call from the customer's own number still answers
 //
 // Telnyx wants a webhook answered within 2 seconds, so the work runs after the answer (track() keeps it, the tests
 // wait for it). A caller who sends three messages in a row gets one answer: a reply waits REPLY_DELAY_MS (3 s) after
@@ -160,13 +163,14 @@ export async function missedCall(app, c, raw) {
   const at = now();
   const caller = normalize(raw) || null;
   if (c.status !== 'active') return { outcome: 'inactive' };
+  if (caller && caller === c.phone) {
+    await note(app, c, { caller, at, line: SVC.lines.test });
+    return { outcome: 'test' };
+  }
+  if (!billingOf(c).on) return { outcome: 'unpaid' };
   if (!caller) {
     await note(app, c, { caller: null, at, line: SVC.lines.hidden });
     return { outcome: 'hidden' };
-  }
-  if (caller === c.phone) {
-    await note(app, c, { caller, at, line: SVC.lines.test });
-    return { outcome: 'test' };
   }
   if (isSkipped(db, c.id, caller)) return { outcome: 'skipped' };
   const open = db.get('SELECT * FROM chats WHERE customer_id = ? AND caller = ? AND opened_at > ? ORDER BY id DESC LIMIT 1', c.id, caller, nowIso(at - DAY));

@@ -2,6 +2,7 @@ import { DAY, HOUR, MINUTE, afterQuiet, israelDate, now, nowIso, quiet, whenHe }
 import { CLOSED, MSG, T } from './copy.js';
 import { num } from './env.js';
 import { GraphError, metaSettings, numberQuality, parseWebhook, sendTemplate, sendText } from './meta.js';
+import { customerByPhone, takeReceipt } from './pay.js';
 import { isMobile, local, masked } from './phones.js';
 import { asksToStop, automatic } from './stopWords.js';
 
@@ -22,7 +23,8 @@ import { asksToStop, automatic } from './stopWords.js';
 // What they answer: "כן, שלחו" (the template's button, or "כן" typed) gets the explanation at once, as plain text,
 // since they just wrote; any other message marks them as answering and opens the 24 hours in which the admin can
 // answer from the lead's page; an away message or a bot's is kept and counts for nothing. Someone who writes to the
-// business number and is not a lead becomes one ("כתבו אלינו").
+// business number and is not a lead becomes one ("כתבו אלינו"). A customer's lead stays a customer's whatever they
+// write, and a picture or a PDF from a customer while they owe a payment is the transfer's receipt (pay.js).
 //
 // Nothing here throws to its caller. A number in a log line is its last four digits.
 
@@ -242,12 +244,13 @@ async function onMessage(app, m) {
   const at = m.at && Math.abs(m.at - now()) < DAY ? m.at : now();
   // The lead we wrote to on this number, else the newest with it.
   let lead = db.get('SELECT * FROM leads WHERE mobile = ? ORDER BY (first_at IS NULL), id DESC LIMIT 1', from);
+  const customer = customerByPhone(db, from);
   if (!lead) {
     const stamp = nowIso(at);
     const id = Number(
       db.run(
-        "INSERT INTO leads (name, mobile, source, detail, stage, out_state, qualified, replied_at, last_in_at, created_at, updated_at) VALUES (?, ?, 'whatsapp', ?, 'talking', 'replied', 1, ?, ?, ?, ?)",
-        (m.name || local(from)).slice(0, 80),
+        `INSERT INTO leads (name, mobile, source, detail, stage, closed_why, out_state, qualified, replied_at, last_in_at, created_at, updated_at) VALUES (?, ?, 'whatsapp', ?, ${customer ? "'closed', 'customer'" : "'talking', NULL"}, 'replied', 1, ?, ?, ?, ?)`,
+        (m.name || (customer ? customer.business : local(from))).slice(0, 80),
         from,
         JSON.stringify({ first: m.text.slice(0, 300) }),
         stamp,
@@ -257,12 +260,23 @@ async function onMessage(app, m) {
       ).lastInsertRowid
     );
     lead = db.get('SELECT * FROM leads WHERE id = ?', id);
-    app.log(`[in] a new lead from ${masked(from)} (lead ${id})`);
+    if (customer) db.run('UPDATE customers SET lead_id = ? WHERE id = ? AND lead_id IS NULL', id, customer.id);
+    app.log(`[in] a new ${customer ? 'chat with customer' : 'lead'} from ${masked(from)} (lead ${id})`);
   }
   const auto = m.type === 'text' && automatic(m.text);
   if (!keep(db, { leadId: lead.id, phone: from, dir: 'in', kind: auto ? 'auto' : 'in', body: m.text, waId: m.id || null, at })) return; // seen before
   const stamp = nowIso(at);
   db.run('UPDATE leads SET last_in_at = ?, updated_at = ? WHERE id = ?', stamp, stamp, lead.id);
+  if (customer && m.media) {
+    let taken = true;
+    try {
+      taken = await takeReceipt(app, customer, m);
+    } catch (e) {
+      app.log(`[pay] customer ${customer.id}: ${e.stack || e}`);
+    }
+    if (taken) return;
+  }
+  const isCustomer = lead.closed_why === 'customer';
 
   const wroteFirst = Boolean(lead.first_at);
   const isNo = (m.type === 'button' && /^לא/.test(m.text)) || asksToStop(m.text) || (wroteFirst && !lead.yes_at && !lead.replied_at && NO.test(m.text));
@@ -270,7 +284,7 @@ async function onMessage(app, m) {
     const already = stopped(db, from);
     db.tx(() => {
       db.run('INSERT OR IGNORE INTO stops (phone, why, at) VALUES (?, ?, ?)', from, m.text.slice(0, 120), stamp);
-      db.run("UPDATE leads SET stage = 'closed', closed_why = 'stopped', out_state = 'stopped', updated_at = ? WHERE mobile = ?", stamp, from);
+      db.run("UPDATE leads SET stage = 'closed', closed_why = 'stopped', out_state = 'stopped', updated_at = ? WHERE mobile = ? AND coalesce(closed_why, '') != 'customer'", stamp, from);
     });
     app.log(`[in] ${masked(from)} asked us to stop (lead ${lead.id})`);
     if (!already) await answer(app, lead, 'stopped', MSG.stopped);
@@ -278,6 +292,12 @@ async function onMessage(app, m) {
   }
   if (auto) return;
 
+  // A customer writing: in a conversation again, so the admin sees it among the leads they answer, and still a
+  // customer (counted as one, and never deleted with the old leads).
+  if (isCustomer) {
+    db.run("UPDATE leads SET stage = 'talking', replied_at = COALESCE(replied_at, ?), later_until = NULL, updated_at = ? WHERE id = ?", stamp, stamp, lead.id);
+    return;
+  }
   const isYes = (m.type === 'button' && /^כן/.test(m.text)) || (wroteFirst && !lead.yes_at && YES.test(m.text));
   if (isYes && !lead.yes_at) {
     db.run("UPDATE leads SET yes_at = ?, stage = 'talking', closed_why = NULL, later_until = NULL, updated_at = ? WHERE id = ?", stamp, stamp, lead.id);

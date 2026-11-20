@@ -2,12 +2,13 @@ import { agoHe, dayMonth, hhmm } from './clock.js';
 import { CALL_OUTCOME, CHAT_STATE, CUST_STATUS, TC, TRADE, WA_STATUS } from './copy.js';
 import { forwardCodes } from './customers.js';
 import { button, csrfField, empty, esc, ext, flashLine, layout, ltr, tag } from './html.js';
+import { billingCard, payCard, payState, waitingCard } from './payPages.js';
 import { local } from './phones.js';
 import { telnyxSettings } from './telnyx.js';
 
-// The customers' pages in the admin: the list, and one page each with the setup in the order it happens (the
-// assistant number, WhatsApp on it, the forwarding codes, turning it on), the "לא לשלוח" list, and the last
-// conversations with what the summary said.
+// The customers' pages in the admin: the list (with the transfer receipts that wait), and one page each with the setup
+// in the order it happens (the assistant number, WhatsApp on it, the forwarding codes, turning it on), the payment,
+// the "לא לשלוח" list, and the last conversations with what the summary said.
 
 const statusKind = { active: '', setup: 'due', paused: 'wait', stopped: 'wait' };
 const custButton = (csrf, id, action, label, kind = '', fields = {}) => button(`/admin/customers/${id}/${action}`, label, csrf, { kind, fields });
@@ -35,18 +36,19 @@ ${input('assistant', c.assistant ? local(c.assistant) : '', 'maxlength="20" dir=
 <button class="primary">${esc(label)}</button></form>`;
 }
 
-export function customersPage(app, { csrf, flash = '', bad = false, rows, at }) {
+export function customersPage(app, { csrf, flash = '', bad = false, rows, waiting = [], at }) {
   const list = rows.length
     ? `<ul class="leads">${rows
         .map(
           (c) =>
-            `<li><div class="who"><a href="/admin/customers/${c.id}"><b>${esc(c.business)}</b></a><span class="muted">${esc(c.name)}</span></div><div class="acts"><a class="button" href="/admin/customers/${c.id}">${esc('לפתוח')}</a></div><div class="tags">${tag(CUST_STATUS[c.status], statusKind[c.status])}${tag(WA_STATUS[c.wa_status], c.wa_status === 'connected' ? '' : 'wait')}${c.trade ? tag(TRADE[c.trade], 'trade') : ''}${tag(`${c.calls_week} שיחות השבוע`, 'where')}${c.last_call_at ? tag(`שיחה אחרונה ${agoHe(Date.parse(c.last_call_at), at)}`, 'where') : ''}</div></li>`
+            `<li><div class="who"><a href="/admin/customers/${c.id}"><b>${esc(c.business)}</b></a><span class="muted">${esc(c.name)}</span></div><div class="acts"><a class="button" href="/admin/customers/${c.id}">${esc('לפתוח')}</a></div><div class="tags">${tag(CUST_STATUS[c.status], statusKind[c.status])}${tag(payState(c).text, payState(c).kind)}${tag(WA_STATUS[c.wa_status], c.wa_status === 'connected' ? '' : 'wait')}${c.trade ? tag(TRADE[c.trade], 'trade') : ''}${tag(`${c.calls_week} שיחות השבוע`, 'where')}${c.last_call_at ? tag(`שיחה אחרונה ${agoHe(Date.parse(c.last_call_at), at)}`, 'where') : ''}</div></li>`
         )
         .join('')}</ul>`
     : empty(TC.empty, TC.emptyLead);
   const body = `${flashLine(flash, bad)}
 <div class="head"><div><h1>${esc(TC.title)}</h1><p class="lead-line">${esc(TC.lead)}</p></div></div>
 ${setupNotes(app)}
+${waitingCard(waiting, at)}
 ${list}
 <details class="card more"><summary>${esc(TC.add)}</summary>${fieldsForm(csrf, '/admin/customers/new', {}, TC.create)}</details>`;
   return layout({ title: TC.title, body, csrf, active: 'customers' });
@@ -101,16 +103,18 @@ function chatsCard(chats, calls, at) {
   return `<article class="card" id="chats"><h2>${esc(TC.chats.title)}</h2>${callLine}${chats.length ? chats.map(one).join('') : `<p class="muted">${esc(TC.chats.none)}</p>`}</article>`;
 }
 
-export function customerPage(app, { csrf, flash = '', bad = false, c, skips, chats, calls, at }) {
+export function customerPage(app, { csrf, flash = '', bad = false, c, skips, chats, calls, receipts = [], notices = [], at }) {
   const body = `${flashLine(flash, bad)}
 <p><a href="/admin/customers">← ${esc(TC.back)}</a></p>
 <div class="head"><div><h1>${esc(c.business)}</h1><p class="tags">${esc(c.name)} ${ltr(local(c.phone), 'muted')} ${c.trade ? tag(TRADE[c.trade], 'trade') : ''}${tag(WA_STATUS[c.wa_status], c.wa_status === 'connected' ? '' : 'wait')}</p></div></div>
 ${setupNotes(app)}
 <div class="cards">
 ${setupCard(app, csrf, c, at)}
+${payCard(app, csrf, c, { receipts, notices })}
 ${chatsCard(chats, calls, at)}
 ${skipsCard(csrf, c, skips)}
 <article class="card" id="details"><h2>${esc('פרטים')}</h2>${fieldsForm(csrf, `/admin/customers/${c.id}/edit`, c)}</article>
+${billingCard(csrf, c)}
 <article class="card end" id="end"><h2>${esc(TC.end.title)}</h2><details class="sure"><summary>${esc(TC.end.remove)}</summary><p class="muted">${esc(TC.end.hint)}</p>${custButton(csrf, c.id, 'delete', TC.end.sure, 'danger')}</details></article>
 </div>`;
   return layout({ title: c.business, body, csrf, active: 'customers', reload: c.wa_status === 'verifying' && !c.otp_recording ? 15 : 0 });
