@@ -2,12 +2,13 @@ import Anthropic from '@anthropic-ai/sdk';
 import { TRADE } from './copy.js';
 
 // The conversation with a caller, one turn at a time: the whole chat so far goes in, and what to answer comes back
-// with what is known (what happened, where, how urgent) and whether that is enough. Claude Opus 5.5 at low effort (a
-// short chat, not a hard problem), the answer held to a JSON schema by structured outputs, and the server-side
-// fallback on, so a request a safety classifier declines is answered by Anthropic's recommended fallback model
-// instead of not at all.
+// with what is known (what happened, where, how urgent) and whether that is enough. Claude Sonnet 5.5 at low effort
+// (a short chat, not a hard problem: half Opus's price, and the caller waits less), the answer held to a JSON schema
+// by structured outputs, and the server-side fallback on, so a request a safety classifier declines is answered by
+// Anthropic's recommended fallback model instead of not at all. CLAUDE_MODEL=claude-opus-5-5 switches to Opus if the
+// Hebrew slips in the pilot.
 
-export const MODEL = 'claude-opus-5-5';
+export const MODEL = 'claude-sonnet-5-5';
 
 /** Claude, or null while ANTHROPIC_API_KEY is not set. Tests hand in their own. */
 export function makeClaude(env) {

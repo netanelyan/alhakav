@@ -72,8 +72,8 @@ At 100 missed calls, estimated from the published prices (Telnyx and Meta in dol
 | The assistant number | $3 (Telnyx, Israel local) |
 | Telnyx per message ($0.004), about 400 messages in and out | about $1.60 |
 | Meta: the first message and the summary, 100 each | $1.06 as Utility, $7.06 if both were Marketing |
-| Claude Opus 5.5, about 3 short turns a conversation | about $3 to $4 |
-| **Total** | **about $9 to $16**, against 149 ₪ |
+| Claude Sonnet 5.5, about 3 short turns a conversation | about $1.50 to $2 |
+| **Total** | **about $7 to $14**, against 149 ₪ |
 
 Replies inside the 24 hours are within the 1,000 free service messages Meta gives each number a month.
 

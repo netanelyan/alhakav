@@ -38,7 +38,7 @@ function fakeClaude(turns) {
   const seen = [];
   return {
     seen,
-    model: 'claude-opus-5-5',
+    model: 'claude-sonnet-5-5',
     messages: {
       create: async (req) => {
         seen.push(req);
