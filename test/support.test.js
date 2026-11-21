@@ -9,7 +9,7 @@ test("Toran's file: the site's own facts, in the company export's shape, with 'j
   assert.equal(d.url, 'https://alhakav.example/');
   assert.equal(d.name, 'על הקו');
   assert.equal(d.start.kind, 'join');
-  assert.equal(d.botName, 'הסוכן');
+  assert.equal(d.botName, '', 'no name: "היי, אני הבוט של על הקו."');
   assert.match(d.status, /מה עובד היום[\s\S]*מה עוד לא/);
   assert.deepEqual(d.plans.map((p) => [p.key, p.monthly]), [['monthly', 149]]);
   assert.match(d.plans[0].text, /175\.82 ₪ כולל מע״מ/);

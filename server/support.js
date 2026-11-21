@@ -95,9 +95,9 @@ export function supportExport(env, at = new Date()) {
     name: 'על הקו',
     status: STATUS,
     start: { kind: 'join', text: START },
-    // The sales bot's name in its first line, "היי, אני הסוכן, הבוט של על הקו.": the orange one, who sells and takes the
-    // payments; המוקדן, the blue one, is the assistant number that does the work (docs/connecting.md).
-    botName: 'הסוכן',
+    // No name: the sales bot opens with "היי, אני הבוט של על הקו." (the owner, 2026-11-21). "" clears any name Toran
+    // has for it. המוקדן, the blue one, is the assistant number that does the work (docs/connecting.md).
+    botName: '',
     tone: textOf((/<p class="lead">([\s\S]*?)<\/p>/.exec(index) || [, ''])[1]),
     contact: { whatsapp, email },
     plans: [{ key: 'monthly', product: 'על הקו', title: 'על הקו, לחודש', monthly: PRICE, text: `${PRICE} ₪ לחודש, לא כולל מע״מ (${withVat} ₪ כולל מע״מ). כולל את המספר שאליו עוברות השיחות ואת ההודעות בוואטסאפ. אין דמי הקמה, ומשלמים חודש מראש בהעברה בנקאית.`, url: `${site}/#price` }],
