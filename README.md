@@ -60,6 +60,13 @@ app's secret in `META_APP_SECRET`. Submit the two templates in `docs/whatsapp-te
 their last line. A number on the Cloud API stops working in the WhatsApp Business app on the phone, unless it is
 connected with coexistence.
 
+When the Meta app's webhook already serves something else, leave it and give the business number's WhatsApp Business
+Account its own: `POST /<META_WABA_ID>/subscribed_apps` with `override_callback_uri` set to
+`https://<domain>/meta/webhook` and `verify_token` set to `META_VERIFY_TOKEN` (alhakav must already be running with that
+token, since Meta checks it at once). The fields stay the app's; alhakav reads `messages` and ignores the rest. Then
+register the number once, `POST /<META_PHONE_ID>/register` with `messaging_product: "whatsapp"` and a six-digit PIN;
+keep the PIN in `META_PIN` (alhakav does not read it, but Meta asks for it to register the number again).
+
 **Payments.** `PAYMENT_DETAILS`, the template `alhakav_payment` (docs/whatsapp-templates.md) submitted on the business
 number, and Morning's API keys in `MORNING_CLIENT_ID` and `MORNING_CLIENT_SECRET` (docs/payments.md).
 

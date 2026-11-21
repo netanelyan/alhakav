@@ -38,7 +38,10 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const STATIC_DIR = path.join(ROOT, 'server', 'static');
 const STATIC = { 'admin.css': 'text/css; charset=utf-8', 'admin.js': 'text/javascript; charset=utf-8' };
 const HTML = 'text/html; charset=utf-8';
-// The public site: the landing page and the legal pages, by name only (the repo's other files are never served).
+const SVG = 'image/svg+xml';
+const PNG = 'image/png';
+// The public site: the landing page, the legal pages and the brand files they show, by name only (the repo's other
+// files are never served).
 const PUBLIC = {
   '/': ['index.html', HTML],
   '/index.html': ['index.html', HTML],
@@ -49,6 +52,13 @@ const PUBLIC = {
   '/accessibility.html': ['accessibility.html', HTML],
   '/accessibility': ['accessibility.html', HTML],
   '/legal.css': ['legal.css', 'text/css; charset=utf-8'],
+  '/svg/al-hakav-logo.svg': ['svg/al-hakav-logo.svg', SVG],
+  '/svg/al-hakav-logo-on-dark.svg': ['svg/al-hakav-logo-on-dark.svg', SVG],
+  '/svg/al-hakav-icon.svg': ['svg/al-hakav-icon.svg', SVG],
+  '/svg/al-hakav-favicon.svg': ['svg/al-hakav-favicon.svg', SVG],
+  '/png/favicon-32.png': ['png/favicon-32.png', PNG],
+  '/png/apple-touch-icon.png': ['png/apple-touch-icon.png', PNG],
+  '/favicon.ico': ['png/favicon-32.png', PNG],
 };
 
 const HEADERS = {
