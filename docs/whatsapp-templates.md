@@ -81,7 +81,8 @@ curl -sS -X POST "https://graph.facebook.com/v23.0/$META_WABA_ID/message_templat
   -H "Authorization: Bearer $META_TOKEN" -H "Content-Type: application/json" --data @-
 ```
 
-The same for `alhakav_page_reminder` with its body. Until Meta approves the first, the scheduled task sends nothing
+Both were submitted this way on 2026-11-21, with `https://alhakav.com/p/{{1}}`, and approved as Marketing the same
+evening. The same for `alhakav_page_reminder` with its body. Until Meta approves the first, the scheduled task sends nothing
 (`template_pending`), and a send from the admin answers error 132001, which the lead's page explains.
 
 The first templates, `alhakav_ask` and `alhakav_ask_reminder` (a question first, with "כן, שלחו"), stay on the account
