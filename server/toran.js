@@ -108,7 +108,7 @@ export function contextOf(db, lead, phone, env = {}) {
     if (db.get('SELECT 1 FROM receipts WHERE customer_id = ? AND decided_at IS NULL', c.id)) lines.push('A transfer screenshot from them is waiting for us to check the bank.');
     return lines.filter(Boolean).join(' ');
   }
-  if (lead.first_at) return [`A tradesperson we wrote to first${lead.name ? ` (${lead.name})` : ''}, asking whether we may send them a short explanation.`, lead.yes_at ? `They said yes and already got our explanation, with the price and a page we made for their business${lead.page_code ? ` (${pageUrl(env, lead.page_code)}), where they can try המוקדן on themselves` : ''}.` : ''].filter(Boolean).join(' ');
+  if (lead.first_at) return [`A tradesperson we wrote to first${lead.name ? ` (${lead.name})` : ''}.`, lead.page_code ? `Our first message linked a page we made for their business (${pageUrl(env, lead.page_code)}), where they can see how it would work for them and try המוקדן on themselves.` : '', lead.yes_at ? 'They said yes and already got the page again, with the price.' : ''].filter(Boolean).join(' ');
   return 'They wrote to us first, most likely from the website.';
 }
 

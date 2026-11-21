@@ -15,7 +15,8 @@ import { bizOf, pageCodeOf, pageUrl } from './demo.js';
 // asks for a person's opt-in before a business writes first, and a template that people block or report is paused,
 // then disabled, and takes the number's rating with it.
 //
-//   - nothing goes by itself: the first message and the one reminder go when the admin presses the button
+//   - the first message goes when the admin presses the button, or when the scheduled task asks (autopilot.js,
+//     docs/autopilot.md); the one reminder only from the admin
 //   - the way out is on the message: "לא, תודה", or "לא", "הסר", "די" in any short form at any time, puts the number in
 //     `stops`, says so once, closes the lead, and no message goes to it again
 //   - at most OUTREACH_DAILY (10) first messages and reminders a day, by Israel's calendar day
@@ -24,8 +25,8 @@ import { bizOf, pageCodeOf, pageUrl } from './demo.js';
 //   - one first message and one reminder per lead, the reminder four days after (and not in a quiet hour), only while
 //     they have not answered, and only to a mobile read from their own site
 //
-// What they answer: "כן, שלחו" (the template's button, or "כן" typed) gets the explanation at once, as plain text,
-// since they just wrote; any other message marks them as answering and opens the 24 hours in which the admin can
+// The first message carries their own page (demo.js), as the template's link button. What they answer: "כן" (or the
+// old template's "כן, שלחו" button) gets the page again with the price at once, as plain text, since they just wrote; any other message marks them as answering and opens the 24 hours in which the admin can
 // answer from the lead's page; an away message or a bot's is kept and counts for nothing. Someone who writes to the
 // business number and is not a lead becomes one ("כתבו אלינו"). A customer's lead stays a customer's whatever they
 // write, and a picture or a PDF from a customer while they owe a payment is the transfer's receipt (pay.js).
@@ -38,8 +39,8 @@ export const WINDOW_MS = 24 * HOUR;
 export function outreachSettings(env) {
   return {
     daily: num(env.OUTREACH_DAILY, 10),
-    first: String(env.TEMPLATE_FIRST || 'alhakav_ask'),
-    reminder: String(env.TEMPLATE_REMINDER || 'alhakav_ask_reminder'),
+    first: String(env.TEMPLATE_FIRST || 'alhakav_page'),
+    reminder: String(env.TEMPLATE_REMINDER || 'alhakav_page_reminder'),
     sender: String(env.SENDER_LINE || '').trim(),
     site: String(env.SITE_URL || '').trim(),
   };
@@ -51,10 +52,10 @@ export function nameParam(lead) {
   return n ? `אצל ${n}` : 'אצלכם';
 }
 
-/** The first message or the reminder, as the tradesperson reads it. */
+/** The first message or the reminder, as the tradesperson reads it, with their page (made first: demo.js pageCodeOf). */
 export function messageText(stage, lead, env, { byHand = false } = {}) {
   const o = outreachSettings(env);
-  return MSG[stage](nameParam(lead), o.sender || MSG.senderMissing, byHand);
+  return MSG[stage](nameParam(lead), pageUrl(env, lead.page_code || ''), o.sender || MSG.senderMissing, byHand);
 }
 
 export const stopped = (db, phone) => Boolean(phone && db.get('SELECT 1 FROM stops WHERE phone = ?', phone));
@@ -145,23 +146,24 @@ function raise(db, lead, state) {
 /** The first message or the reminder, from the business number, as its approved template. */
 export async function sendPitch(app, lead, stage) {
   const m = metaSettings(app.env);
-  if (!m.ready) return { ok: false, flash: T.setup.meta };
+  if (!m.ready) return { ok: false, why: 'setup', flash: T.setup.meta };
   const b = blocked(app, lead, stage);
-  if (b) return { ok: false, flash: blockedText(b) };
+  if (b) return { ok: false, why: b.why, flash: blockedText(b) };
   const q = await qualityNow(app, m);
-  if (q && !['GREEN', 'UNKNOWN'].includes(q)) return { ok: false, flash: T.guard.quality(q) };
+  if (q && !['GREEN', 'UNKNOWN'].includes(q)) return { ok: false, why: 'quality', flash: T.guard.quality(q) };
   const o = outreachSettings(app.env);
+  const code = pageCodeOf(app.db, lead);
   const body = messageText(stage, lead, app.env);
   let id;
   try {
-    id = await sendTemplate(m, app.graphFetch, lead.mobile, stage === 'first' ? o.first : o.reminder, [nameParam(lead)]);
+    id = await sendTemplate(m, app.graphFetch, lead.mobile, stage === 'first' ? o.first : o.reminder, [nameParam(lead)], 'he', { url: code });
   } catch (e) {
     app.log(`[out] ${stage} to ${masked(lead.mobile)} (lead ${lead.id}) not sent: ${e.code || ''} ${e.message}`);
     if (e instanceof GraphError && UNDELIVERED.has(e.code)) {
       keep(app.db, { leadId: lead.id, phone: lead.mobile, dir: 'out', kind: stage, body, status: 'failed', error: graphWhy(e) });
       if (stage === 'first') app.db.run("UPDATE leads SET out_state = 'undelivered', updated_at = ? WHERE id = ?", nowIso(), lead.id);
     }
-    return { ok: false, flash: T.send.failed(graphWhy(e)) };
+    return { ok: false, why: e instanceof GraphError && UNDELIVERED.has(e.code) ? 'undelivered' : 'failed', flash: T.send.failed(graphWhy(e)) };
   }
   const at = nowIso();
   app.db.tx(() => {
@@ -178,6 +180,7 @@ export function markByHand(app, lead, stage) {
   const b = blocked(app, lead, stage, { byHand: true });
   // Quiet hours and a reminder not yet due say when to send; once it went from the phone, it went.
   if (b && !['quiet', 'notDue'].includes(b.why)) return { ok: false, flash: blockedText(b) };
+  pageCodeOf(app.db, lead);
   const at = nowIso();
   app.db.tx(() => {
     keep(app.db, { leadId: lead.id, phone: lead.mobile, dir: 'out', kind: stage, body: messageText(stage, lead, app.env, { byHand: true }), status: 'hand' });

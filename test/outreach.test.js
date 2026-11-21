@@ -23,8 +23,12 @@ test('the first message goes as the approved template, with the name, and moves 
   const send = graph.sent()[0];
   assert.equal(send.url, 'https://graph.test/v23.0/123/messages');
   assert.equal(send.body.to, '972541234567');
-  assert.equal(send.body.template.name, 'alhakav_ask');
+  assert.equal(send.body.template.name, 'alhakav_page');
   assert.deepEqual(send.body.template.components[0].parameters, [{ type: 'text', text: 'אצל אבי אינסטלציה' }]);
+  // The button opens their own page.
+  const code = leadOf(db, lead.id).page_code;
+  assert.match(code, /^[a-z0-9]{10}$/);
+  assert.deepEqual(send.body.template.components[1], { type: 'button', sub_type: 'url', index: '0', parameters: [{ type: 'text', text: code }] });
   const x = leadOf(db, lead.id);
   assert.equal(x.stage, 'waiting');
   assert.equal(x.out_state, 'sent');
@@ -32,7 +36,7 @@ test('the first message goes as the approved template, with the name, and moves 
   const [m] = msgs(db, lead.id);
   assert.equal(m.kind, 'first');
   assert.equal(m.wa_id, 'wamid.1');
-  assert.match(m.body, /אפשר לשלוח לכם הסבר קצר איך זה יעבוד אצל אבי אינסטלציה\?/);
+  assert.match(m.body, /הכנו דף קצר שמראה איך זה ייראה אצל אבי אינסטלציה\./);
   assert.match(m.body, /ישראל ישראלי/);
   assert.deepEqual(countsNew(db), { all: 0, fit: 0, below: 0 });
   assert.equal(countsReached(db).waiting, 1);
@@ -83,7 +87,7 @@ test('one reminder, four days on, only while they have not answered', async () =
   setNow(SUNDAY + 4 * DAY + HOUR);
   assert.ok(reminderDue(leadOf(db, lead.id)));
   assert.ok((await sendPitch(app, leadOf(db, lead.id), 'reminder')).ok);
-  assert.equal(graph.sent().at(-1).body.template.name, 'alhakav_ask_reminder');
+  assert.equal(graph.sent().at(-1).body.template.name, 'alhakav_page_reminder');
   assert.ok(!(await sendPitch(app, leadOf(db, lead.id), 'reminder')).ok);
 });
 

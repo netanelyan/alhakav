@@ -258,6 +258,15 @@ CREATE TABLE demo_messages (
   at TEXT NOT NULL
 );
 `,
+  // The scheduled task's notes for the owner (autopilot.js, docs/autopilot.md).
+  `
+CREATE TABLE autopilot_notes (
+  id INTEGER PRIMARY KEY,
+  text TEXT NOT NULL,
+  tell INTEGER NOT NULL DEFAULT 0,
+  at TEXT NOT NULL
+);
+`,
 ];
 
 export class Db {

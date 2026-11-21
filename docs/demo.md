@@ -20,9 +20,10 @@ the views, and the tries.
 
 ## How it reaches them
 
-The first message (`alhakav_ask`) asks whether we may send a short explanation. "כן, שלחו" brings the page at once
-(copy.js `MSG.pitch`): one honest line on what the page is, the address, that they can try it on themselves, and the
-price. Nothing else sends it; the admin can also copy it from the lead's page and send it by hand.
+In the first message itself (`alhakav_page`, docs/whatsapp-templates.md), as its button "לראות את הדף שלכם": the owner,
+2026-11-21, "they dont have time to text, they see a url with a promise and they click." Sent by hand, the address
+is in the text. A "כן" brings it again at once with the price (copy.js `MSG.pitch`), and so does the old template's
+"כן, שלחו".
 
 ## The try
 

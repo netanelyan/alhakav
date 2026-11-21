@@ -1,89 +1,101 @@
 # WhatsApp templates
 
 A business can write first to someone who has not written to it in the last 24 hours only with a template Meta
-approved. The outreach to tradespeople uses two, both **Marketing**, in **Hebrew (he)**, the same shape as openfrequency's
-`openfrequency_ask`: they ask before sending anything, say who writes, and carry the way out as a button.
+approved. The outreach to tradespeople uses two, both **Marketing**, in **Hebrew (he)**: the first message carries
+their own page as a link button (docs/demo.md), says who writes, and carries the way out as a button. docs/autopilot.md
+says why the first message is an offer from the start, and what follows from that.
 
 The last line of each body identifies who writes, as section 30A asks of an advertiser: the business name, the owner's
-full name and the address (no site until there is a domain). That line is one of the few places the owner's details
-appear, so it is never written in this repo: it lives only in `SENDER_LINE` on the server, and the template submitted
-to Meta carries it exactly, so the admin page shows what the tradesperson will read.
+full name and the address. That line is one of the few places the owner's details appear, so it is never written in
+this repo: it lives only in `SENDER_LINE` on the server, and the template submitted to Meta carries it exactly, so the
+admin page shows what the tradesperson will read.
 
 Where they go: a WhatsApp Business Account named על הקו in the verified HanutHashofet portfolio, created with the
 business number itself (Meta's "Create a WhatsApp account" asks for the number and verifies it in the same step), so
 the number comes first.
 
-Meta's rules these follow: the body does not start or end with a variable, and quick replies are the only buttons.
+Meta's rules these follow: the body does not start or end with a variable, a link button's variable is the end of its
+address, and the link comes before the quick reply. The link's address is fixed when Meta approves the template, so it
+is the site's real domain (`SITE_URL`); a new domain means submitting both again under new names and setting
+`TEMPLATE_FIRST` and `TEMPLATE_REMINDER`.
 
-## alhakav_ask (the first message)
+## alhakav_page (the first message)
 
 | | |
 |---|---|
-| Name | `alhakav_ask` (or set `TEMPLATE_FIRST`) |
+| Name | `alhakav_page` (or set `TEMPLATE_FIRST`) |
 | Category | Marketing |
 | Language | Hebrew (he) |
-| Buttons | two quick replies: `כן, שלחו`, then `לא, תודה` |
-| Variable (sample) | `{{1}}` = `אצל אבי אינסטלציה` |
+| Buttons | a link, `לראות את הדף שלכם`, to `<SITE_URL>/p/{{1}}`; then a quick reply, `לא, תודה` |
+| Variables (sample) | the body's `{{1}}` = `אצל אבי אינסטלציה`; the link's `{{1}}` = `abcdefgh23`, the page's code |
 
 ```
-שלום, כאן על הקו. כשאתם באמצע עבודה ולא עונים לטלפון, אנחנו שולחים למי שהתקשר הודעה בוואטסאפ, מבררים מה הוא צריך, ושולחים לכם סיכום.
+שלום, כאן על הקו. כשאתם באמצע עבודה ולא עונים, מי שהתקשר מקבל מאיתנו הודעה בוואטסאפ בשם העסק, ואתם מקבלים סיכום של מה שהוא צריך.
 
-אפשר לשלוח לכם הסבר קצר איך זה יעבוד {{1}}?
+הכנו דף קצר שמראה איך זה ייראה {{1}}. אפשר גם לנסות שם על עצמכם, לוקח דקה.
 
-לא מעוניינים? לוחצים "לא, תודה" ולא נכתוב שוב.
+לא רלוונטי? לוחצים "לא, תודה" ולא נכתוב שוב.
 
 [שם העסק], [שם מלא], [כתובת].
 ```
 
-## alhakav_ask_reminder (the one reminder, four days later)
+## alhakav_page_reminder (the one reminder, four days later, only by the admin)
 
 | | |
 |---|---|
-| Name | `alhakav_ask_reminder` (or set `TEMPLATE_REMINDER`) |
+| Name | `alhakav_page_reminder` (or set `TEMPLATE_REMINDER`) |
 | Category | Marketing |
 | Language | Hebrew (he) |
-| Buttons | two quick replies: `כן, שלחו`, then `לא, תודה` |
-| Variable (sample) | `{{1}}` = `אצל אבי אינסטלציה` |
+| Buttons | the same two |
+| Variables (sample) | the same |
 
 ```
-שלום שוב, כאן על הקו. לפני כמה ימים שאלנו אם אפשר לשלוח לכם הסבר קצר איך זה יעבוד {{1}}: מי שמתקשר ולא מקבל מענה מקבל מאיתנו הודעה בוואטסאפ, ואתם מקבלים סיכום.
+שלום שוב, כאן על הקו. לפני כמה ימים שלחנו לכם דף שמראה איך זה ייראה {{1}}: מי שמתקשר ולא מקבל מענה מקבל מאיתנו הודעה בוואטסאפ, ואתם מקבלים סיכום.
 
-זו ההודעה האחרונה שלנו בנושא. לוחצים "כן, שלחו" ונשלח, או "לא, תודה" ולא נכתוב שוב.
+זו ההודעה האחרונה שלנו בנושא. לא רלוונטי? לוחצים "לא, תודה" ולא נכתוב שוב.
 
 [שם העסק], [שם מלא], [כתובת].
 ```
 
 ## Submitting them
 
-In WhatsApp Manager (Account tools, Message templates), or with the API, using a system user token and your WhatsApp
-Business Account id (`META_WABA_ID`). After filling in the last line, from a shell with `jq` installed:
+With the API, a system user token and the WhatsApp Business Account's id (`META_WABA_ID`), on the server, where
+`SENDER_LINE` is, so the owner's details are never typed anywhere else:
 
 ```sh
-body1='שלום, כאן על הקו. כשאתם באמצע עבודה ולא עונים לטלפון, אנחנו שולחים למי שהתקשר הודעה בוואטסאפ, מבררים מה הוא צריך, ושולחים לכם סיכום.
+set -a; . /etc/alhakav/alhakav.env; set +a
+body1="שלום, כאן על הקו. כשאתם באמצע עבודה ולא עונים, מי שהתקשר מקבל מאיתנו הודעה בוואטסאפ בשם העסק, ואתם מקבלים סיכום של מה שהוא צריך.
 
-אפשר לשלוח לכם הסבר קצר איך זה יעבוד {{1}}?
+הכנו דף קצר שמראה איך זה ייראה {{1}}. אפשר גם לנסות שם על עצמכם, לוקח דקה.
 
-לא מעוניינים? לוחצים "לא, תודה" ולא נכתוב שוב.
+לא רלוונטי? לוחצים \"לא, תודה\" ולא נכתוב שוב.
 
-[שם העסק], [שם מלא], [כתובת].'
+$SENDER_LINE"
 
-jq -n --arg body "$body1" '{name: "alhakav_ask", language: "he", category: "MARKETING",
+jq -n --arg body "$body1" --arg site "${SITE_URL%/}" '{name: "alhakav_page", language: "he", category: "MARKETING",
   components: [{type: "BODY", text: $body, example: {body_text: [["אצל אבי אינסטלציה"]]}},
-               {type: "BUTTONS", buttons: [{type: "QUICK_REPLY", text: "כן, שלחו"}, {type: "QUICK_REPLY", text: "לא, תודה"}]}]}' |
+               {type: "BUTTONS", buttons: [
+                 {type: "URL", text: "לראות את הדף שלכם", url: ($site + "/p/{{1}}"), example: [($site + "/p/abcdefgh23")]},
+                 {type: "QUICK_REPLY", text: "לא, תודה"}]}]}' |
 curl -sS -X POST "https://graph.facebook.com/v23.0/$META_WABA_ID/message_templates" \
   -H "Authorization: Bearer $META_TOKEN" -H "Content-Type: application/json" --data @-
 ```
 
-The same for `alhakav_ask_reminder` with its body. Until Meta approves a template, a send answers error 132001 and the
-lead's page says so.
+The same for `alhakav_page_reminder` with its body. Until Meta approves the first, the scheduled task sends nothing
+(`template_pending`), and a send from the admin answers error 132001, which the lead's page explains.
+
+The first templates, `alhakav_ask` and `alhakav_ask_reminder` (a question first, with "כן, שלחו"), stay on the account
+for the leads that got them; "כן, שלחו" still brings their page.
 
 ## What happens after
 
-- **כן, שלחו** (or "כן" typed): the explanation goes at once as plain text (`server/copy.js`, `MSG.pitch`), with the
-  price and `SITE_URL`, since they just wrote to us. The lead moves to "בשיחה".
+- **לראות את הדף שלכם**: their page (docs/demo.md). The owner hears when they open it, and when they try המוקדן.
+- **כן** typed (or the old "כן, שלחו" button): their page again at once, with the price, as plain text (`MSG.pitch`),
+  since they just wrote to us. The lead moves to "בשיחה".
 - **לא, תודה** (or "לא", "הסר", "די" in any short form, at any time): the number goes into `stops`, one line says it
   was removed, the lead closes, and no message goes to it again.
-- Anything else they write marks them as answering and opens 24 hours in which you can answer from the lead's page.
+- Anything else they write: Toran's sales bot answers (docs/toran.md), and for 24 hours the admin can answer from the
+  lead's page too.
 
 ## המוקדן's number (the service itself)
 

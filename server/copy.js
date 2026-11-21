@@ -10,28 +10,37 @@ export const CLOSED = { ...LOST, customer: 'הפכו ללקוחות', stopped: '
 
 // ---- The messages to a tradesperson.
 //
-// Israel's anti-spam rule (the Communications Law, section 30A) lets a business make one approach to another business
-// asking whether it may send an offer, when it says who writes and how to stop: so the first message asks, the line
-// at its end says who we are, and "לא, תודה" (or "לא", "הסר", "די" in any short form) stops us for good. The one
-// reminder is the last message. openfrequency's openfrequency_ask template, for על הקו.
+// The first message carries their page (demo.js), the owner, 2026-11-21: "it should be sent in the first message. they
+// dont have time to text, they see a url with a promise and they click." So it is an offer from the start, not the
+// question section 30A of the Communications Law allows as the one approach to a business (openfrequency-toran's
+// docs/autopilot.md, "Why the question"): the owner chose it knowing that. What stays: the line at its end says who
+// we are, and "לא, תודה" (or "לא", "הסר", "די" in any short form) stops us for good. The one reminder is the last
+// message, and only the admin sends it; the scheduled task never does (docs/autopilot.md).
 //
 // The first and the reminder go from the business number as Meta-approved templates (docs/whatsapp-templates.md); the
-// text here is the same body, filled in, so the admin sees what the tradesperson will read. {{1}} is "אצל <name>".
+// text here is the same body, filled in, so the admin sees what the tradesperson will read. {{1}} is "אצל <name>",
+// and the button "לראות את הדף שלכם" opens their page. Sent by hand, the page's address is in the text instead.
 
 export const MSG = {
-  first: (n, sender, byHand) =>
+  first: (n, url, sender, byHand) =>
     [
-      'שלום, כאן על הקו. כשאתם באמצע עבודה ולא עונים לטלפון, אנחנו שולחים למי שהתקשר הודעה בוואטסאפ, מבררים מה הוא צריך, ושולחים לכם סיכום.',
-      `אפשר לשלוח לכם הסבר קצר איך זה יעבוד ${n}?`,
-      byHand ? 'לא מעוניינים? עונים "לא" ולא נכתוב שוב.' : 'לא מעוניינים? לוחצים "לא, תודה" ולא נכתוב שוב.',
+      'שלום, כאן על הקו. כשאתם באמצע עבודה ולא עונים, מי שהתקשר מקבל מאיתנו הודעה בוואטסאפ בשם העסק, ואתם מקבלים סיכום של מה שהוא צריך.',
+      `הכנו דף קצר שמראה איך זה ייראה ${n}. אפשר גם לנסות שם על עצמכם, לוקח דקה.`,
+      byHand ? url : '',
+      byHand ? 'לא רלוונטי? עונים "לא" ולא נכתוב שוב.' : 'לא רלוונטי? לוחצים "לא, תודה" ולא נכתוב שוב.',
       sender,
-    ].join('\n\n'),
-  reminder: (n, sender, byHand) =>
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
+  reminder: (n, url, sender, byHand) =>
     [
-      `שלום שוב, כאן על הקו. לפני כמה ימים שאלנו אם אפשר לשלוח לכם הסבר קצר איך זה יעבוד ${n}: מי שמתקשר ולא מקבל מענה מקבל מאיתנו הודעה בוואטסאפ, ואתם מקבלים סיכום.`,
-      byHand ? 'זו ההודעה האחרונה שלנו בנושא. עונים "כן" ונשלח, או "לא" ולא נכתוב שוב.' : 'זו ההודעה האחרונה שלנו בנושא. לוחצים "כן, שלחו" ונשלח, או "לא, תודה" ולא נכתוב שוב.',
+      `שלום שוב, כאן על הקו. לפני כמה ימים שלחנו לכם דף שמראה איך זה ייראה ${n}: מי שמתקשר ולא מקבל מענה מקבל מאיתנו הודעה בוואטסאפ, ואתם מקבלים סיכום.`,
+      byHand ? url : '',
+      byHand ? 'זו ההודעה האחרונה שלנו בנושא. לא רלוונטי? עונים "לא" ולא נכתוב שוב.' : 'זו ההודעה האחרונה שלנו בנושא. לא רלוונטי? לוחצים "לא, תודה" ולא נכתוב שוב.',
       sender,
-    ].join('\n\n'),
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
   // After "כן, שלחו": they wrote to us, so this goes as plain text, at once, with the page we made them (demo.js).
   pitch: (biz, url) =>
     [
@@ -142,7 +151,7 @@ export const T = {
   // A lead's own page (demo.js), on the admin's lead page.
   page: {
     title: 'הדף שלהם',
-    hint: 'נשלח להם לבד אחרי "כן, שלחו". אפשר גם להעתיק ולשלוח בעצמכם.',
+    hint: 'הקישור נמצא בהודעה הראשונה, בכפתור "לראות את הדף שלכם".',
     views: (n, ago) => `נפתח ${n === 1 ? 'פעם אחת' : `${n} פעמים`}, לאחרונה ${ago}.`,
     noViews: 'עוד לא נפתח.',
     demos: (n) => `ניסו את המוקדן על עצמם ${n === 1 ? 'פעם אחת' : `${n} פעמים`}.`,

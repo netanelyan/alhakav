@@ -90,7 +90,7 @@ test('a site added by its address becomes a lead with its page, its message and 
   const page = await b.go(r.location);
   assert.match(page.text, /נוסף: אבי אינסטלציה, ציון 100/);
   assert.match(page.text, /ככה הם יקראו את ההודעה/);
-  assert.match(page.text, /איך זה יעבוד אצל אבי אינסטלציה\?/);
+  assert.match(page.text, /איך זה ייראה אצל אבי אינסטלציה\./);
   assert.match(page.text, /למה הציון 100/);
   const list = await b.go('/admin/leads');
   assert.match(list.text, /אבי אינסטלציה/);

@@ -24,6 +24,7 @@ import { onCall, serviceState, track } from './service.js';
 import { readEvent, signatureOk as telnyxSigned, telnyxSettings } from './telnyx.js';
 import { toranState } from './toran.js';
 import { leadByCode, pageHtml, pageViewed } from './demo.js';
+import { autopilot } from './autopilot.js';
 
 // The one HTTP server, behind Caddy on 127.0.0.1:
 //
@@ -34,6 +35,8 @@ import { leadByCode, pageHtml, pageViewed } from './demo.js';
 //   /telnyx/webhook Telnyx's webhook for the customers' own numbers: the calls forwarded to them, signed
 //                   with Ed25519 (TELNYX_PUBLIC_KEY), answered at once and handled after (service.js)
 //   /api/health     "ok" while the process runs
+//   /autopilot/*    the scheduled task's door (autopilot.js, docs/autopilot.md), JSON with AUTOPILOT_TOKEN
+//   /p/<code>       a lead's own page (demo.js)
 //   /               the landing page, for running it on a laptop; on the server Caddy serves it as a file
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -166,6 +169,11 @@ async function route(app, req, res) {
   if (p === '/api/health') return send(res, 200, 'text/plain; charset=utf-8', 'ok');
   if (p === '/meta/webhook') return webhook(app, req, res, url);
   if (p === '/telnyx/webhook') return telnyxWebhook(app, req, res);
+  if (p.startsWith('/autopilot/')) {
+    const raw = req.method === 'POST' ? await readBody(req, 64 * 1024) : '';
+    const out = await autopilot(app, req, raw, url, p);
+    return send(res, out.status, 'application/json; charset=utf-8', JSON.stringify(out.json));
+  }
   // A lead's own page (demo.js): its code, or not found; never indexed, never cached, each view counted.
   const page = /^\/p\/([a-z0-9]{10})$/.exec(p);
   if (page && req.method === 'GET') {

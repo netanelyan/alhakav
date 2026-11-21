@@ -173,7 +173,7 @@ test('"כן, שלחו" and "לא, תודה" stay ours: the explanation or the st
   assert.match(toran.alerts[0].title, /ביקשו את ההסבר/);
   // A question after the explanation is Toran's, with who they are.
   await onWebhook(app, hook({ messages: [text('wamid.q', 'מה צריך כדי להתחיל?', lead.mobile)] }));
-  assert.match(toran.calls[0].body.context, /A tradesperson we wrote to first \(אבי אינסטלציה\)[\s\S]*said yes and already got our explanation/);
+  assert.match(toran.calls[0].body.context, /A tradesperson we wrote to first \(אבי אינסטלציה\)[\s\S]*linked a page we made for their business \(https:\/\/alhakav\.example\/p\/[a-z0-9]{10}\)[\s\S]*said yes/);
   const other = addLead(db, 'plumber', { mobile: '972541110000', domain: 'other' });
   assert.ok((await sendPitch(app, other, 'first')).ok);
   await onWebhook(app, hook({ messages: [{ id: 'wamid.n', from: other.mobile, type: 'button', button: { text: 'לא, תודה' } }] }));

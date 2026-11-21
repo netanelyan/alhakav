@@ -8,3 +8,14 @@ alhakav.example {
 	encode zstd gzip
 	reverse_proxy 127.0.0.1:4760
 }
+
+# The scheduled task's door (docs/autopilot.md): its routines reach toran.openfrequency.co.il only, so that host hands
+# /alhakav/autopilot/* to this server as /autopilot/*. In toran.openfrequency.co.il's block, before its own proxy:
+#
+#	handle /alhakav/autopilot/* {
+#		uri strip_prefix /alhakav
+#		reverse_proxy 127.0.0.1:4760
+#	}
+#	handle {
+#		reverse_proxy 127.0.0.1:4710
+#	}

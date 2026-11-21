@@ -143,6 +143,7 @@ ${list}`;
 // ---- one lead
 
 function compose(app, csrf, x, stage, at) {
+  pageCodeOf(app.db, x);
   const m = metaSettings(app.env);
   const b = blocked(app, x, stage, { at, byHand: !m.ready });
   const guard = b ? `<p class="note">${esc(blockedText(b, at))}</p>` : '';

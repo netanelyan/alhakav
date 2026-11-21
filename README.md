@@ -22,20 +22,20 @@ things:
    on the site, a WhatsApp link, one area, Hebrew, a recent year, a person writing about their own work; minus points for
    a call centre or a chain. A directory, a site that is not one of the trades, or a site with no mobile is never a lead.
    55 and up is "מתאימים".
-3. **Writing.** On a lead you see the message exactly as they will read it, and one button sends it from the business
-   number as an approved template (`docs/whatsapp-templates.md`). One reminder becomes available four days later, only
-   if they have not answered. Until Meta is set up, the page offers copy-and-open on your own phone, and "שלחתי".
+3. **Writing.** The first message carries their own page (`docs/demo.md`) and goes from the business number as an
+   approved template (`docs/whatsapp-templates.md`). A scheduled Claude task sends it on working days, to the ones it
+   judged fit (`docs/autopilot.md`); on a lead you see the message exactly as they will read it, and one button sends
+   it too. One reminder becomes available to the admin four days later, only if they have not answered. Until Meta is set up, the page offers copy-and-open on your own phone, and "שלחתי".
 4. **Answers.** Meta's webhook tells the desk how far each message got (sent, delivered, read, not delivered) and what
    they wrote. "כן, שלחו" gets the explanation at once; "לא, תודה" or "הסר" stops everything for that number; any other
    answer opens 24 hours in which you answer from the lead's page. Someone who writes to the business number on their
    own becomes a lead too.
 
-The guardrails are openfrequency-toran's, because the business number's rating is what everything rides on: nothing
-sends by itself, at most `OUTREACH_DAILY` (10) first messages and reminders a day, never 20:00 to 09:00 or on Shabbat
-and holidays, the number's quality read from Meta before each send, and one first message and one reminder per lead.
-The first message asks permission, says who writes and how to stop, following the reading of the Communications Law's
-section 30A that openfrequency uses (one approach to a business). Check that reading with a lawyer before sending at
-scale.
+The guardrails are openfrequency-toran's, because the business number's rating is what everything rides on: at most `OUTREACH_DAILY` (10) first messages and reminders a day, never 20:00 to 09:00 or on Shabbat
+and holidays, the number's quality read from Meta before each send, and one first message and one reminder per lead,
+and the scheduled task at most `AUTOPILOT_BATCH` (5) in a half day and never the reminder. The first message is an offer
+with a link, says who writes and how to stop; openfrequency asks permission first instead, following its reading of
+the Communications Law's section 30A (docs/autopilot.md). Check this with a lawyer before sending at scale.
 
 ## Running it on a server
 
@@ -70,7 +70,10 @@ keep the PIN in `META_PIN` (alhakav does not read it, but Meta asks for it to re
 **Payments.** `PAYMENT_DETAILS`, the template `alhakav_payment` (docs/whatsapp-templates.md) submitted on the business
 number, and Morning's API keys in `MORNING_CLIENT_ID` and `MORNING_CLIENT_SECRET` (docs/payments.md).
 
-**Pages.** Each lead gets a page of its own with a working try of המוקדן, sent after "כן, שלחו" (docs/demo.md). `DEMO_DAILY` caps the tries a day (30).
+**Pages.** Each lead gets a page of its own with a working try of המוקדן, linked from the first message (docs/demo.md). `DEMO_DAILY` caps the tries a day (30).
+
+**The scheduled task.** `AUTOPILOT_TOKEN`, `AUTOPILOT=1`, the Caddy route on toran.openfrequency.co.il, and the two
+routines (docs/autopilot.md).
 
 **Toran.** openfrequency-toran answers on the business number as על הקו, sends the admin's alerts to their WhatsApp,
 and hands whoever wants to join to the payment message: `OF_INTERNAL_TOKEN` (the same as Toran's), and על הקו's export

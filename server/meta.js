@@ -64,12 +64,15 @@ async function graph(m, f, method, path, body) {
 }
 
 /** A template to `to`, with its body's variables in order. Answers Meta's message id. */
-export async function sendTemplate(m, f, to, name, params = [], lang = 'he') {
+export async function sendTemplate(m, f, to, name, params = [], lang = 'he', { url } = {}) {
+  const components = params.length ? [{ type: 'body', parameters: params.map((text) => ({ type: 'text', text })) }] : [];
+  // A link button's {{1}}, the end of its address (the first message's "לראות את הדף שלכם": the page's code).
+  if (url) components.push({ type: 'button', sub_type: 'url', index: '0', parameters: [{ type: 'text', text: url }] });
   const out = await graph(m, f, 'POST', `${m.phoneId}/messages`, {
     messaging_product: 'whatsapp',
     to,
     type: 'template',
-    template: { name, language: { code: lang }, components: params.length ? [{ type: 'body', parameters: params.map((text) => ({ type: 'text', text })) }] : [] },
+    template: { name, language: { code: lang }, components },
   });
   return String(out?.messages?.[0]?.id || '');
 }
@@ -78,6 +81,14 @@ export async function sendTemplate(m, f, to, name, params = [], lang = 'he') {
 export async function sendText(m, f, to, body) {
   const out = await graph(m, f, 'POST', `${m.phoneId}/messages`, { messaging_product: 'whatsapp', to, type: 'text', text: { body, preview_url: true } });
   return String(out?.messages?.[0]?.id || '');
+}
+
+/** Where Meta's review of a template stands: APPROVED, PENDING, REJECTED, PAUSED, DISABLED, or MISSING. */
+export async function templateStatus(m, f, name, lang = 'he') {
+  if (!m.wabaId) return 'UNKNOWN';
+  const out = await graph(m, f, 'GET', `${m.wabaId}/message_templates?name=${encodeURIComponent(name)}&fields=name,status,language`);
+  const t = (out?.data || []).find((x) => x.name === name && (x.language || lang) === lang);
+  return t ? String(t.status || 'UNKNOWN').toUpperCase() : 'MISSING';
 }
 
 export async function numberQuality(m, f) {
