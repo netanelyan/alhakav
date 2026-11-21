@@ -267,6 +267,18 @@ CREATE TABLE autopilot_notes (
   at TEXT NOT NULL
 );
 `,
+  // The numbers we bought at Telnyx for customers (numbers.js): which, for whom, and when Telnyx made each active.
+  `
+CREATE TABLE numbers (
+  id INTEGER PRIMARY KEY,
+  number TEXT NOT NULL UNIQUE,
+  order_id TEXT,
+  customer_id INTEGER,
+  monthly_usd REAL,
+  ordered_at TEXT NOT NULL,
+  active_at TEXT
+);
+`,
 ];
 
 export class Db {

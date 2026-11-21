@@ -7,6 +7,7 @@ import { num } from './env.js';
 import { GraphError, downloadMedia, metaSettings, sendTemplate, sendText } from './meta.js';
 import { invoiceReceipt } from './morning.js';
 import { masked } from './phones.js';
+import { giveNumber } from './numbers.js';
 
 // Paying (docs/payments.md), as openfrequency pays over WhatsApp, on the business number: the customer gets the
 // amount and the transfer details on WhatsApp, transfers, and sends the transfer's picture back to the business number.
@@ -245,6 +246,8 @@ async function afterPaid(app, receiptId) {
   }
   const c = r?.customer_id && app.db.get('SELECT * FROM customers WHERE id = ?', r.customer_id);
   if (c) await tell(app, c, 'paid', PAY.paid({ business: c.business, until: dateHe(r.bill.until), url: invoice.url || '' }));
+  // Their own number for the forwarded calls, the first time they pay (numbers.js).
+  if (c && !c.assistant && c.status !== 'stopped') await giveNumber(app, c);
   return invoice;
 }
 

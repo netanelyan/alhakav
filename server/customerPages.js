@@ -6,6 +6,7 @@ import { billingCard, payCard, payState, waitingCard } from './payPages.js';
 import { assistSettings } from './meta.js';
 import { local } from './phones.js';
 import { telnyxSettings } from './telnyx.js';
+import { numberOf } from './numbers.js';
 
 // The customers' pages in the admin: the list (with the transfer receipts that wait), and one page each with the setup
 // in the order it happens (their number at Telnyx, the forwarding codes, turning it on), the payment,
@@ -57,7 +58,10 @@ ${list}
 
 function setupCard(app, csrf, c, at) {
   const step = (done, title, inner) => `<li class="${done ? 'done' : ''}"><b>${esc(title)}</b>${inner}</li>`;
-  const assistant = c.assistant ? `<p>${ltr(local(c.assistant))}</p>` : `<p class="muted">${esc(TC.steps.assistantHint)}</p>`;
+  const nr = numberOf(app.db, c);
+  const assistant = c.assistant
+    ? `<p>${ltr(local(c.assistant))}</p>${nr && !nr.active_at ? `<p class="note">${esc(TC.numbers.review)}</p>` : ''}`
+    : `<p class="muted">${esc(TC.steps.assistantHint)}</p>${c.status === 'stopped' ? '' : `<div class="ops">${custButton(csrf, c.id, 'number', TC.numbers.buy, 'primary')}</div>`}`;
   const codes = c.assistant
     ? `<p class="muted">${esc(TC.steps.forwardHint)}</p><textarea id="codes" rows="4" readonly dir="ltr">${esc(forwardCodes(c.assistant).join('\n'))}</textarea><p class="note">${esc(TC.steps.forwardWarn)}</p><p class="muted">${esc(c.last_call_at ? TC.steps.lastCall(`${agoHe(Date.parse(c.last_call_at), at)}, ${dayMonth(Date.parse(c.last_call_at))} ${hhmm(Date.parse(c.last_call_at))}`) : TC.steps.noCall)}</p>`
     : '';

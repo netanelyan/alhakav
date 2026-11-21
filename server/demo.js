@@ -54,72 +54,64 @@ export function pageCodeOf(db, lead) {
 
 export const leadByCode = (db, code) => (CODE.test(String(code)) ? db.get('SELECT * FROM leads WHERE page_code = ?', code) : null);
 
-// ---- a missed call and its summary, in their trade (the names, addresses and numbers are made up; the business is
-// theirs, and the city when we know it)
+// ---- a missed call and its summary, in their trade (the names, addresses and numbers are made up, and the phone
+// says "דוגמה"; the business is theirs, and the city when we know it)
 
 const EXAMPLES = {
   plumber: {
     city: 'חולון',
-    chat: (biz, city) => [
-      ['in', 'בוקר טוב, האסלה סתומה והמים עולים כשמורידים', '08:13'],
-      ['out', 'יש בבית עוד שירותים שעובדים? ומה הכתובת?', '08:14'],
-      ['in', `יש עוד אחד והוא בסדר. סוקולוב 40 ${city}, דירה 12. אפשר גם בצהריים, לא חייב עכשיו`, '08:15'],
-      ['out', `תודה, הפרטים אצל ${biz} והם יחזרו אליך כשיתפנו.`, '08:15'],
-    ],
-    summary: (city) => ({ time: '08:12', what: 'סתימה באסלה, המים עולים כשמורידים. יש בבית עוד שירותים תקינים', place: `סוקולוב 40, ${city}. דירה 12`, urgency: 'בינונית, אפשר עד הצהריים', phone: '052-XXX-XX17' }),
+    said: (city) => `בוקר טוב, האסלה סתומה והמים עולים. סוקולוב 40 ${city}, אפשר עד הצהריים`,
+    summary: (city) => ({ time: '08:12', what: 'האסלה סתומה, המים עולים', place: `סוקולוב 40, ${city}`, urgency: 'אפשר עד הצהריים', phone: '052-XXX-XX17' }),
   },
   electrician: {
     city: 'גבעתיים',
-    chat: (biz, city) => [
-      ['in', 'קפץ החשמל במטבח ובסלון ואני לא מצליחה להחזיר אותו', '17:27'],
-      ['out', 'יש ריח של שרוף, או שקע או מפסק שמרגישים חמים? ומה הכתובת?', '17:28'],
-      ['in', `אין שום ריח. ויצמן 8 ${city}, אני בבית עד הערב`, '17:29'],
-      ['out', `תודה, הפרטים אצל ${biz} והם יחזרו אליך כשיתפנו.`, '17:29'],
-    ],
-    summary: (city) => ({ time: '17:26', what: 'אין חשמל במטבח ובסלון, המפסק לא חוזר. אין ריח שרוף', place: `ויצמן 8, ${city}`, urgency: 'הלקוחה בבית עד הערב', phone: '050-XXX-XX64' }),
+    said: (city) => `קפץ החשמל במטבח ובסלון ולא חוזר. ויצמן 8 ${city}, אני בבית עד הערב`,
+    summary: (city) => ({ time: '17:26', what: 'אין חשמל במטבח ובסלון', place: `ויצמן 8, ${city}`, urgency: 'בבית עד הערב', phone: '050-XXX-XX64' }),
   },
   ac: {
     city: 'בת ים',
-    chat: (biz, city) => [
-      ['in', 'המזגן בסלון מטפטף מים על הרצפה', '13:06'],
-      ['out', 'איזה מזגן זה, ובן כמה בערך? ומה הכתובת?', '13:07'],
-      ['in', `עילי, בן 6 בערך. בן גוריון 22 ${city}, קומה 5. כיביתי אותו בינתיים, עדיף השבוע`, '13:08'],
-      ['out', `תודה, הפרטים אצל ${biz} והם יחזרו אליך כשיתפנו.`, '13:09'],
-    ],
-    summary: (city) => ({ time: '13:05', what: 'מזגן עילי בסלון מטפטף מים, בן 6 בערך. כרגע כבוי', place: `בן גוריון 22, ${city}. קומה 5`, urgency: 'לא דחוף, ביקש השבוע', phone: '054-XXX-XX90' }),
+    said: (city) => `המזגן בסלון מטפטף מים. בן גוריון 22 ${city}, קומה 5. עדיף השבוע`,
+    summary: (city) => ({ time: '13:05', what: 'מזגן בסלון מטפטף מים', place: `בן גוריון 22, ${city}`, urgency: 'לא דחוף, השבוע', phone: '054-XXX-XX90' }),
   },
   locksmith: {
     city: 'רמת גן',
-    chat: (biz, city) => [
-      ['in', 'ננעלתי מחוץ לבית והמפתחות בפנים', '21:49'],
-      ['out', 'אוי. איזו דלת, רגילה או דלת ביטחון? ומה הכתובת?', '21:50'],
-      ['in', `דלת ביטחון. הרא״ה 101 ${city}, אני מחכה למטה עם הילדים`, '21:50'],
-      ['out', `העברתי ל${biz} שזה דחוף. הם יתקשרו אליך ברגע שיתפנו.`, '21:51'],
-    ],
-    summary: (city) => ({ time: '21:48', what: 'ננעלה מחוץ לבית, המפתחות בפנים. דלת ביטחון', place: `הרא״ה 101, ${city}`, urgency: 'דחוף, מחכה בחוץ עם ילדים', phone: '053-XXX-XX05' }),
+    said: (city) => `ננעלתי בחוץ והמפתחות בפנים. הרא״ה 101 ${city}, מחכה למטה עם הילדים`,
+    summary: (city) => ({ time: '21:48', what: 'נעול בחוץ, המפתחות בפנים', place: `הרא״ה 101, ${city}`, urgency: 'דחוף, מחכה בחוץ', phone: '053-XXX-XX05' }),
   },
 };
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const wa = (digits, text) => `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
+const plus = (hhmmText, n) => {
+  const [h, m] = hhmmText.split(':').map(Number);
+  const t = h * 60 + m + n;
+  return `${String(Math.floor(t / 60) % 24).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+};
 
-/** The page, for one lead. */
+/** The page, for one lead: a missed call and what they get from it, then two buttons. Few words: they read it on a job. */
 export function pageHtml(env, lead) {
   const biz = bizOf(lead);
   const ex = EXAMPLES[lead.trade] || EXAMPLES.plumber;
   const city = String(lead.city || '').trim() || ex.city;
-  const chat = ex.chat(biz, city);
   const sum = ex.summary(city);
   const assist = assistSettings(env).number;
   const tryLink = assist ? wa(assist, `אני רוצה לנסות (${lead.page_code})`) : '';
   const talkLink = salesNumber() ? wa(salesNumber(), `היי, ראיתי את הדף של ${biz}`) : '';
-  const bubbles = [['out', SVC.callerFirst(biz), chat[0][2]], ...chat]
-    .map(([dir, text, time]) => `<li class="${dir === 'in' ? 'o' : ''}">${esc(text).replace(/\n/g, '<br>')}<time>${esc(time)}</time></li>`)
+  const bubbles = [
+    ['out', SVC.callerFirst(biz), plus(sum.time, 1)],
+    ['in', ex.said(city), plus(sum.time, 2)],
+    ['out', SVC.callerThanks(biz), plus(sum.time, 3)],
+  ]
+    .map(([dir, text, time]) => `<li class="${dir === 'in' ? 'o' : ''}">${esc(text).replace(/\n+/g, '<br>')}<time>${time}</time></li>`)
     .join('');
-  // The number reads left to right inside the Hebrew.
-  const summary = esc(SVC.summary({ ...sum, phone: '@@PHONE@@' }))
-    .replace(/\n/g, '<br>')
-    .replace('@@PHONE@@', `<bdi dir="ltr">${esc(sum.phone)}</bdi>`);
+  const rows = [
+    ['מה', sum.what],
+    ['איפה', sum.place],
+    ['כמה דחוף', sum.urgency],
+    ['טלפון', sum.phone],
+  ]
+    .map(([k, v]) => `<div><dt>${k}</dt><dd${k === 'טלפון' ? ' dir="ltr"' : ''}>${esc(v)}</dd></div>`)
+    .join('');
   const icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 18.8L4 20z"/></svg>';
   return `<!doctype html>
 <html lang="he" dir="rtl">
@@ -134,71 +126,59 @@ export function pageHtml(env, lead) {
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;800;900&amp;display=swap">
 <style>
-:root{--navy:#0B2340;--or:#FF6A13;--blue:#1F6FEB;--sky:#EEF2F7;--txt:#33475e;--mute:#5d6e80}
+:root{--navy:#0B2340;--or:#FF6A13;--blue:#1F6FEB;--sky:#EEF2F7;--mute:#5d6e80}
 *{box-sizing:border-box}
-body{margin:0;background:#fff;color:var(--navy);font:400 1.125rem/1.55 Heebo,system-ui,"Segoe UI",Arial,sans-serif;direction:rtl}
-.wrap{max-width:34rem;margin:0 auto;padding:0 1.25rem}
-h1,h2,p{margin:0}
-h1,h2{line-height:1.15;font-weight:900}
+body{margin:0;background:#fff;color:var(--navy);font:400 1.0625rem/1.5 Heebo,system-ui,"Segoe UI",Arial,sans-serif;direction:rtl}
+.wrap{max-width:30rem;margin:0 auto;padding:0 1rem}
+h1,h2,p,dl,dd{margin:0}
 :focus-visible{outline:3px solid var(--navy);outline-offset:3px}
-.top{background:var(--navy);color:#fff;padding:1rem 0 2.25rem}
-.top img{display:block;width:8.5rem;height:auto}
-.for{margin-top:1.5rem;color:#ffb37f;font-weight:700}
-h1{margin-top:.4rem;font-size:clamp(2rem,8vw,2.6rem)}
-.lead{margin-top:.75rem;color:#d3dcea}
-.try{margin:-1.25rem auto 0;padding:1.25rem;border-radius:1.25rem;background:#fff;box-shadow:0 10px 30px #0b234026;position:relative}
-.try h2{font-size:1.45rem;display:flex;align-items:center;gap:.6rem}
-.try h2 img{width:2.4rem;height:2.4rem;border-radius:50%}
-.try p{margin-top:.5rem;color:var(--txt)}
-.btn{display:flex;align-items:center;justify-content:center;gap:.6rem;min-height:3.6rem;margin-top:1rem;padding:.8rem 1.25rem;border-radius:999px;background:var(--blue);color:#fff;font-weight:800;font-size:1.25rem;text-decoration:none}
-.btn.or{background:var(--or);color:var(--navy)}
-.btn svg{width:1.4rem;height:1.4rem;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linejoin:round}
-section{padding:2.25rem 0 0}
-h2{font-size:1.5rem}
-.cap{margin:.9rem 0 .5rem;color:var(--mute);font-size:.95rem}
-.phone{overflow:hidden;border:7px solid #0b1522;border-radius:1.5rem;background:#efeae2}
-.wa{display:flex;align-items:center;gap:.6rem;padding:.5rem .8rem;background:#008069;color:#fff;font-weight:700}
-.wa img{width:2.1rem;height:2.1rem;border-radius:50%}
-.chat{list-style:none;margin:0;padding:.7rem .6rem 1rem;display:flex;flex-direction:column;gap:.3rem}
-.chat li{align-self:flex-start;max-width:86%;padding:.35rem .55rem .2rem;border-radius:.6rem;background:#fff;box-shadow:0 1px .5px #0b141a22;font-size:1rem;line-height:1.4}
+.top{background:var(--navy);color:#fff;padding:1rem 0 1.75rem;text-align:center}
+.top img{width:7.5rem;height:auto}
+.for{margin-top:1.25rem;color:#ffb37f;font-weight:700;font-size:1rem}
+h1{margin-top:.25rem;font-size:clamp(1.9rem,8.5vw,2.4rem);line-height:1.15;font-weight:900}
+.sub{margin-top:.5rem;color:#d3dcea}
+.phone{margin-top:1.25rem;overflow:hidden;border:6px solid #0b1522;border-radius:1.4rem;background:#efeae2}
+.wa{display:flex;align-items:center;gap:.5rem;padding:.45rem .75rem;background:#008069;color:#fff;font-weight:700;font-size:.95rem}
+.wa img{width:1.9rem;height:1.9rem;border-radius:50%}
+.wa small{margin-inline-start:auto;font-weight:400;opacity:.8}
+.chat{list-style:none;margin:0;padding:.6rem .55rem .8rem;display:flex;flex-direction:column;gap:.3rem}
+.chat li{align-self:flex-start;max-width:85%;padding:.35rem .55rem .2rem;border-radius:.6rem;background:#fff;box-shadow:0 1px .5px #0b141a22;font-size:.95rem;line-height:1.4}
 .chat .o{align-self:flex-end;background:#d9fdd3}
-.chat time{display:block;text-align:end;color:#54656f;font-size:.72rem}
-.sum{padding:1rem;border-radius:1rem;background:var(--sky);font-size:1rem;line-height:1.5}
-.price{margin-top:2.25rem;padding:1.5rem 1.25rem;border-radius:1.25rem;background:var(--sky)}
-.price p{margin-top:.5rem;color:var(--txt)}
-.fine{margin-top:1.5rem;color:var(--mute);font-size:.85rem}
-footer{margin-top:2.5rem;padding:1.5rem 0 2.5rem;background:var(--navy);color:#a9b9cd;font-size:.95rem}
+.chat time{display:block;text-align:end;color:#54656f;font-size:.7rem}
+.arrow{margin:1.1rem 0 .5rem;font-weight:800;font-size:1.15rem}
+.sum{padding:.9rem 1rem;border-radius:1rem;background:var(--sky)}
+.sum div{display:flex;gap:.75rem;padding:.3rem 0}
+.sum div+div{border-top:1px solid #d6dee9}
+.sum dt{flex:0 0 4.5rem;color:var(--mute);font-size:.95rem}
+.sum dd{font-weight:700}
+.btn{display:flex;align-items:center;justify-content:center;gap:.55rem;min-height:3.5rem;margin-top:.75rem;padding:.75rem 1.25rem;border-radius:999px;background:var(--blue);color:#fff;font-weight:800;font-size:1.2rem;text-decoration:none}
+.btn.or{background:var(--or);color:var(--navy)}
+.btn svg{width:1.35rem;height:1.35rem;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linejoin:round}
+.cta{margin-top:1.75rem;text-align:center}
+.cta h2{font-size:1.35rem;font-weight:900}
+.cta p{margin-top:.15rem;color:var(--mute)}
+.price{margin-top:1.75rem;padding:1.25rem 1rem;border-radius:1.25rem;background:var(--sky);text-align:center}
+.price h2{font-size:1.6rem;font-weight:900}
+.price p{color:var(--mute)}
+footer{margin-top:2rem;padding:1.25rem 0 2rem;background:var(--navy);color:#a9b9cd;font-size:.85rem;text-align:center}
 footer a{color:#fff}
 </style>
 </head>
 <body>
 <header class="top"><div class="wrap">
-<img src="/svg/al-hakav-logo-on-dark.svg" alt="על הקו" width="136" height="32">
-<p class="for">הכנו את הדף הזה בשביל ${esc(biz)}</p>
+<img src="/svg/al-hakav-logo-on-dark.svg" alt="על הקו" width="120" height="28">
+<p class="for">בשביל ${esc(biz)}</p>
 <h1>ככה זה ייראה אצלכם</h1>
-<p class="lead">כשאתם באמצע עבודה ולא עונים, מי שהתקשר מקבל מהמוקדן שלנו הודעה בוואטסאפ, בשם ${esc(biz)}. אתם מקבלים מה הוא צריך, וחוזרים אליו כשמתפנים.</p>
+<p class="sub">לא עניתם לטלפון? מי שהתקשר מקבל הודעה, ואתם מקבלים סיכום.</p>
 </div></header>
 <main class="wrap">
-${tryLink ? `<div class="try">
-<h2><img src="/svg/al-hakav-mokdan-avatar.svg" alt="" width="38" height="38">לנסות על עצמכם, בדקה</h2>
-<p>לוחצים, ושולחים את ההודעה שנפתחת. המוקדן יכתוב לכם כאילו התקשרתם ל${esc(biz)} ולא ענו. עונים לו כמו לקוח, ובסוף מקבלים את הסיכום שהיה מגיע אליכם.</p>
-<a class="btn" href="${esc(tryLink)}">${icon}לנסות בוואטסאפ</a>
-</div>` : ''}
-<section aria-labelledby="ex">
-<h2 id="ex">מישהו התקשר ל${esc(biz)} ולא עניתם</h2>
-<p class="cap">ככה זה נראה אצלו</p>
-<div class="phone"><p class="wa"><img src="/svg/al-hakav-mokdan-avatar.svg" alt="" width="34" height="34">המוקדן של על הקו</p><ol class="chat">${bubbles}</ol></div>
-<p class="cap">וזה מה שמגיע אליכם לוואטסאפ</p>
-<p class="sum">${summary}</p>
-</section>
-<div class="price">
-<h2>149 ₪ לחודש</h2>
-<p>לא כולל מע״מ. אין דמי הקמה. המספר שלכם נשאר כמו שהוא. משלמים חודש מראש, ומי שרוצה להפסיק מפסיק לפני החודש הבא.</p>
-${talkLink ? `<a class="btn or" href="${esc(talkLink)}">${icon}רוצים את זה? כתבו לנו</a>` : ''}
-</div>
-<p class="fine">השמות, הכתובות והמספרים בדוגמה מומצאים, חוץ מהשם שלכם.</p>
+<div class="phone" role="img" aria-label="דוגמה לשיחה בוואטסאפ עם מי שהתקשר"><p class="wa"><img src="/svg/al-hakav-mokdan-avatar.svg" alt="" width="30" height="30">המוקדן של על הקו<small>דוגמה</small></p><ol class="chat">${bubbles}</ol></div>
+<p class="arrow">ואליכם מגיע:</p>
+<dl class="sum">${rows}</dl>
+${tryLink ? `<div class="cta"><h2>לנסות על עצמכם</h2><p>המוקדן יכתוב לכם כמו ללקוח. לוקח דקה.</p><a class="btn" href="${esc(tryLink)}">${icon}לנסות בוואטסאפ</a></div>` : ''}
+<div class="price"><h2>149 ₪ לחודש</h2><p>לא כולל מע״מ · אין דמי הקמה</p>${talkLink ? `<a class="btn or" href="${esc(talkLink)}">${icon}רוצים את זה? כתבו לנו</a>` : ''}</div>
 </main>
-<footer><div class="wrap"><p><a href="/">על הקו</a> · <a href="/terms">תנאי שימוש</a> · <a href="/privacy">מדיניות פרטיות</a> · <a href="/accessibility">הצהרת נגישות</a></p></div></footer>
+<footer><div class="wrap"><a href="/">על הקו</a> · <a href="/terms">תנאים</a> · <a href="/privacy">פרטיות</a> · <a href="/accessibility">נגישות</a></div></footer>
 </body>
 </html>`;
 }

@@ -43,7 +43,7 @@ test("a lead's page: their name, an example from their trade and city, the try a
   assert.match(code, /^[a-z0-9]{10}$/);
   assert.equal(pageCodeOf(db, db.get('SELECT * FROM leads WHERE id = ?', lead.id)), code, 'one code a lead');
   const html = pageHtml(app.env, db.get('SELECT * FROM leads WHERE id = ?', lead.id));
-  assert.match(html, /הכנו את הדף הזה בשביל אבי אינסטלציה/);
+  assert.match(html, /בשביל אבי אינסטלציה/);
   assert.match(html, /קפץ החשמל במטבח/, 'the electrician example');
   assert.match(html, /ויצמן 8 אשדוד/, 'their city');
   assert.match(html, /שלום, כאן העוזר של אבי אינסטלציה/);

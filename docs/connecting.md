@@ -36,6 +36,7 @@ every one of them against a fake Telnyx (calls), a fake Meta (WhatsApp) and a fa
 | | What | Where it goes |
 |---|---|---|
 | Telnyx account | An API key, and the account's public key (Keys & Credentials) | `TELNYX_API_KEY`, `TELNYX_PUBLIC_KEY` |
+| Buying numbers | The Voice API application's id, and the requirement group with the business's documents (Numbers, Compliance) | `TELNYX_CONNECTION_ID`, `TELNYX_REQUIREMENT_GROUP` |
 | A Voice API application | With the webhook URL `https://<domain>/telnyx/webhook`. Every customer's number is assigned to it | (in Telnyx) |
 | המוקדן's number | An Israeli mobile, added to על הקו's WhatsApp Business Account in WhatsApp Manager like the business number (code by SMS), registered on the Cloud API with a PIN (README, "Toran"), display name על הקו, the blue avatar (`png/al-hakav-mokdan-avatar-640.png`) | `ASSIST_PHONE_ID`, `ASSIST_NUMBER` |
 | The three templates | `alhakav_caller`, `alhakav_summary`, `alhakav_call_note`, in `docs/whatsapp-templates.md`, on על הקו's account (templates belong to the account, so המוקדן's number uses them). Submitted 2026-11-21 | (at Meta) |
@@ -44,8 +45,12 @@ every one of them against a fake Telnyx (calls), a fake Meta (WhatsApp) and a fa
 ## Each customer (the admin's "לקוחות" page)
 
 1. A lead marked "הפכו ללקוחות" becomes a customer with its name, business and mobile already in; or add one there.
-2. **Buy their number** in Telnyx (Israel, voice), assign it to the Voice API application, and paste it on the
-   customer's page. It never touches WhatsApp.
+2. **Their number** comes by itself when you approve their first payment (server/numbers.js, the owner 2026-11-21: "a
+   number should be bought when i approve the payment"): a number already on the Voice API application that no customer
+   has, or else a new Israeli local one bought onto it with the requirement group "alhakav-forwarding" (our business's
+   documents, which Telnyx asks of every Israeli number), at most `NUMBERS_PER_MONTH` (5) a month and `NUMBER_MAX_USD`
+   ($5). You hear on WhatsApp what happened, and again when Telnyx made a new one active. For a customer who does not
+   pay, "לקנות מספר" on their page does the same; a number can also be pasted there. It never touches WhatsApp.
 3. **Send the customer the forwarding codes** shown on the page (they include their number):
    `**61*<number>**20#`, `**67*<number>#`, `**62*<number>#`, then `*#61#` to check. Tell them first that it replaces
    voicemail, and that `##002#` undoes it.

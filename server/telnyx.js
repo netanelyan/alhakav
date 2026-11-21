@@ -52,6 +52,26 @@ async function call(t, f, method, path, body) {
   return data;
 }
 
+// ---- numbers (numbers.js)
+
+/** The numbers on a voice app: [{ id, number (E.164), status }]. */
+export async function numbersOn(t, f, connectionId) {
+  const out = await call(t, f, 'GET', `/phone_numbers?filter[connection_id]=${encodeURIComponent(connectionId)}&page[size]=250`);
+  return (out?.data || []).map((n) => ({ id: String(n.id), number: String(n.phone_number), status: String(n.status || '') }));
+}
+
+/** Israeli local numbers for calls that can be bought now, with their price in dollars. */
+export async function availableNumbers(t, f) {
+  const out = await call(t, f, 'GET', '/available_phone_numbers?filter[country_code]=IL&filter[phone_number_type]=local&filter[features]=voice&filter[limit]=5');
+  return (out?.data || []).map((n) => ({ number: String(n.phone_number), upfront: Number(n.cost_information?.upfront_cost), monthly: Number(n.cost_information?.monthly_cost) }));
+}
+
+/** Buy one number onto the voice app, with the requirement group Telnyx asks of an Israeli number. */
+export async function orderNumber(t, f, number, connectionId, groupId, reference) {
+  const out = await call(t, f, 'POST', '/number_orders', { phone_numbers: [{ phone_number: number, requirement_group_id: groupId }], connection_id: connectionId, customer_reference: reference });
+  return { id: String(out?.data?.id || ''), status: String(out?.data?.status || '') };
+}
+
 // ---- calls
 
 export const callAction = (t, f, id, action, body = {}) => call(t, f, 'POST', `/calls/${encodeURIComponent(id)}/actions/${action}`, body);

@@ -10,6 +10,7 @@ import { dailyDiscovery, discover } from './discover.js';
 import { loadEnv, num } from './env.js';
 import { purgeLeads } from './leads.js';
 import { payTick } from './pay.js';
+import { numbersTick } from './numbers.js';
 import { serviceTick } from './service.js';
 import { handler, makeApp } from './app.js';
 import { brave, fromUrls, queriesFor, seeds } from './sources.js';
@@ -55,6 +56,7 @@ async function serve() {
   setInterval(() => {
     serviceTick(app).catch((e) => log(`[service] tick failed: ${e.message}`));
     payTick(app).catch((e) => log(`[pay] tick failed: ${e.message}`));
+    numbersTick(app).catch((e) => log(`[numbers] tick failed: ${e.message}`));
   }, MINUTE).unref();
   setTimeout(tick, MINUTE).unref();
   setInterval(tick, 30 * MINUTE).unref();

@@ -16,7 +16,8 @@ import { makeClaude } from './claude.js';
 import { addSkip, createCustomer, customerFromLead, endAtMonthEnd, getCustomer, listCustomers, recentCalls, recentChats, removeCustomer, removeSkip, setStatus, skipsOf, unend, updateBilling, updateCustomer } from './customers.js';
 import { customerPage, customersPage } from './customerPages.js';
 import { dateHe } from './billing.js';
-import { PAY } from './copy.js';
+import { PAY, TC } from './copy.js';
+import { local } from './phones.js';
 import { morningClient, morningConfig } from './morning.js';
 import { PayError, decideReceipt, manualPayment, noticesOf, receiptById, receiptFile, receiptsOf, receiptsWaiting, retryInvoice, sendPayment } from './pay.js';
 import { receiptPage } from './payPages.js';
@@ -25,6 +26,7 @@ import { readEvent, signatureOk as telnyxSigned, telnyxSettings } from './telnyx
 import { toranState } from './toran.js';
 import { leadByCode, pageHtml, pageViewed } from './demo.js';
 import { autopilot } from './autopilot.js';
+import { giveNumber } from './numbers.js';
 
 // The one HTTP server, behind Caddy on 127.0.0.1:
 //
@@ -410,6 +412,10 @@ async function customerAction(app, req, res, id, action, form, token) {
     case 'pause':
     case 'stop':
       return back(setStatus(app.db, c, action));
+    case 'number': {
+      const r = await giveNumber(app, c);
+      return back({ ok: r.ok, flash: r.ok ? TC.numbers.done(local(r.number)) : r.detail || TC.numbers.why[r.why] || r.why });
+    }
     case 'billing':
       return back(updateBilling(app.db, c, form), 'billing');
     case 'pay-ask': {

@@ -17,211 +17,123 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;800;900&amp;display=swap">
 <style>
-:root{--navy:#0B2340;--navy2:#163a66;--or:#FF6A13;--orh:#ff8240;--sky:#EEF2F7;--txt:#33475e;--mute:#5d6e80;--line:#dbe2ea}
+:root{--navy:#0B2340;--or:#FF6A13;--orh:#ff8240;--sky:#EEF2F7;--txt:#33475e;--mute:#5d6e80;--line:#dbe2ea}
 *{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{margin:0;background:#fff;color:var(--navy);font:400 1.125rem/1.55 Heebo,system-ui,"Segoe UI","Arial Hebrew",Arial,sans-serif;direction:rtl;-webkit-text-size-adjust:100%}
-.wrap{max-width:64rem;margin:0 auto;padding:0 1.25rem}
+body{margin:0;background:#fff;color:var(--navy);font:400 1.0625rem/1.5 Heebo,system-ui,"Segoe UI","Arial Hebrew",Arial,sans-serif;direction:rtl;-webkit-text-size-adjust:100%}
+.wrap{max-width:56rem;margin:0 auto;padding:0 1rem}
 h1,h2,h3,p{margin:0}
-h1,h2{line-height:1.12;font-weight:900;letter-spacing:-.01em}
-h2{font-size:clamp(1.85rem,7vw,2.6rem)}
+h1,h2{line-height:1.15;font-weight:900}
+h2{font-size:clamp(1.5rem,6vw,2rem)}
 img{display:block;max-width:100%}
 :focus-visible{outline:3px solid var(--navy);outline-offset:3px}
-.head :focus-visible,.hero :focus-visible,.foot :focus-visible{outline-color:#fff}
+.hero :focus-visible,.foot :focus-visible{outline-color:#fff}
 .skip{position:absolute;inset-inline-start:1rem;top:-4rem;z-index:10;padding:.5rem 1rem;border-radius:.5rem;background:#fff;color:var(--navy)}
 .skip:focus{top:1rem}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:.6rem;min-height:3.75rem;padding:.8rem 1.75rem;border-radius:999px;background:var(--or);color:var(--navy);font-weight:800;font-size:1.3rem;text-decoration:none}
+.btn{display:flex;align-items:center;justify-content:center;gap:.55rem;min-height:3.5rem;padding:.75rem 1.5rem;border-radius:999px;background:var(--or);color:var(--navy);font-weight:800;font-size:1.2rem;text-decoration:none}
 .btn:hover{background:var(--orh)}
-.btn svg,.fab svg{flex:none;width:1.5rem;height:1.5rem;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linejoin:round}
-.head,.hero{background:var(--navy);color:#fff}
-.hero{overflow:hidden}
-.top{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding-block:1rem}
-.top img{width:9.5rem;height:auto}
-.top a.say{padding:.45rem 1rem;border-radius:999px;box-shadow:inset 0 0 0 2px #ffffff66;color:#fff;font-weight:700;font-size:1rem;text-decoration:none}
-.top a.say:hover{box-shadow:inset 0 0 0 2px #fff}
-.hero-in{padding-block:.75rem 3.5rem}
-.for{color:#ffb37f;font-size:1rem;font-weight:700}
-h1{margin-top:.75rem;font-size:clamp(2.2rem,9vw,3.2rem)}
+.btn svg{flex:none;width:1.35rem;height:1.35rem;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linejoin:round}
+.hero{background:var(--navy);color:#fff;text-align:center}
+.top{padding-block:1rem}
+.top img{width:8rem;height:auto;margin:0 auto}
+.hero-in{padding-block:.5rem 2.25rem}
+.for{color:#ffb37f;font-size:.95rem;font-weight:700}
+h1{margin-top:.4rem;font-size:clamp(1.8rem,8vw,2.8rem)}
 h1 span{color:var(--or)}
-.lead{max-width:32rem;margin-top:1rem;color:#d3dcea;font-size:1.2rem}
-.cta{margin-top:1.75rem}
-.note{margin-top:.75rem;color:#a9b9cd;font-size:.95rem}
-.lock-fig{margin:2.75rem auto 0;max-width:20rem}
-.lock{padding:1.1rem .85rem 1.5rem;border:8px solid #050f1d;border-radius:2rem;background:linear-gradient(170deg,#2a5d99 0%,#163a66 45%,#0e2a4c 100%);box-shadow:0 24px 60px #00000059}
-.lock-time{margin:.3rem 0 1.25rem;text-align:center;font-size:3.5rem;font-weight:700;line-height:1}
-.n{display:flex;gap:.6rem;padding:.65rem .8rem;border-radius:1rem;background:#fffffff0;color:var(--navy);font-size:.95rem;line-height:1.35;box-shadow:0 4px 14px #0000002e}
-.n+.n{margin-top:.55rem}
+.lead{margin-top:.6rem;color:#d3dcea}
+.cta{max-width:22rem;margin:1.25rem auto 0}
+.lock{max-width:18rem;margin:1.75rem auto 0;padding:.9rem .75rem 1.1rem;border:7px solid #050f1d;border-radius:1.75rem;background:linear-gradient(170deg,#2a5d99 0%,#163a66 45%,#0e2a4c 100%);text-align:start}
+.lock-time{margin:.1rem 0 .9rem;text-align:center;font-size:3rem;font-weight:700;line-height:1}
+.n{display:flex;gap:.55rem;padding:.6rem .7rem;border-radius:.9rem;background:#fffffff0;color:var(--navy);font-size:.9rem;line-height:1.35}
+.n+.n{margin-top:.5rem}
 .n>div{flex:1;min-width:0}
-.n-ic{flex:none;display:grid;place-items:center;width:2.2rem;height:2.2rem;border-radius:.6rem;background:#e7ecf2;font-size:1.1rem}
-.n-ic img{width:2.2rem;height:2.2rem;border-radius:.6rem}
-.n-ic svg{width:1.3rem;height:1.3rem;fill:none;stroke:#c0392b;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.n-h{display:flex;justify-content:space-between;color:var(--mute);font-size:.78rem}
-.lock-fig figcaption{margin-top:.75rem;color:#a9b9cd;font-size:.9rem;text-align:center}
-.how{padding:3.5rem 0}
-.steps{list-style:none;margin:2rem 0 0;padding:0;counter-reset:s}
-.steps li{counter-increment:s;display:grid;grid-template-columns:auto 1fr;column-gap:1rem;align-items:start}
-.steps li+li{margin-top:1.75rem}
-.steps li::before{content:counter(s);grid-row:span 2;display:grid;place-items:center;width:2.9rem;height:2.9rem;border-radius:50%;background:var(--or);color:var(--navy);font-size:1.35rem;font-weight:900}
-.steps h3{padding-top:.35rem;font-size:1.35rem;font-weight:800;line-height:1.25}
-.steps p{margin-top:.25rem;color:var(--txt)}
-.chat-fig{margin:2.5rem auto 0;max-width:21rem}
-.chat-fig figcaption{margin-bottom:.6rem;color:var(--mute);font-size:.95rem}
-.phone{overflow:hidden;border:8px solid #0b1522;border-radius:1.6rem;background:#efeae2}
-.wa{display:flex;align-items:center;gap:.6rem;padding:.55rem .8rem;background:#008069;color:#fff;font-weight:700;font-size:1.05rem}
-.wa img{width:2.2rem;height:2.2rem;border-radius:50%}
-.chat{list-style:none;margin:0;padding:.7rem .6rem 1rem;display:flex;flex-direction:column;gap:.3rem}
-.chat li{align-self:flex-start;max-width:85%;padding:.35rem .55rem .2rem;border-radius:.6rem;background:#fff;box-shadow:0 1px .5px #0b141a22;font-size:1rem;line-height:1.4}
-.chat .o{align-self:flex-end;background:#d9fdd3}
-.chat time{display:block;text-align:end;color:#54656f;font-size:.72rem}
-.o time::after{content:" ✓✓"/"";color:#53bdeb}
-.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.fine{margin-top:.6rem;color:var(--mute);font-size:.85rem}
-.price{padding:3.5rem 0;background:var(--sky)}
-.price p.sub{max-width:34rem;margin-top:1rem;color:var(--txt);font-size:1.2rem}
-.amount{display:inline-flex;align-items:baseline;flex-wrap:wrap;gap:.2rem .6rem;margin-top:1.75rem;padding:1.25rem 1.5rem;border-radius:1.25rem;background:#fff;box-shadow:0 2px 0 var(--line)}
-.amount b{font-size:4rem;font-weight:900;line-height:1}
-.amount b small{font-size:.5em}
-.amount span{font-size:1.3rem;font-weight:800}
-.amount em{flex-basis:100%;color:var(--mute);font-size:1rem;font-style:normal}
-.terms{max-width:34rem;margin-top:1.25rem;color:var(--txt)}
-.faq-s{padding:3.5rem 0}
-.faq{max-width:44rem;margin-top:1.5rem;border-top:2px solid var(--line)}
+.n-ic{flex:none;display:grid;place-items:center;width:2.1rem;height:2.1rem;border-radius:.55rem;background:#e7ecf2}
+.n-ic img{width:2.1rem;height:2.1rem;border-radius:50%}
+.n-ic svg{width:1.25rem;height:1.25rem;fill:none;stroke:#c0392b;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.n-h{display:flex;justify-content:space-between;color:var(--mute);font-size:.75rem}
+section{padding:2.25rem 0 0}
+.steps{list-style:none;margin:1rem 0 0;padding:0;counter-reset:s}
+.steps li{counter-increment:s;display:flex;align-items:center;gap:.8rem;font-size:1.15rem;font-weight:700;line-height:1.3}
+.steps li+li{margin-top:.9rem}
+.steps li::before{content:counter(s);flex:none;display:grid;place-items:center;width:2.4rem;height:2.4rem;border-radius:50%;background:var(--or);color:var(--navy);font-size:1.15rem;font-weight:900}
+.price{padding:1.5rem 1rem;border-radius:1.25rem;background:var(--sky);text-align:center}
+.price h2{font-size:2.2rem}
+.price p{margin-top:.15rem;color:var(--mute)}
+.price .btn{margin-top:1rem}
+section.faq-s{padding:2.25rem 1rem 0}
+.faq{margin-top:.75rem;border-top:2px solid var(--line)}
 .faq details{border-bottom:2px solid var(--line)}
-.faq summary{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.1rem 0;font-size:1.2rem;font-weight:800;cursor:pointer;list-style:none}
+.faq summary{display:flex;align-items:center;justify-content:space-between;gap:1rem;min-height:3.5rem;padding:.6rem 0;font-size:1.1rem;font-weight:800;cursor:pointer;list-style:none}
 .faq summary::-webkit-details-marker{display:none}
-.faq summary::after{content:"+";flex:none;display:grid;place-items:center;width:2rem;height:2rem;border-radius:50%;background:var(--sky);font-weight:900}
+.faq summary::after{content:"+";flex:none;display:grid;place-items:center;width:1.9rem;height:1.9rem;border-radius:50%;background:var(--sky);font-weight:900}
 .faq details[open] summary::after{content:"−";background:var(--or)}
-.faq details p{padding:0 0 1.25rem;color:var(--txt)}
-.last{padding:3rem 0;background:var(--or)}
-.last .wrap{display:flex;flex-direction:column;align-items:flex-start;gap:1.25rem}
-.last img{width:5rem;height:5rem}
-.last p{max-width:30rem;margin-top:.4rem;font-size:1.15rem}
-.last .btn{background:var(--navy);color:#fff}
-.last .btn:hover{background:var(--navy2)}
-.foot{padding:2.5rem 0 6.5rem;background:var(--navy);color:#a9b9cd;font-size:1rem}
-.foot img{width:8.5rem;height:auto;margin-bottom:1rem}
-.foot p+p{margin-top:.4rem}
+.faq details p{padding:0 0 1rem;color:var(--txt)}
+.foot{margin-top:2.5rem;padding:1.75rem 0 2rem;background:var(--navy);color:#a9b9cd;font-size:.9rem;text-align:center}
+.foot img{width:7rem;height:auto;margin:0 auto .75rem}
+.foot p+p{margin-top:.35rem}
 .foot a{color:#fff}
-.fab{position:fixed;inset-inline-end:1rem;bottom:1rem;z-index:5;display:flex;align-items:center;gap:.5rem;min-height:3.4rem;padding:.5rem 1.3rem .5rem 1.1rem;border-radius:999px;background:var(--or);color:var(--navy);font-weight:800;text-decoration:none;box-shadow:0 6px 20px #0b234059;transition:opacity .2s,transform .2s,visibility .2s}
-.fab:hover{background:var(--orh)}
-.js .fab:not(.on){visibility:hidden;opacity:0;transform:translateY(1rem)}
-@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.fab{transition:none}}
 @media (min-width:56rem){
-.top img{width:11rem}
-.hero-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,.75fr);gap:3rem;align-items:center}
-.hero-in{padding-block:1.75rem 4.5rem}
-.lock-fig{margin:0 auto}
-.how-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,21rem);gap:4rem;align-items:start}
-.chat-fig{margin:0}
-.price .wrap{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3rem;align-items:center}
-.amount{margin-top:0}
-.last .wrap{flex-direction:row;align-items:center;gap:2rem}
-.last .btn{margin-inline-start:auto}
+.hero{text-align:start}
+.top img{margin:0}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:3rem;align-items:center}
+.hero-in{padding-block:1rem 3rem}
+.cta{margin-inline:0}
+.lock{margin:0 auto}
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:3rem;align-items:start}
 }
 </style>
 </head>
 <body>
 <a class="skip" href="#main">לדלג לתוכן</a>
-<header class="head">
-<div class="wrap top">
-<a href="#main"><img src="svg/al-hakav-logo-on-dark.svg" alt="על הקו" width="176" height="42"></a>
-<a class="say" href="https://wa.me/972515310498?text=%D7%94%D7%99%D7%99%2C%20%D7%A8%D7%90%D7%99%D7%AA%D7%99%20%D7%90%D7%AA%20%D7%94%D7%90%D7%AA%D7%A8%20%D7%95%D7%90%D7%A0%D7%99%20%D7%A8%D7%95%D7%A6%D7%94%20%D7%9C%D7%A0%D7%A1%D7%95%D7%AA">לכתוב לנו</a>
-</div>
-</header>
 <main id="main">
 <div class="hero">
+<div class="wrap top"><img src="svg/al-hakav-logo-on-dark.svg" alt="על הקו" width="176" height="42"></div>
 <div class="wrap hero-in hero-grid">
 <div>
 <p class="for">לאינסטלטורים, חשמלאים, טכנאי מזגנים ומנעולנים</p>
-<h1>פספסתם שיחה באמצע עבודה? <span>אנחנו כבר כותבים ללקוח בוואטסאפ</span></h1>
-<p class="lead">מבררים איתו מה קרה, איפה, וכמה זה דחוף, ושולחים לכם סיכום. אתם חוזרים אליו כשמתפנים.</p>
+<h1>פספסתם שיחה? <span>אנחנו כותבים ללקוח בוואטסאפ</span></h1>
+<p class="lead">ואתם מקבלים סיכום של מה שהוא צריך.</p>
 <p class="cta"><a class="btn" href="https://wa.me/972515310498?text=%D7%94%D7%99%D7%99%2C%20%D7%A8%D7%90%D7%99%D7%AA%D7%99%20%D7%90%D7%AA%20%D7%94%D7%90%D7%AA%D7%A8%20%D7%95%D7%90%D7%A0%D7%99%20%D7%A8%D7%95%D7%A6%D7%94%20%D7%9C%D7%A0%D7%A1%D7%95%D7%AA"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 18.8L4 20z"/></svg>אני רוצה לנסות</a></p>
-<p class="note">149 ₪ לחודש, לא כולל מע״מ. הכפתור פותח איתנו שיחה בוואטסאפ.</p>
 </div>
-<figure class="lock-fig">
-<div class="lock" role="img" aria-label="דוגמה למסך הנעילה שלכם. שיחה שלא נענתה מ-054-XXX-XX38 בשעה 10:41, ובשעה 10:44 הודעה בוואטסאפ מעל הקו: פנייה חדשה, דחוף, נזילה חזקה מתחת לכיור בהרצל 15 אשדוד">
+<div class="lock" role="img" aria-label="דוגמה למסך הנעילה שלכם. שיחה שלא נענתה בשעה 10:41, ובשעה 10:44 הודעה בוואטסאפ מהמוקדן של על הקו: נזילה חזקה מתחת לכיור, הרצל 15 אשדוד, דחוף">
 <p class="lock-time">10:44</p>
-<div class="n"><span class="n-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6.6 3.5h3l1.5 4.2-2 1.3a11 11 0 0 0 5.9 5.9l1.3-2 4.2 1.5v3a2 2 0 0 1-2.1 2A16.5 16.5 0 0 1 4.6 5.6a2 2 0 0 1 2-2.1z"/><path d="M14.5 3.5l6 6m0-6l-6 6"/></svg></span><div><p class="n-h"><span>טלפון</span><span>10:41</span></p><p><b>שיחה שלא נענתה</b></p><p><span dir="ltr">054-XXX-XX38</span></p></div></div>
-<div class="n"><span class="n-ic" aria-hidden="true"><img src="svg/al-hakav-icon.svg" alt="" width="35" height="35"></span><div><p class="n-h"><span>וואטסאפ</span><span>10:44</span></p><p><b>על הקו</b></p><p>פנייה חדשה, דחוף. נזילה חזקה מתחת לכיור, הרצל 15 אשדוד. הלקוח כבר סגר את הברז הראשי.</p></div></div>
-</div>
-<figcaption>השיחה נכנסה ב-10:41, והסיכום הגיע ב-10:44</figcaption>
-</figure>
+<div class="n"><span class="n-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6.6 3.5h3l1.5 4.2-2 1.3a11 11 0 0 0 5.9 5.9l1.3-2 4.2 1.5v3a2 2 0 0 1-2.1 2A16.5 16.5 0 0 1 4.6 5.6a2 2 0 0 1 2-2.1z"/><path d="M14.5 3.5l6 6m0-6l-6 6"/></svg></span><div><p class="n-h"><span>טלפון</span><span>10:41</span></p><p><b>שיחה שלא נענתה</b></p></div></div>
+<div class="n"><span class="n-ic" aria-hidden="true"><img src="svg/al-hakav-mokdan-avatar.svg" alt="" width="34" height="34"></span><div><p class="n-h"><span>וואטסאפ</span><span>10:44</span></p><p><b>המוקדן של על הקו</b></p><p>נזילה חזקה מתחת לכיור, הרצל 15 אשדוד. דחוף.</p></div></div>
 </div>
 </div>
-<section class="how" aria-labelledby="how">
-<div class="wrap how-grid">
-<div>
+</div>
+<div class="wrap cols">
+<section aria-labelledby="how">
 <h2 id="how">ככה זה עובד</h2>
 <ol class="steps">
-<li><h3>פספסתם שיחה</h3><p>אתם על סולם או מתחת לכיור, והטלפון מצלצל בכיס.</p></li>
-<li><h3>הלקוח מקבל וואטסאפ</h3><p>מיד כשהשיחה נגמרת, מהמוקדן של על הקו, בשם העסק שלכם. הוא שואל מה קרה ואיפה, ואומר לו שתחזרו אליו.</p></li>
-<li><h3>אתם מקבלים סיכום</h3><p>הודעה אחת עם הבעיה, הכתובת, כמה זה דחוף והטלפון שלו. את המחיר ואת השעה סוגרים איתו בעצמכם.</p></li>
+<li>לא עניתם לשיחה</li>
+<li>המוקדן כותב ללקוח בוואטסאפ, בשם העסק שלכם</li>
+<li>אתם מקבלים סיכום וחוזרים אליו</li>
 </ol>
-</div>
-<figure class="chat-fig">
-<figcaption>ככה זה נראה אצל מי שהתקשר</figcaption>
-<div class="phone">
-<p class="wa"><img src="svg/al-hakav-icon.svg" alt="" width="35" height="35">העוזר של אבי אינסטלציה</p>
-<ol class="chat">
-<li><span class="sr">העוזר:</span>שלום, כאן העוזר של אבי אינסטלציה. ראינו שהתקשרת ולא הצליחו לענות. מה קרה, ואיפה?<time>10:42</time></li>
-<li class="o"><span class="sr">הלקוח:</span>יש לי נזילה מתחת לכיור במטבח, הרצל 15 אשדוד<time>10:42</time></li>
-<li><span class="sr">העוזר:</span>זה מטפטף או ממש זורם? ובאיזו קומה?<time>10:43</time></li>
-<li class="o"><span class="sr">הלקוח:</span>זורם חזק, סגרתי את הברז הראשי. קומה 3<time>10:43</time></li>
-<li><span class="sr">העוזר:</span>תודה, העברתי לאבי אינסטלציה שזה דחוף. הם יתקשרו אליך ברגע שיתפנו.<time>10:44</time></li>
-</ol>
-</div>
-<p class="fine">השם, הכתובת והמספר מומצאים.</p>
-</figure>
+</section>
+<section aria-labelledby="price">
+<div class="price">
+<h2 id="price">149 ₪ לחודש</h2>
+<p>לא כולל מע״מ. אין דמי הקמה.</p>
+<a class="btn" href="https://wa.me/972515310498?text=%D7%94%D7%99%D7%99%2C%20%D7%A8%D7%90%D7%99%D7%AA%D7%99%20%D7%90%D7%AA%20%D7%94%D7%90%D7%AA%D7%A8%20%D7%95%D7%90%D7%A0%D7%99%20%D7%A8%D7%95%D7%A6%D7%94%20%D7%9C%D7%A0%D7%A1%D7%95%D7%AA"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 18.8L4 20z"/></svg>כתבו לנו בוואטסאפ</a>
 </div>
 </section>
-<section class="price" aria-labelledby="price">
-<div class="wrap">
-<div>
-<h2 id="price">לקוח שלא עניתם לו מתקשר למי שמופיע אחריכם בגוגל</h2>
-<p class="sub">מספיק שעבודה אחת בחודש חוזרת אליכם בזכותנו, וה־149 ₪ כבר חזרו.</p>
-<p class="terms">אין דמי הקמה. משלמים חודש מראש בהעברה בנקאית, ומי שרוצה להפסיק מפסיק לפני החודש הבא.</p>
 </div>
-<p class="amount"><b>149 <small>₪</small></b><span>לחודש</span><em>לא כולל מע״מ</em></p>
-</div>
-</section>
-<section class="faq-s" aria-labelledby="faq">
-<div class="wrap">
-<h2 id="faq">מה שואלים אותנו</h2>
+<section class="wrap faq-s" aria-labelledby="faq">
+<h2 id="faq">שאלות</h2>
 <div class="faq">
-<details><summary>צריך להחליף את המספר של העסק?</summary><p>לא. המספר שלכם נשאר כמו שהוא. מקלידים בטלפון קוד שמעביר לעוזר רק שיחות שלא עניתם עליהן, וגם כשהקו תפוס או כשהטלפון כבוי. שימו לב, ההעברה מחליפה את התא הקולי.</p></details>
-<details><summary>מה אם הלקוח שואל כמה זה יעלה?</summary><p>העוזר רק אוסף פרטים. על מחיר ועל שעה הוא לא מתחייב, את זה אתם סוגרים עם הלקוח בטלפון, כמו היום.</p></details>
-<details><summary>גם אמא שלי תקבל הודעה כשאני לא עונה לה?</summary><p>כן, אם לא עניתם לה. כדי שלא, כותבים לעוזר "לא לשלוח ל־" ואת המספר שלה, והוא לא יכתוב אליה יותר. אותו דבר לספקים וללקוחות קבועים.</p></details>
-<details><summary>איך מתחילים?</summary><p>שולחים לנו הודעה בוואטסאפ, ואנחנו מסבירים מה להקליד בטלפון כדי שזה יתחיל לעבוד אצלכם.</p></details>
-</div>
-</div>
-</section>
-<section class="last" aria-labelledby="try">
-<div class="wrap">
-<img src="svg/al-hakav-icon.svg" alt="" width="80" height="80">
-<div>
-<h2 id="try">רוצים לנסות על המספר שלכם?</h2>
-<p>כתבו לנו בוואטסאפ ונסביר מה צריך לעשות.</p>
-</div>
-<a class="btn" href="https://wa.me/972515310498?text=%D7%94%D7%99%D7%99%2C%20%D7%A8%D7%90%D7%99%D7%AA%D7%99%20%D7%90%D7%AA%20%D7%94%D7%90%D7%AA%D7%A8%20%D7%95%D7%90%D7%A0%D7%99%20%D7%A8%D7%95%D7%A6%D7%94%20%D7%9C%D7%A0%D7%A1%D7%95%D7%AA"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 18.8L4 20z"/></svg>אני רוצה לנסות</a>
+<details><summary>צריך להחליף את המספר של העסק?</summary><p>לא. מקלידים בטלפון קוד, ורק שיחות שלא עניתם עוברות אלינו. ההעברה מחליפה את התא הקולי.</p></details>
+<details><summary>מה אם הלקוח שואל כמה זה יעלה?</summary><p>המוקדן רק אוסף פרטים. מחיר ושעה אתם סוגרים איתו בטלפון.</p></details>
+<details><summary>גם אמא שלי תקבל הודעה?</summary><p>רק אם לא עניתם לה. כותבים למוקדן "לא לשלוח ל־" ואת המספר שלה, והוא לא יכתוב אליה.</p></details>
+<details><summary>איך מתחילים?</summary><p>כותבים לנו בוואטסאפ, ואנחנו מסבירים מה להקליד בטלפון.</p></details>
 </div>
 </section>
 </main>
 <footer class="foot">
 <div class="wrap">
 <img src="svg/al-hakav-logo-on-dark.svg" alt="על הקו" width="136" height="32">
-<p>הודעה בוואטסאפ לכל מי שהתקשר ולא עניתם לו, וסיכום של מה שהוא צריך אליכם.</p>
 <p><a href="terms.html">תנאי שימוש</a> · <a href="privacy.html">מדיניות פרטיות</a> · <a href="accessibility.html">הצהרת נגישות</a></p>
 <p>© 2026 על הקו</p>
 </div>
 </footer>
-<a class="fab" href="https://wa.me/972515310498?text=%D7%94%D7%99%D7%99%2C%20%D7%A8%D7%90%D7%99%D7%AA%D7%99%20%D7%90%D7%AA%20%D7%94%D7%90%D7%AA%D7%A8%20%D7%95%D7%90%D7%A0%D7%99%20%D7%A8%D7%95%D7%A6%D7%94%20%D7%9C%D7%A0%D7%A1%D7%95%D7%AA" aria-label="לכתוב לנו בוואטסאפ"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 18.8L4 20z"/></svg><span>וואטסאפ</span></a>
-<script>
-document.documentElement.classList.add('js');
-(function(){
-var fab=document.querySelector('.fab'),hero=document.querySelector('.hero');
-if('IntersectionObserver' in window)new IntersectionObserver(function(e){fab.classList.toggle('on',!e[e.length-1].isIntersecting)}).observe(hero);
-else fab.classList.add('on');
-})();
-</script>
 </body>
 </html>
