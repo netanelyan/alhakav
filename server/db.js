@@ -225,6 +225,39 @@ CREATE TABLE pay_notices (
   `
 ALTER TABLE leads ADD COLUMN toran_at TEXT;
 `,
+  // Each lead's own page and the demo on it (server/demo.js, docs/demo.md): the page's code, who opened it and when,
+  // and the tries of המוקדן a tradesperson made on themselves, kept 30 days.
+  `
+ALTER TABLE leads ADD COLUMN page_code TEXT;
+CREATE UNIQUE INDEX leads_page_code ON leads (page_code);
+ALTER TABLE leads ADD COLUMN page_views INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE leads ADD COLUMN page_first_at TEXT;
+ALTER TABLE leads ADD COLUMN page_last_at TEXT;
+
+CREATE TABLE demos (
+  id INTEGER PRIMARY KEY,
+  lead_id INTEGER REFERENCES leads (id) ON DELETE CASCADE,
+  phone TEXT NOT NULL,
+  state TEXT NOT NULL DEFAULT 'talking' CHECK (state IN ('talking', 'done')),
+  turns INTEGER NOT NULL DEFAULT 0,
+  what TEXT,
+  place TEXT,
+  urgency TEXT,
+  started_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX demos_phone ON demos (phone, updated_at);
+
+CREATE TABLE demo_messages (
+  id INTEGER PRIMARY KEY,
+  demo_id INTEGER NOT NULL REFERENCES demos (id) ON DELETE CASCADE,
+  dir TEXT NOT NULL CHECK (dir IN ('in', 'out')),
+  kind TEXT NOT NULL,
+  body TEXT NOT NULL,
+  msg_id TEXT UNIQUE,
+  at TEXT NOT NULL
+);
+`,
 ];
 
 export class Db {

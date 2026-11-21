@@ -1,6 +1,7 @@
 import { agoHe, dayMonth, hhmm, whenHe } from './clock.js';
 import { CLOSED, LOST, T, TRADE } from './copy.js';
 import { button, csrfField, empty, esc, ext, flashLine, layout, ltr, tag } from './html.js';
+import { pageCodeOf, pageUrl } from './demo.js';
 import { laterDue } from './leads.js';
 import { metaSettings } from './meta.js';
 import { blocked, blockedText, messageText, nameParam, reminderDue, reminderDueAt, unreached, windowOpen, windowUntil } from './outreach.js';
@@ -243,6 +244,13 @@ function endCard(csrf, x) {
   return `<article class="card end" id="end"><h2>${esc(T.end.title)}</h2><details class="sure"><summary>${esc(T.end.remove)}</summary><p class="muted">${esc(T.end.hint)}</p>${leadButton(csrf, x.id, 'delete', T.end.sure, 'danger')}</details></article>`;
 }
 
+/** Their own page: its address, who opened it, and the tries of המוקדן on it (demo.js). */
+function pageCard(app, x, at) {
+  const url = pageUrl(app.env, pageCodeOf(app.db, x));
+  const demos = app.db.get('SELECT count(*) AS n FROM demos WHERE lead_id = ?', x.id).n;
+  return `<article class="card" id="page"><h2>${esc(T.page.title)}</h2><p>${ext(url, ltr(url))}</p><p class="muted">${esc(T.page.hint)}</p><p>${esc(x.page_views ? T.page.views(x.page_views, agoHe(Date.parse(x.page_last_at), at)) : T.page.noViews)}</p><p>${esc(demos ? T.page.demos(demos) : T.page.noDemos)}</p></article>`;
+}
+
 export function leadPage(app, { csrf, flash = '', bad = false, lead: x, messages, isStopped, at }) {
   const back = x.stage === 'new' ? ['/admin/leads', T.reached.back] : ['/admin/leads/reached', T.reached.title];
   const tags = [tradeTag(x), cityTag(x), x.stage === 'new' ? tag(T.lead.score(x.score), x.qualified ? '' : 'wait') : outTag(x), reminderDue(x, at) ? tag(T.lead.due, 'due') : ''].join('');
@@ -252,6 +260,7 @@ export function leadPage(app, { csrf, flash = '', bad = false, lead: x, messages
 <div class="cards">
 ${sendCard(app, csrf, x, isStopped, at)}
 ${chatCard(app, csrf, x, messages, at)}
+${pageCard(app, x, at)}
 ${standsCard(csrf, x, at)}
 ${detailsCard(x, at)}
 ${endCard(csrf, x)}

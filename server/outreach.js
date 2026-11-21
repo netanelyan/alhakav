@@ -8,6 +8,7 @@ import { customerByPhone, takeReceipt } from './pay.js';
 import { isMobile, local, masked } from './phones.js';
 import { asksToStop, automatic } from './stopWords.js';
 import { queueAnswer } from './toran.js';
+import { bizOf, pageCodeOf, pageUrl } from './demo.js';
 
 // Writing to a tradesperson from the business number, and what happens when they answer. The guardrails are
 // openfrequency-toran's (src/ops/outreach.ts), because the number's rating is what everything else rides on: Meta
@@ -307,7 +308,7 @@ async function onMessage(app, m) {
     db.run("UPDATE leads SET yes_at = ?, stage = 'talking', closed_why = NULL, later_until = NULL, updated_at = ? WHERE id = ?", stamp, stamp, lead.id);
     raise(db, lead, 'yes');
     app.log(`[in] ${masked(from)} said yes (lead ${lead.id})`);
-    if (!db.get("SELECT 1 FROM messages WHERE lead_id = ? AND kind = 'pitch'", lead.id)) await answer(app, lead, 'pitch', MSG.pitch(outreachSettings(app.env).site));
+    if (!db.get("SELECT 1 FROM messages WHERE lead_id = ? AND kind = 'pitch'", lead.id)) await answer(app, lead, 'pitch', MSG.pitch(bizOf(lead), pageUrl(app.env, pageCodeOf(db, lead))));
     await alertOwner(app, `yes:${lead.id}`, ALERT.yes(whoIs(lead.name, from)), ALERT.body.open(adminLink(app.env, `/admin/leads/${lead.id}`)), 24 * 60);
     return;
   }

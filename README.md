@@ -70,6 +70,8 @@ keep the PIN in `META_PIN` (alhakav does not read it, but Meta asks for it to re
 **Payments.** `PAYMENT_DETAILS`, the template `alhakav_payment` (docs/whatsapp-templates.md) submitted on the business
 number, and Morning's API keys in `MORNING_CLIENT_ID` and `MORNING_CLIENT_SECRET` (docs/payments.md).
 
+**Pages.** Each lead gets a page of its own with a working try of המוקדן, sent after "כן, שלחו" (docs/demo.md). `DEMO_DAILY` caps the tries a day (30).
+
 **Toran.** openfrequency-toran answers on the business number as על הקו, sends the admin's alerts to their WhatsApp,
 and hands whoever wants to join to the payment message: `OF_INTERNAL_TOKEN` (the same as Toran's), and על הקו's export
 synced into Toran (`node server/main.js support <file>`, docs/toran.md).

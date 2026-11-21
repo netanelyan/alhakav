@@ -7,6 +7,7 @@ import { num } from './env.js';
 import { metaSettings, sendText } from './meta.js';
 import { customerByPhone, sendPayment } from './pay.js';
 import { masked } from './phones.js';
+import { pageUrl } from './demo.js';
 
 // Toran answers on the business number (docs/toran.md). openfrequency-toran's agent, the one that answers
 // OpenFrequency's own support, answers as על הקו too: from what the site says (its export, server/support.js), with its
@@ -92,8 +93,8 @@ export function queueAnswer(app, lead, m) {
   return null;
 }
 
-/** Who this is here, in a few English lines for Toran's agent (never shown to them). */
-export function contextOf(db, lead, phone) {
+/** Who this is here, in a few English lines for Toran's agent (never shown to them). env: for their page's address. */
+export function contextOf(db, lead, phone, env = {}) {
   const c = customerByPhone(db, phone);
   if (c) {
     const b = billingOf(c);
@@ -107,7 +108,7 @@ export function contextOf(db, lead, phone) {
     if (db.get('SELECT 1 FROM receipts WHERE customer_id = ? AND decided_at IS NULL', c.id)) lines.push('A transfer screenshot from them is waiting for us to check the bank.');
     return lines.filter(Boolean).join(' ');
   }
-  if (lead.first_at) return [`A tradesperson we wrote to first${lead.name ? ` (${lead.name})` : ''}, asking whether we may send them a short explanation.`, lead.yes_at ? 'They said yes and already got our explanation, with the price and the site.' : ''].filter(Boolean).join(' ');
+  if (lead.first_at) return [`A tradesperson we wrote to first${lead.name ? ` (${lead.name})` : ''}, asking whether we may send them a short explanation.`, lead.yes_at ? `They said yes and already got our explanation, with the price and a page we made for their business${lead.page_code ? ` (${pageUrl(env, lead.page_code)}), where they can try המוקדן on themselves` : ''}.` : ''].filter(Boolean).join(' ');
   return 'They wrote to us first, most likely from the website.';
 }
 
@@ -127,7 +128,7 @@ async function answer(app, phone, batch) {
     const res = await app.toranFetch(`${t.url}/internal/company/answer`, {
       method: 'POST',
       headers: { authorization: `Bearer ${t.token}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ domain: t.domain, phone, name: name || null, messages: batch.map(({ id, text, at }) => ({ id, text, at })), operator, context: contextOf(db, lead, phone) }),
+      body: JSON.stringify({ domain: t.domain, phone, name: name || null, messages: batch.map(({ id, text, at }) => ({ id, text, at })), operator, context: contextOf(db, lead, phone, app.env) }),
       signal: AbortSignal.timeout(90_000),
     });
     if (!res.ok) throw new Error(`Toran answered ${res.status}`);

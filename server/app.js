@@ -23,6 +23,7 @@ import { receiptPage } from './payPages.js';
 import { onCall, serviceState, track } from './service.js';
 import { readEvent, signatureOk as telnyxSigned, telnyxSettings } from './telnyx.js';
 import { toranState } from './toran.js';
+import { leadByCode, pageHtml, pageViewed } from './demo.js';
 
 // The one HTTP server, behind Caddy on 127.0.0.1:
 //
@@ -56,6 +57,7 @@ const PUBLIC = {
   '/svg/al-hakav-logo.svg': ['svg/al-hakav-logo.svg', SVG],
   '/svg/al-hakav-logo-on-dark.svg': ['svg/al-hakav-logo-on-dark.svg', SVG],
   '/svg/al-hakav-icon.svg': ['svg/al-hakav-icon.svg', SVG],
+  '/svg/al-hakav-mokdan-avatar.svg': ['svg/al-hakav-mokdan-avatar.svg', SVG],
   '/svg/al-hakav-favicon.svg': ['svg/al-hakav-favicon.svg', SVG],
   '/png/favicon-32.png': ['png/favicon-32.png', PNG],
   '/png/apple-touch-icon.png': ['png/apple-touch-icon.png', PNG],
@@ -164,6 +166,14 @@ async function route(app, req, res) {
   if (p === '/api/health') return send(res, 200, 'text/plain; charset=utf-8', 'ok');
   if (p === '/meta/webhook') return webhook(app, req, res, url);
   if (p === '/telnyx/webhook') return telnyxWebhook(app, req, res);
+  // A lead's own page (demo.js): its code, or not found; never indexed, never cached, each view counted.
+  const page = /^\/p\/([a-z0-9]{10})$/.exec(p);
+  if (page && req.method === 'GET') {
+    const lead = leadByCode(app.db, page[1]);
+    if (!lead) return send(res, 404, 'text/plain; charset=utf-8', 'not found');
+    await pageViewed(app, lead);
+    return send(res, 200, HTML, pageHtml(app.env, lead), { 'content-security-policy': "frame-ancestors 'none'", 'x-robots-tag': 'noindex, nofollow' });
+  }
   if (PUBLIC[p] && req.method === 'GET') {
     const [file, type] = PUBLIC[p];
     return send(res, 200, type, readFileSync(path.join(ROOT, file)), { 'content-security-policy': "frame-ancestors 'none'", 'cache-control': 'public, max-age=300' });

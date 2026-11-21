@@ -5,6 +5,7 @@ import { SVC } from './copy.js';
 import { num } from './env.js';
 import { local, masked, normalize } from './phones.js';
 import { GraphError, assistSettings, sendTemplate, sendText } from './meta.js';
+import { demoMessage } from './demo.js';
 import { asksToStop, automatic } from './stopWords.js';
 import { callAction, telnyxSettings } from './telnyx.js';
 
@@ -228,6 +229,8 @@ export async function onAssistMessage(app, m) {
   const { db } = app;
   const from = String(m.from || '').replace(/\D/g, '');
   if (!from) return;
+  // A try of המוקדן from a lead's page (demo.js): a page's code starts one, and its turns follow.
+  if (await demoMessage(app, from, m)) return;
   const text = String(m.text || '').trim();
   const owner = ownerOf(db, from);
   if (owner) return fromOwner(app, owner, m, text);
