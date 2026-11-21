@@ -21,6 +21,7 @@ test("Toran's file: the site's own facts, in the company export's shape, with 'j
   assert.equal(new Set(d.faq.map((f) => f.q)).size, d.faq.length);
   assert.deepEqual(d.pages.map((p) => p.kind), ['about', 'about', 'payment', 'terms', 'privacy', 'accessibility']);
   assert.ok(d.pages.every((p) => p.title && p.text.length > 100 && p.url.startsWith('https://alhakav.example/')));
+  assert.equal(new Set(d.pages.map((p) => p.url)).size, d.pages.length, 'one page for each address, as Toran keeps them');
   assert.equal(d.contact.whatsapp, '972515310498');
   assert.equal(d.generatedAt, '2026-11-21T10:00:00.000Z');
   // The owner's name stays on the privacy page, where the law asks for it, and out of what Toran says.

@@ -103,8 +103,9 @@ export function supportExport(env, at = new Date()) {
     plans: [{ key: 'monthly', product: 'על הקו', title: 'על הקו, לחודש', monthly: PRICE, text: `${PRICE} ₪ לחודש, לא כולל מע״מ (${withVat} ₪ כולל מע״מ). כולל את המספר שאליו עוברות השיחות ואת ההודעות בוואטסאפ. אין דמי הקמה, ומשלמים חודש מראש בהעברה בנקאית.`, url: `${site}/#price` }],
     faq,
     pages: [
-      { kind: 'about', title: 'מה עובד היום, ומה עוד לא', url: `${site}/`, text: STATUS },
-      { kind: 'about', title: 'איך על הקו עובד', url: `${site}/`, text: textOf(mainOf(index)) },
+      // Each page at its own address: Toran keeps one page for each address of a store.
+      { kind: 'about', title: 'מה עובד היום, ומה עוד לא', url: `${site}/#today`, text: STATUS },
+      { kind: 'about', title: 'איך על הקו עובד', url: `${site}/#how`, text: textOf(mainOf(index)) },
       { kind: 'payment', title: 'מחיר ותשלום', url: `${site}/#price`, text: [MORE[0].a, MORE[1].a, MORE[2].a].join('\n') },
       { kind: 'terms', title: titleOf(terms), url: `${site}/terms`, text: textOf(mainOf(terms)) },
       { kind: 'privacy', title: titleOf(privacy), url: `${site}/privacy`, text: textOf(mainOf(privacy)) },
