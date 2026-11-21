@@ -16,7 +16,7 @@ import { ENV, hook, testApp } from './helpers.js';
 const SUNDAY = Date.parse('2026-11-22T08:41:00Z'); // 10:41 in Israel
 const OWNER = '972541112222';
 const JPEG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01]);
-const PENV = { ...ENV, PAYMENT_DETAILS: 'בנק הפועלים (12), סניף 345, חשבון 678901, על שם נתנאל יאנצבסקי', MORNING_CLIENT_ID: 'id', MORNING_CLIENT_SECRET: 'secret', MORNING_ENV: 'sandbox' };
+const PENV = { ...ENV, PAYMENT_DETAILS: 'בנק הפועלים (12), סניף 345, חשבון 678901, על שם ישראל ישראלי', MORNING_CLIENT_ID: 'id', MORNING_CLIENT_SECRET: 'secret', MORNING_ENV: 'sandbox' };
 
 /** Morning, faked: a token, the business's VAT settings, and each document answers number 1000 + n. */
 function fakeMorning({ vatRate = 0.18 } = {}) {

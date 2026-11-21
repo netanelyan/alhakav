@@ -54,15 +54,30 @@ every one of them against a fake Telnyx and a fake Claude.
 
 ## Check on the first number
 
-These could not be confirmed from Telnyx's or Meta's documents, so the first customer is also the test:
+What the documents say (read 2026-11-21), and what only the first customer can show:
 
-- **WhatsApp on an Israeli Telnyx number.** Telnyx lists WhatsApp in 180+ countries but no list of which numbers.
-  If an Israeli number can't be registered, the fallback is Twilio, which also does voice and WhatsApp on its numbers.
-- **The caller's number on a forwarded call** arrives in `from` (Bezeq says the caller's number is kept; no Israeli
-  carrier says it isn't). The test call shows it.
-- **The template's category.** Meta may class "we saw you called" as Marketing ($0.0353 a message in Israel) rather
-  than Utility ($0.0053), since the caller didn't ask for WhatsApp. Either way the cost is in the price; a template
-  that people block or report would lower the assistant numbers' rating, so "הסר" stops every message at once.
+- **WhatsApp on an Israeli Telnyx number: likely.** Telnyx's WhatsApp FAQ takes landline, mobile and toll-free
+  numbers and names no country it excludes; Meta takes VoIP and fixed lines whose code comes by voice ("Standard";
+  by SMS to VoIP is "Not Recommended"), provided the number takes calls from abroad and no IVR stands in the way.
+  Telnyx's Israeli local numbers need a business registration certificate, a use-case description and a proof of
+  address under 3 months old; its Israeli mobile numbers only a name and an email. No one reports a Telnyx +972 number
+  registered, so the first number is the test. If it fails, Twilio sells Israeli local numbers ($5.50 a month) that
+  can be WhatsApp senders by voice code.
+- **The caller's number on a forwarded call: likely kept.** Israeli carriers' forwarding (Pelephone, Partner,
+  Cellcom, HOT Mobile, Bezeq and others) shows the caller's number, not the forwarding phone's, and products like
+  ITD's WhatsApp router are built on it. Golan and some prepaid SIMs block forwarding abroad. Whether Telnyx's Israeli
+  supplier passes it on is the test call. Telnyx's `call.initiated` carries the caller in `from`, and a `Diversion`
+  or `History-Info` header in `sip_headers` (e.g. `reason=user-busy`) when the network sends one; `to` already says
+  whose assistant it is.
+- **The template's category: likely Utility, at real risk of Marketing.** Utility must be non-promotional and
+  specific to the user; Meta's "continue a conversation" case ("we are following up on your call...") is the closest,
+  but says the move to WhatsApp should be one the user asked for. Since April 2025 a Utility template Meta reads as
+  Marketing is approved as Marketing, and can be recategorized later with a day's notice (the
+  `template_category_update` webhook; 60 days to appeal). In Israel since 2026-10-01: Marketing $0.0353, Utility
+  $0.0053, and Utility is no longer free inside the 24 hours; a phone call opens no 24 hours, so the first message is
+  always paid. A `GREETING_URL` that says "נמשיך בוואטסאפ" before the call ends makes the case for Utility stronger.
+  Either way the cost is in the price; a template that people block or report would lower the assistant numbers'
+  rating, so "הסר" stops every message at once.
 - **More than 20 customers** needs Meta to raise the number limit, or על הקו becoming a Meta Tech Provider.
 
 ## What it costs, per customer, per month
@@ -89,3 +104,11 @@ https://telnyx.com/phone-numbers/israel. Meta's number limits: https://developer
 templates and opt-in: https://developers.facebook.com/docs/whatsapp/updates-to-pricing/new-template-guidelines ;
 prices in Israel: https://developers.facebook.com/docs/whatsapp/pricing. Forwarding codes and caller ID: Pelephone,
 Cellcom, Partner and Bezeq's support pages, and https://www.exm.co.il/kb/virtual-numbers/call-forward/cellcom.html.
+
+The checks above (read 2026-11-21): https://support.telnyx.com/en/articles/13986488-whatsapp-faq ;
+https://support.telnyx.com/en/articles/5466651-israel-did-requirements ;
+https://www.twilio.com/docs/whatsapp/register-senders-using-api.md ; https://www.twilio.com/en-us/voice/pricing/il ;
+https://www.ice.co.il/digital-140/news/article/836530 (forwarding keeps the caller's number) ;
+https://www.mako.co.il/nexter-cellular/apps/Article-c77c83875d1a461006.htm ;
+https://developers.facebook.com/documentation/business-messaging/whatsapp/templates/template-categorization ;
+https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing.

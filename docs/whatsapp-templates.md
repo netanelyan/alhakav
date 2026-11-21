@@ -4,9 +4,14 @@ A business can write first to someone who has not written to it in the last 24 h
 approved. The outreach to tradespeople uses two, both **Marketing**, in **Hebrew (he)**, the same shape as openfrequency's
 `openfrequency_ask`: they ask before sending anything, say who writes, and carry the way out as a button.
 
-Before submitting, replace the last line of each body with the real identification line: the business name, your full
-name, the address and the site. Put the exact same line in `SENDER_LINE` in `private/.env`, so the admin page shows
-what the tradesperson will read.
+The last line of each body identifies who writes, as section 30A asks of an advertiser: the business name, the owner's
+full name and the address (no site until there is a domain). That line is one of the few places the owner's details
+appear, so it is never written in this repo: it lives only in `SENDER_LINE` on the server, and the template submitted
+to Meta carries it exactly, so the admin page shows what the tradesperson will read.
+
+Where they go: a WhatsApp Business Account named על הקו in the verified HanutHashofet portfolio, created with the
+business number itself (Meta's "Create a WhatsApp account" asks for the number and verifies it in the same step), so
+the number comes first.
 
 Meta's rules these follow: the body does not start or end with a variable, and quick replies are the only buttons.
 
@@ -27,7 +32,7 @@ Meta's rules these follow: the body does not start or end with a variable, and q
 
 לא מעוניינים? לוחצים "לא, תודה" ולא נכתוב שוב.
 
-[שם העסק], [שם מלא], [כתובת]. [אתר]
+[שם העסק], [שם מלא], [כתובת].
 ```
 
 ## alhakav_ask_reminder (the one reminder, four days later)
@@ -45,7 +50,7 @@ Meta's rules these follow: the body does not start or end with a variable, and q
 
 זו ההודעה האחרונה שלנו בנושא. לוחצים "כן, שלחו" ונשלח, או "לא, תודה" ולא נכתוב שוב.
 
-[שם העסק], [שם מלא], [כתובת]. [אתר]
+[שם העסק], [שם מלא], [כתובת].
 ```
 
 ## Submitting them
@@ -60,7 +65,7 @@ body1='שלום, כאן על הקו. כשאתם באמצע עבודה ולא ע�
 
 לא מעוניינים? לוחצים "לא, תודה" ולא נכתוב שוב.
 
-[שם העסק], [שם מלא], [כתובת]. [אתר]'
+[שם העסק], [שם מלא], [כתובת].'
 
 jq -n --arg body "$body1" '{name: "alhakav_ask", language: "he", category: "MARKETING",
   components: [{type: "BODY", text: $body, example: {body_text: [["אצל אבי אינסטלציה"]]}},
@@ -147,7 +152,7 @@ customer's last message the same words go as plain text.
 | Category | Utility |
 | Language | Hebrew (he) |
 | Buttons | none |
-| Variables (sample) | `{{1}}` = `העוזר של אבי אינסטלציה משולם עד 24.11.2026. זה התשלום על החודש הבא, מ־25.11.2026 עד 24.12.2026.`, `{{2}}` = `175.82`, `{{3}}` = `בנק הפועלים (12), סניף 345, חשבון 678901, על שם נתנאל יאנצבסקי` |
+| Variables (sample) | `{{1}}` = `העוזר של אבי אינסטלציה משולם עד 24.11.2026. זה התשלום על החודש הבא, מ־25.11.2026 עד 24.12.2026.`, `{{2}}` = `175.82`, `{{3}}` = `בנק הפועלים (12), סניף 345, חשבון 678901, על שם ישראל ישראלי` |
 
 ```
 שלום, כאן על הקו. {{1}}

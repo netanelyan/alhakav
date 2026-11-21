@@ -4,7 +4,8 @@ What terms.html promises, built the way openfrequency takes payments over WhatsA
 (175.82 ₪ with it), paid ahead for each month by bank transfer; the amount and the transfer details go to the customer
 on WhatsApp; they send back a screenshot or a PDF of the transfer; the admin checks the bank and records it; Morning
 issues the invoice-receipt. A payment that has not come within 72 hours after the paid month ends stops the assistant
-until it comes. **Nothing records a payment by itself, and nothing moves money: only the admin's press records one.**
+until it comes. A payment for the current month or an earlier one is never refunded, not even in part (terms.html,
+"החזרים"). **Nothing records a payment by itself, and nothing moves money: only the admin's press records one.**
 
 All of it is on the business number (the one the lead desk writes from, `META_*`), not on the assistant numbers: it is
 על הקו talking to its customer, and Meta's API can fetch the picture they send there.
@@ -81,14 +82,15 @@ payments are recorded as before and the receipt's page says the invoice was not 
 
 The payment is recorded first, always: an invoice that fails never holds it up, and the receipt's page shows Morning's
 code and words and "להפיק חשבונית שוב". One receipt is claimed before Morning is asked, so a double press never makes
-two documents. UNVERIFIED until the first live run, as in openfrequency: the error body's field names, whether `vatRate`
-comes as 0.18 or 18 (both are read), and the client's `taxId` and `address` field names.
+two documents. Read with the business's keys on 2026-11-21: `/documents/info` answers `vatRate` 0.18 and `exemption`
+false. UNVERIFIED until the first invoice, as in openfrequency: the error body's field names, and the client's `taxId`
+and `address` field names.
 
 ## Settings
 
 | Setting | |
 |---|---|
-| `PAYMENT_DETAILS` | The transfer details in one line, as the customer reads them: "בנק הפועלים (12), סניף 345, חשבון 678901, על שם נתנאל יאנצבסקי". Unset, no payment message goes. |
+| `PAYMENT_DETAILS` | The transfer details in one line, as the customer reads them: "בנק הפועלים (12), סניף 345, חשבון 678901, על שם ישראל ישראלי". Unset, no payment message goes. |
 | `TEMPLATE_PAYMENT` | The approved template's name, `alhakav_payment` by default. |
 | `MORNING_CLIENT_ID`, `MORNING_CLIENT_SECRET`, `MORNING_ENV` | Morning, above. |
 
