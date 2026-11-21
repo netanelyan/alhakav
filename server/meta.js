@@ -28,6 +28,17 @@ export function metaSettings(env) {
   return { ...s, ready: Boolean(s.token && s.phoneId) };
 }
 
+/**
+ * The assistant's own number, המוקדן (docs/connecting.md): a second number on the same WhatsApp Business Account, with
+ * the same token, templates and webhook, that writes to every customer's callers and to the customers themselves.
+ * ASSIST_PHONE_ID is its Meta id; ASSIST_NUMBER its digits (972...), for the pages.
+ */
+export function assistSettings(env) {
+  const m = metaSettings(env);
+  const phoneId = String(env.ASSIST_PHONE_ID || '').trim();
+  return { ...m, phoneId, number: String(env.ASSIST_NUMBER || '').replace(/\D/g, ''), ready: Boolean(m.token && phoneId) };
+}
+
 export class GraphError extends Error {
   constructor(message, status, code) {
     super(message);
@@ -113,6 +124,8 @@ export function parseWebhook(body) {
     for (const change of entry?.changes || []) {
       if (change?.field && change.field !== 'messages') continue;
       const v = change?.value || {};
+      // Which of our numbers it is about: the business number, or the assistant's (outreach.js onWebhook splits them).
+      const phoneId = String(v.metadata?.phone_number_id || '');
       const names = Object.fromEntries((v.contacts || []).map((c) => [String(c.wa_id), String(c.profile?.name || '')]));
       for (const msg of v.messages || []) {
         if (msg.type === 'reaction') continue;
@@ -130,11 +143,12 @@ export function parseWebhook(body) {
           text: String(text || ''),
           media: ['image', 'document'].includes(msg.type) && msg[msg.type]?.id ? { id: String(msg[msg.type].id), mime: String(msg[msg.type].mime_type || ''), name: String(msg[msg.type].filename || '') } : null,
           name: names[String(msg.from)] || '',
+          phoneId,
         });
       }
       for (const s of v.statuses || []) {
         const err = s.errors?.[0];
-        statuses.push({ id: String(s.id || ''), status: String(s.status || ''), to: String(s.recipient_id || ''), error: err ? { code: Number(err.code) || null, title: String(err.title || err.message || '') } : null });
+        statuses.push({ id: String(s.id || ''), status: String(s.status || ''), to: String(s.recipient_id || ''), error: err ? { code: Number(err.code) || null, title: String(err.title || err.message || '') } : null, phoneId });
       }
     }
   }

@@ -85,11 +85,12 @@ lead's page says so.
   was removed, the lead closes, and no message goes to it again.
 - Anything else they write marks them as answering and opens 24 hours in which you can answer from the lead's page.
 
-## The assistant numbers (the service itself)
+## המוקדן's number (the service itself)
 
-Three **Utility** templates on the WhatsApp Business Account the assistant numbers belong to (`TELNYX_WABA_ID`),
-submitted through Telnyx or WhatsApp Manager. The bodies are the same text `server/copy.js` (`SVC`) shows on the admin
-page; a variable's value never has a line break in it (Meta refuses that).
+Three **Utility** templates on על הקו's own WhatsApp Business Account (`META_WABA_ID`), the one both numbers are on:
+templates belong to the account, so המוקדן's number (`ASSIST_PHONE_ID`) sends them. Submitted with the API on
+2026-11-21. The bodies are the same text `server/copy.js` (`SVC`) builds, written for a tradesperson who reads them on
+a job: plain words, no office language. A variable's value never has a line break in it (Meta refuses that).
 
 ### alhakav_caller, to the caller, as their call ends
 
@@ -112,14 +113,14 @@ page; a variable's value never has a line break in it (Meta refuses that).
 | Variables (sample) | `{{1}}` = `10:41`, `{{2}}` = `נזילה חזקה מתחת לכיור`, `{{3}}` = `הרצל 15, אשדוד, קומה 3`, `{{4}}` = `דחוף, המים זורמים`, `{{5}}` = `054-123-4567` |
 
 ```
-פנייה חדשה משיחה שלא נענתה ב־{{1}}
+התקשרו אליכם ב־{{1}} ולא עניתם. זה מה שצריך:
 
 מה: {{2}}
 איפה: {{3}}
-דחיפות: {{4}}
+כמה דחוף: {{4}}
 טלפון: {{5}}
 
-אפשר לחזור ללקוח בטלפון או בוואטסאפ.
+אפשר לחזור בטלפון או בוואטסאפ.
 ```
 
 ### alhakav_call_note, to the customer, when there is no conversation to sum up
@@ -130,7 +131,7 @@ page; a variable's value never has a line break in it (Meta refuses that).
 | Variables (sample) | `{{1}}` = `מ־054-123-4567`, `{{2}}` = `10:41`, `{{3}}` = `שלחנו הודעה בוואטסאפ ועוד אין תשובה.` |
 
 ```
-שיחה שלא נענתה {{1}} ב־{{2}}.
+התקשרו אליכם {{1}} ב־{{2}} ולא עניתם.
 {{3}}
 
 נעדכן כשיהיה משהו חדש.

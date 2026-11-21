@@ -43,6 +43,17 @@ export const MSG = {
     ]
       .filter(Boolean)
       .join('\n\n'),
+  // To someone who wrote to us first, when Toran could not answer them (docs/toran.md): once, and a person follows.
+  welcome: (site) =>
+    [
+      'היי, תודה על ההודעה. ככה על הקו עובד:',
+      'כשאתם לא עונים לשיחה, מי שהתקשר מקבל מאיתנו הודעה בוואטסאפ מיד כשהשיחה נגמרת. אנחנו שואלים אותו מה קרה, איפה, ואם זה דחוף, ושולחים לכם סיכום אחד עם המספר שלו.',
+      '149 ₪ לחודש, לא כולל מע״מ. אין דמי הקמה, ומשלמים חודש בחודש.',
+      site ? `ככה זה נראה: ${site}` : '',
+      'ההודעה שלכם אצלנו, ונחזור אליכם כאן.',
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
   stopped: 'הסרנו את המספר שלכם, ולא נכתוב אליכם שוב.',
   senderMissing: '[שורת הזיהוי: שם העסק, שם מלא, כתובת ואתר]',
 };
@@ -198,7 +209,7 @@ export const T = {
     empty: 'אין מה לשלוח.',
     auto: 'הודעה אוטומטית מהטלפון שלהם',
     status: { sent: 'נשלחה', delivered: 'הגיעה', read: 'נקראה', failed: 'לא הגיעה', hand: 'נשלחה מהטלפון' },
-    kind: { first: 'ההודעה הראשונה', reminder: 'התזכורת', pitch: 'ההסבר, אחרי שאמרו כן', stopped: 'אחרי שביקשו להסיר', reply: '', pay: 'בקשת תשלום', receipt: 'אחרי אישור העברה', paid: 'אחרי שהתשלום נרשם' },
+    kind: { first: 'ההודעה הראשונה', reminder: 'התזכורת', pitch: 'ההסבר, אחרי שאמרו כן', stopped: 'אחרי שביקשו להסיר', reply: '', pay: 'בקשת תשלום', receipt: 'אחרי אישור העברה', paid: 'אחרי שהתשלום נרשם', bot: 'תורן', welcome: 'ההסבר האוטומטי' },
   },
   stands: {
     title: 'איפה זה עומד',
@@ -244,7 +255,8 @@ export const T = {
   error: 'משהו נשבר בשרת. הפרטים בלוג.',
 };
 
-// ---- The service: what the assistant says to a caller and to its customer (docs/connecting.md).
+// ---- The service: what המוקדן, the assistant number every customer shares, says to a caller and to its customer
+// (docs/connecting.md).
 //
 // The first message to a caller and the summary and the note to the customer go as templates when no 24-hour window is
 // open (docs/whatsapp-templates.md has them for Meta); the text here is the same body, filled in. A caller is addressed
@@ -253,9 +265,11 @@ export const T = {
 export const SVC = {
   callerFirst: (business) => `שלום, כאן העוזר של ${business}. ראינו שהתקשרת ולא הצליחו לענות. מה קרה, ואיפה? הפרטים יעברו אליהם, והם יחזרו אליך כשיתפנו.\n\nלא רלוונטי? אפשר לכתוב "הסר".`,
   callerStopped: 'הסרנו את המספר, ולא נכתוב שוב.',
+  // To someone who wrote to המוקדן and neither called one of our customers lately nor is one.
+  stranger: (site) => `שלום, כאן המוקדן של על הקו. אני כותב למי שהתקשר לבעל מקצוע שעובד איתנו ולא קיבל מענה, ומעביר לבעל המקצוע את הפרטים. אם התקשרת למישהו לאחרונה, הוא יחזור אליך.${site ? `\n\nמה זה על הקו: ${site}` : ''}`,
   callerThanks: (business) => `תודה, הפרטים אצל ${business} והם יחזרו אליך כשיתפנו.`,
-  summary: ({ time, what, place, urgency, phone }) => `פנייה חדשה משיחה שלא נענתה ב־${time}\n\nמה: ${what}\nאיפה: ${place}\nדחיפות: ${urgency}\nטלפון: ${phone}\n\nאפשר לחזור ללקוח בטלפון או בוואטסאפ.`,
-  note: ({ from, time, line }) => `שיחה שלא נענתה ${from} ב־${time}.\n${line}\n\nנעדכן כשיהיה משהו חדש.`,
+  summary: ({ time, what, place, urgency, phone }) => `התקשרו אליכם ב־${time} ולא עניתם. זה מה שצריך:\n\nמה: ${what}\nאיפה: ${place}\nכמה דחוף: ${urgency}\nטלפון: ${phone}\n\nאפשר לחזור בטלפון או בוואטסאפ.`,
+  note: ({ from, time, line }) => `התקשרו אליכם ${from} ב־${time} ולא עניתם.\n${line}\n\nנעדכן כשיהיה משהו חדש.`,
   from: (phone) => `מ־${phone}`,
   fromHidden: 'ממספר חסוי',
   unknown: 'לא נאמר',
@@ -268,7 +282,7 @@ export const SVC = {
     test: 'זו שיחת בדיקה, והעוזר קיבל אותה. הכול מחובר.',
   },
   owner: {
-    help: (business) => `כאן העוזר של ${business}. כשלא עונים לשיחה, מי שהתקשר מקבל ממני הודעה בוואטסאפ, ואתם מקבלים כאן סיכום.\n\nאפשר לכתוב לי:\n"לא לשלוח ל־0541234567": המספר הזה לא יקבל ממני הודעות.\n"לשלוח ל־0541234567": המספר חוזר לקבל.\n"לעצור": לא אכתוב למתקשרים עד שתכתבו "להמשיך".`,
+    help: () => `כאן המוקדן של על הקו. כשאתם לא עונים, אני כותב למי שהתקשר, ושולח לכם לכאן מה הוא צריך.\n\nמישהו לא צריך לקבל ממני הודעה, כמו אמא או ספק? כתבו "לא לשלוח" ואת המספר שלו.\n\nרוצים שאפסיק לכתוב לכולם לזמן מה? כתבו "לעצור". כדי שאחזור, "להמשיך".\n\nעל תשלום כותבים למספר של על הקו, זה ששלח לכם את פרטי התשלום.`,
     skipped: (phone) => `סגור, ${phone} לא יקבל ממני הודעות.`,
     unskipped: (phone) => `סגור, ${phone} יקבל שוב הודעות כשלא תענו לו.`,
     paused: 'עצרתי. לא אכתוב למתקשרים עד שתכתבו "להמשיך".',
@@ -277,9 +291,8 @@ export const SVC = {
 };
 
 export const CUST_STATUS = { setup: 'בהקמה', active: 'פעיל', paused: 'עצור', stopped: 'הפסיק' };
-export const WA_STATUS = { none: 'לא רשום בוואטסאפ', verifying: 'מחכה לקוד', connected: 'מחובר לוואטסאפ' };
 export const CHAT_STATE = { waiting: 'מחכה לתשובה', talking: 'בשיחה', done: 'נשלח סיכום', stopped: 'ביקשו להסיר', failed: 'לא הגיעה' };
-export const CALL_OUTCOME = { messaged: 'נשלחה הודעה', again: 'התקשר שוב', hidden: 'מספר חסוי', skipped: 'ברשימת "לא לשלוח"', test: 'שיחת בדיקה', failed: 'השליחה נכשלה', inactive: 'העוזר לא פעיל', unpaid: 'לא שולם', otp: 'קוד אימות' };
+export const CALL_OUTCOME = { messaged: 'נשלחה הודעה', again: 'התקשר שוב', hidden: 'מספר חסוי', skipped: 'ברשימת "לא לשלוח"', test: 'שיחת בדיקה', failed: 'השליחה נכשלה', inactive: 'העוזר לא פעיל', unpaid: 'לא שולם', otp: 'קוד אימות (מההקמה הקודמת)' };
 
 export const TC = {
   nav: 'לקוחות',
@@ -288,7 +301,7 @@ export const TC = {
   empty: 'עוד אין לקוחות',
   emptyLead: 'לקוח נוסף כאן מליד שסימנתם "הפכו ללקוחות", או בטופס למטה.',
   add: 'לקוח חדש',
-  fields: { name: 'שם', business: 'שם העסק, כמו שמי שמתקשר מכיר אותו', trade: 'מקצוע', phone: 'הוואטסאפ שלהם, לסיכומים', assistant: 'מספר העוזר ב־Telnyx' },
+  fields: { name: 'שם', business: 'שם העסק, כמו שמי שמתקשר מכיר אותו', trade: 'מקצוע', phone: 'הוואטסאפ שלהם, לסיכומים', assistant: 'המספר שלהם ב־Telnyx, שאליו עוברות השיחות' },
   save: 'לשמור',
   create: 'להוסיף',
   created: 'הלקוח נוסף.',
@@ -296,23 +309,14 @@ export const TC = {
   bad: 'חסר שם, שם עסק או מספר נייד תקין.',
   back: 'לקוחות',
   setup: {
-    telnyx: 'Telnyx עוד לא מחובר (TELNYX_API_KEY ו־TELNYX_PUBLIC_KEY), אז שיחות והודעות לא מגיעות לכאן.',
-    waba: 'חשבון הוואטסאפ ב־Telnyx עוד לא מוגדר (TELNYX_WABA_ID), אז אי אפשר לרשום מספר עוזר בוואטסאפ.',
+    telnyx: 'Telnyx עוד לא מחובר (TELNYX_API_KEY ו־TELNYX_PUBLIC_KEY), אז שיחות שהועברו לא מגיעות לכאן.',
+    assist: 'המספר של המוקדן עוד לא מחובר (ASSIST_PHONE_ID), אז העוזר לא יכול לכתוב למתקשרים ולשלוח סיכומים.',
     claude: 'Claude עוד לא מחובר (ANTHROPIC_API_KEY). עד אז העוזר מודה למי שעונה ומעביר לכם את מה שכתב, בלי לשאול שאלות.',
   },
   steps: {
     title: 'ההקמה',
-    assistant: 'מספר העוזר',
-    assistantHint: 'קונים מספר ישראלי ב־Telnyx, מחברים אותו לאפליקציית הקול ולפרופיל ההודעות, ומדביקים אותו כאן.',
-    wa: 'וואטסאפ על מספר העוזר',
-    register: 'לרשום בוואטסאפ',
-    registerHint: 'Meta מתקשרת למספר ומקריאה קוד. העוזר מקליט את השיחה, והקישור להקלטה יופיע כאן.',
-    registered: 'הבקשה נשלחה. Meta תתקשר למספר בדקות הקרובות.',
-    listen: 'להקשיב לקוד',
-    noRecording: 'עוד לא הגיעה שיחה מ־Meta. הדף מתעדכן לבד.',
-    code: 'הקוד',
-    verify: 'לאמת',
-    verified: 'המספר מחובר לוואטסאפ.',
+    assistant: 'המספר שאליו עוברות השיחות',
+    assistantHint: 'קונים מספר ישראלי לשיחות בלבד ב־Telnyx, מחברים אותו לאפליקציית הקול, ומדביקים אותו כאן. בוואטסאפ כותב המוקדן, מהמספר המשותף.',
     forward: 'העברת השיחות',
     forwardHint: 'שולחים ללקוח את השורות האלה. מקלידים כל אחת בחייגן ולוחצים חיוג.',
     forwardWarn: 'ההעברה מחליפה את התא הקולי. ##002# מבטל את כל ההעברות.',
@@ -329,7 +333,6 @@ export const TC = {
   skips: { title: 'לא לשלוח אל', hint: 'מספרים שהעוזר לא כותב אליהם: משפחה, ספקים, מי שביקש להסיר. הלקוח יכול גם לכתוב לעוזר "לא לשלוח ל־05X...".', add: 'להוסיף', remove: 'להוציא', none: 'אין מספרים ברשימה.', why: { owner: 'הלקוח ביקש', admin: 'הוספתי', stopped: 'ביקשו להסיר' } },
   chats: { title: 'שיחות אחרונות', none: 'עוד אין שיחות.', calls: (n) => (n > 1 ? `${n} שיחות` : 'שיחה אחת') },
   end: { title: 'מחיקה', remove: 'למחוק את הלקוח', sure: 'כן, למחוק', hint: 'הלקוח, השיחות וההודעות שלו נמחקים, וגם צילומי ההעברות. רישומי התשלום נשארים 7 שנים, כמו שחוק המס מחייב. את המספר ב־Telnyx מבטלים שם.', done: 'הלקוח נמחק.' },
-  errors: { wa: (why) => `לא הצלחתי: ${why}` },
 };
 
 // ---- Paying (docs/payments.md): to the customer from the business number, and the admin's pages.
@@ -444,5 +447,31 @@ export const PAY = {
       vat_unknown: 'Morning לא אמר מה שיעור המע״מ אצלו, אז אי אפשר לבדוק שהחשבונית תהיה נכונה.',
     },
     flash: { issued: (n) => `Morning הפיק חשבונית מס קבלה ${n}.`, failed: 'החשבונית לא הופקה. הפרטים בדף של האישור.' },
+  },
+};
+
+// ---- The admin's alerts on their own WhatsApp (alerts.js), through Toran. A title the phone shows, and a body with
+// what happened and the page to open.
+
+export const ALERT = {
+  fresh: (who) => `על הקו: הודעה חדשה מ־${who}`,
+  yes: (who) => `על הקו: ${who} ביקשו את ההסבר`,
+  join: (who) => `על הקו: ${who} רוצים להצטרף, ופרטי התשלום נשלחו אליהם`,
+  joinFailed: (who) => `על הקו: ${who} רוצים להצטרף, אבל פרטי התשלום לא נשלחו`,
+  handoff: (who) => `על הקו: תורן העביר אליך את ${who}`,
+  receipt: (who) => `על הקו: ${who} שלחו צילום של העברה`,
+  quiet: (who) => `על הקו: תורן לא ענה ל־${who}`,
+  body: {
+    open: (link) => `הדף שלהם: ${link}`,
+    check: (link) => `לבדוק מול הבנק ולאשר: ${link}`,
+    answer: (link) => `צריך לענות להם מהדף שלהם: ${link}`,
+    joinWhy: {
+      meta: 'השליחה מהמספר של העסק לא מחוברת.',
+      details: 'פרטי החשבון להעברה לא מוגדרים (PAYMENT_DETAILS).',
+      nothing: 'אין להם מה לשלם עכשיו.',
+      stopped: 'הם ביקשו שלא נכתוב להם.',
+      failed: 'Meta לא שלח את ההודעה.',
+      customer: 'לא נפתח להם כרטיס לקוח, כנראה כי המספר שלהם לא נייד ישראלי.',
+    },
   },
 };

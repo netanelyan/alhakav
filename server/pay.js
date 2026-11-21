@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import { DAY, HOUR, israelDate, now, nowIso, quiet } from './clock.js';
 import { addDays, billingOf, daysBetween, dateHe, money } from './billing.js';
-import { PAY } from './copy.js';
+import { adminLink, alertOwner, whoIs } from './alerts.js';
+import { ALERT, PAY } from './copy.js';
 import { num } from './env.js';
 import { GraphError, downloadMedia, metaSettings, sendTemplate, sendText } from './meta.js';
 import { invoiceReceipt } from './morning.js';
@@ -210,6 +211,7 @@ export async function takeReceipt(app, c, msg) {
   );
   app.log(`[pay] customer ${c.id}: receipt ${id} came (${type}, ${file.data.length} bytes)`);
   await tell(app, c, 'receipt', PAY.received);
+  await alertOwner(app, `receipt:${id}`, ALERT.receipt(whoIs(c.business, c.phone)), ALERT.body.check(adminLink(app.env, `/admin/receipts/${id}`)), 24 * 60);
   return true;
 }
 

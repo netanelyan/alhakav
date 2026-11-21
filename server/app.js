@@ -13,15 +13,16 @@ import { markByHand, onWebhook, reply, sendPitch, stopped } from './outreach.js'
 import { leadPage, leadsPage, loginPage, notFoundPage, reachedPage } from './pages.js';
 import { fromUrls } from './sources.js';
 import { makeClaude } from './claude.js';
-import { addSkip, createCustomer, customerFromLead, endAtMonthEnd, getCustomer, listCustomers, recentCalls, recentChats, registerWa, removeCustomer, removeSkip, setStatus, skipsOf, unend, updateBilling, updateCustomer, verifyWa } from './customers.js';
+import { addSkip, createCustomer, customerFromLead, endAtMonthEnd, getCustomer, listCustomers, recentCalls, recentChats, removeCustomer, removeSkip, setStatus, skipsOf, unend, updateBilling, updateCustomer } from './customers.js';
 import { customerPage, customersPage } from './customerPages.js';
 import { dateHe } from './billing.js';
 import { PAY } from './copy.js';
 import { morningClient, morningConfig } from './morning.js';
 import { PayError, decideReceipt, manualPayment, noticesOf, receiptById, receiptFile, receiptsOf, receiptsWaiting, retryInvoice, sendPayment } from './pay.js';
 import { receiptPage } from './payPages.js';
-import { onCall, onWhatsApp, serviceState, track } from './service.js';
+import { onCall, serviceState, track } from './service.js';
 import { readEvent, signatureOk as telnyxSigned, telnyxSettings } from './telnyx.js';
+import { toranState } from './toran.js';
 
 // The one HTTP server, behind Caddy on 127.0.0.1:
 //
@@ -29,7 +30,7 @@ import { readEvent, signatureOk as telnyxSigned, telnyxSettings } from './telnyx
 //                   the transfer receipts among them (/admin/receipts/<id>, docs/payments.md)
 //   /meta/webhook   Meta's webhook: GET to verify it once (META_VERIFY_TOKEN), POST for every message and status,
 //                   signed with META_APP_SECRET (the outreach number)
-//   /telnyx/webhook Telnyx's webhook for the customers' assistant numbers: their calls and their WhatsApp, signed
+//   /telnyx/webhook Telnyx's webhook for the customers' own numbers: the calls forwarded to them, signed
 //                   with Ed25519 (TELNYX_PUBLIC_KEY), answered at once and handled after (service.js)
 //   /api/health     "ok" while the process runs
 //   /               the landing page, for running it on a laptop; on the server Caddy serves it as a file
@@ -69,7 +70,7 @@ const HEADERS = {
 };
 
 /** Everything the server works with, so the tests can hand it a database, fake sites and a fake Meta. */
-export function makeApp({ db, env = {}, fetchSite, apiFetch = fetch, graphFetch, telnyxFetch, morningFetch, claude, log = (m) => console.log(m), searchPause } = {}) {
+export function makeApp({ db, env = {}, fetchSite, apiFetch = fetch, graphFetch, telnyxFetch, toranFetch, morningFetch, claude, log = (m) => console.log(m), searchPause } = {}) {
   return {
     db,
     env,
@@ -77,6 +78,8 @@ export function makeApp({ db, env = {}, fetchSite, apiFetch = fetch, graphFetch,
     apiFetch,
     graphFetch: graphFetch || apiFetch,
     telnyxFetch: telnyxFetch || apiFetch,
+    toranFetch: toranFetch || apiFetch,
+    toran: toranState(),
     claude: claude === undefined ? makeClaude(env) : claude,
     morning: morningClient(morningConfig(env), morningFetch || apiFetch),
     log,
@@ -385,10 +388,6 @@ async function customerAction(app, req, res, id, action, form, token) {
   switch (action) {
     case 'edit':
       return back(updateCustomer(app.db, c, form), 'details');
-    case 'wa-register':
-      return back(await registerWa(app, c));
-    case 'wa-code':
-      return back(await verifyWa(app, c, form.code));
     case 'activate':
     case 'pause':
     case 'stop':
@@ -462,5 +461,4 @@ async function telnyxWebhook(app, req, res) {
   }
   send(res, 200, 'text/plain; charset=utf-8', 'ok');
   if (ev.kind === 'call') track(app, onCall(app, ev));
-  else if (ev.kind === 'whatsapp') track(app, onWhatsApp(app, ev));
 }

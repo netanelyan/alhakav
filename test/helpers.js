@@ -52,12 +52,35 @@ export const ENV = {
   SESSION_SECRET: 'x'.repeat(40),
 };
 
-export function testApp({ env = ENV, graph = fakeGraph(), fetchSite } = {}) {
+export function testApp({ env = ENV, graph = fakeGraph(), fetchSite, toranFetch } = {}) {
   const db = new Db(':memory:');
   const logs = [];
-  const app = makeApp({ db, env, graphFetch: graph.f, apiFetch: graph.f, fetchSite: fetchSite || (async (url) => ({ url, status: 200, text: fixture('plumber') })), log: (m) => logs.push(m), searchPause: 0 });
+  const app = makeApp({ db, env, graphFetch: graph.f, apiFetch: graph.f, toranFetch, fetchSite: fetchSite || (async (url) => ({ url, status: 200, text: fixture('plumber') })), log: (m) => logs.push(m), searchPause: 0 });
   return { app, db, graph, logs };
 }
+
+/**
+ * openfrequency-toran on this machine, faked: `answers` are its answers to /internal/company/answer in turn (an Error
+ * throws, a number answers that status); calls holds what it was asked, alerts what /internal/ops/alert was given.
+ */
+export function fakeToran(answers = []) {
+  const t = { calls: [], alerts: [], answers: [...answers] };
+  t.f = async (url, init = {}) => {
+    const body = init.body ? JSON.parse(init.body) : null;
+    if (String(url).endsWith('/internal/ops/alert')) {
+      t.alerts.push({ ...body, auth: init.headers?.authorization });
+      return Response.json({ ok: true, due: true });
+    }
+    t.calls.push({ url: String(url), body, auth: init.headers?.authorization });
+    const a = t.answers.shift() ?? { reply: null, handoff: null };
+    if (a instanceof Error) throw a;
+    if (typeof a === 'number') return Response.json({ error: 'x' }, { status: a });
+    return Response.json({ conversationId: 1, handoff: null, ...a });
+  };
+  return t;
+}
+
+export const TORAN_ENV = { ...ENV, OF_INTERNAL_TOKEN: 't'.repeat(40), TORAN_URL: 'http://toran.test', TORAN_DEBOUNCE_MS: '0', PAYMENT_DETAILS: 'בנק הפועלים (12), סניף 345, חשבון 678901, על שם ישראל ישראלי' };
 
 /** A lead from a fixture, saved as discovery saves one, with another mobile when asked. */
 export function addLead(db, name = 'plumber', { mobile, domain } = {}) {
@@ -69,9 +92,9 @@ export function addLead(db, name = 'plumber', { mobile, domain } = {}) {
 }
 
 /** A webhook body as Meta sends it. */
-export function hook({ messages = [], statuses = [], name = 'אבי' } = {}) {
+export function hook({ messages = [], statuses = [], name = 'אבי', phoneId = '123' } = {}) {
   return {
     object: 'whatsapp_business_account',
-    entry: [{ id: 'waba', changes: [{ field: 'messages', value: { messaging_product: 'whatsapp', metadata: { phone_number_id: '123' }, contacts: messages.map((m) => ({ wa_id: m.from, profile: { name } })), messages, statuses } }] }],
+    entry: [{ id: 'waba', changes: [{ field: 'messages', value: { messaging_product: 'whatsapp', metadata: { phone_number_id: phoneId }, contacts: messages.map((m) => ({ wa_id: m.from, profile: { name } })), messages, statuses } }] }],
   };
 }

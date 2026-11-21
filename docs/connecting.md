@@ -1,54 +1,57 @@
 # How a customer connects
 
-Decided with the owner on 2026-11-19: every caller gets a message; each customer gets an assistant number that writes
-to their callers and sends the summary to the customer's own WhatsApp; Telnyx provides the numbers; Meta's fees are
-in the 149 ₪. The customer's own number only forwards calls and receives summaries: nothing is installed on it or
-connected to it.
+Decided with the owner on 2026-11-19: every caller gets a message, and the summary goes to the customer's own
+WhatsApp; Meta's fees are in the 149 ₪. Changed with the owner on 2026-11-21: on WhatsApp one number writes for every
+customer, **המוקדן** (blue logo), a second number on על הקו's own WhatsApp Business Account beside the business number
+(orange logo, sales and payments). Each customer still gets a number of their own at Telnyx, for voice only: their
+calls are forwarded to it, and it is how the server knows whose caller it is. So no number is registered on WhatsApp
+per customer, nothing depends on Telnyx and WhatsApp, and Meta's limit of 20 numbers does not apply. The customer's
+own phone only forwards calls and receives summaries: nothing is installed on it or connected to it.
 
 ## How it works
 
 1. **The customer types three codes on their phone, once.** Unanswered calls (after 20 seconds), calls while busy,
-   and calls while the phone is off are forwarded by their carrier to their assistant number, an Israeli number at
-   Telnyx. Works on every Israeli carrier, iPhone and Android. The forwarded call keeps the caller's number.
-2. **The call ends at once** (or after a short recording, if `GREETING_URL` points at one), and the assistant number
-   sends the caller a WhatsApp template in the business's name:
+   and calls while the phone is off are forwarded by their carrier to their own number at Telnyx (Israel, voice).
+   Works on every Israeli carrier, iPhone and Android. The forwarded call keeps the caller's number.
+2. **The call ends at once** (or after a short recording, if `GREETING_URL` points at one), and המוקדן sends the
+   caller a WhatsApp template in the business's name:
    > שלום, כאן העוזר של אבי אינסטלציה. ראינו שהתקשרת ולא הצליחו לענות. מה קרה, ואיפה? הפרטים יעברו אליהם, והם יחזרו
    > אליך כשיתפנו. / לא רלוונטי? אפשר לכתוב "הסר".
 3. **When they answer, Claude asks** what happened, where and how urgent, one short question at a time, and never
    quotes a price or a time. Someone describing danger is told to call 102 or 101 first.
-4. **The summary goes from the assistant number to the customer's own WhatsApp.** No answer within 20 minutes, and the
-   customer gets a note with the number instead; the same for a hidden number, or a number with no WhatsApp.
-5. **The customer talks to their assistant** from their own WhatsApp: "לא לשלוח ל־054…" (family, suppliers),
-   "לשלוח ל־054…", "לעצור", "להמשיך".
+4. **The summary goes from המוקדן to the customer's own WhatsApp.** No answer within 20 minutes, and the customer
+   gets a note with the number instead; the same for a hidden number, or a number with no WhatsApp.
+5. **The customer writes to המוקדן** from their own WhatsApp: "לא לשלוח" and a number (family, suppliers),
+   "לשלוח ל־054…", "לעצור", "להמשיך". Anything else gets two plain lines on what it does.
+
+Who a message to המוקדן is from: the customer when it comes from their own phone; else a caller, in the chat of their
+latest call (someone who called two customers is answered about the last one); anyone else gets one line, once a day,
+on what the number is.
 
 What it does in each case, and why, is at the top of `server/service.js`; the tests in `test/service.test.js` run
-every one of them against a fake Telnyx and a fake Claude.
+every one of them against a fake Telnyx (calls), a fake Meta (WhatsApp) and a fake Claude.
 
 ## Set up once
 
 | | What | Where it goes |
 |---|---|---|
-| Telnyx account | Not a trial account (trial accounts can't use WhatsApp). An API key, and the account's public key (Keys & Credentials) | `TELNYX_API_KEY`, `TELNYX_PUBLIC_KEY` |
-| WhatsApp at Telnyx | Mission Control, WhatsApp, the signup: Meta's window creates the WhatsApp Business Account under על הקו's Meta business. Its id | `TELNYX_WABA_ID` |
-| A messaging profile | With the webhook URL `https://<domain>/telnyx/webhook`. Its id | `TELNYX_MESSAGING_PROFILE_ID` |
-| A Voice API application | With the same webhook URL. Every assistant number is assigned to it | (in Telnyx) |
-| Meta business verification | Meta allows 2 numbers until the business is verified, then 20 | (at Meta, takes days) |
-| The three templates | `alhakav_caller`, `alhakav_summary`, `alhakav_call_note`, in `docs/whatsapp-templates.md`, submitted as Utility | (at Meta, through Telnyx) |
+| Telnyx account | An API key, and the account's public key (Keys & Credentials) | `TELNYX_API_KEY`, `TELNYX_PUBLIC_KEY` |
+| A Voice API application | With the webhook URL `https://<domain>/telnyx/webhook`. Every customer's number is assigned to it | (in Telnyx) |
+| המוקדן's number | An Israeli mobile, added to על הקו's WhatsApp Business Account in WhatsApp Manager like the business number (code by SMS), registered on the Cloud API with a PIN (README, "Toran"), display name על הקו, the blue avatar (`png/al-hakav-mokdan-avatar-640.png`) | `ASSIST_PHONE_ID`, `ASSIST_NUMBER` |
+| The three templates | `alhakav_caller`, `alhakav_summary`, `alhakav_call_note`, in `docs/whatsapp-templates.md`, on על הקו's account (templates belong to the account, so המוקדן's number uses them). Submitted 2026-11-21 | (at Meta) |
 | Claude | An Anthropic API key | `ANTHROPIC_API_KEY` |
 
 ## Each customer (the admin's "לקוחות" page)
 
 1. A lead marked "הפכו ללקוחות" becomes a customer with its name, business and mobile already in; or add one there.
-2. **Buy the number** in Telnyx (Israel, voice), assign it to the Voice API application and the messaging profile, and
-   paste it on the customer's page.
-3. **"לרשום בוואטסאפ".** Meta calls the number and reads a code aloud; the assistant records that call, and its
-   recording appears on the page. Listen, type the code, "לאמת".
-4. **Send the customer the forwarding codes** shown on the page (they include their number):
+2. **Buy their number** in Telnyx (Israel, voice), assign it to the Voice API application, and paste it on the
+   customer's page. It never touches WhatsApp.
+3. **Send the customer the forwarding codes** shown on the page (they include their number):
    `**61*<number>**20#`, `**67*<number>#`, `**62*<number>#`, then `*#61#` to check. Tell them first that it replaces
    voicemail, and that `##002#` undoes it.
-5. **A test:** someone calls the customer and they don't answer. The page shows the call, and the caller gets the
+4. **A test:** someone calls the customer and they don't answer. The page shows the call, and the caller gets the
    message. "להפעיל" turns the assistant on (until then a forwarded call gets no message).
-6. **Payment** (docs/payments.md): fill in the invoice details on the customer's page, press "לשלוח בקשת תשלום
+5. **Payment** (docs/payments.md): fill in the invoice details on the customer's page, press "לשלוח בקשת תשלום
    בוואטסאפ", and when their transfer's picture comes, check the bank and press "התשלום הגיע". The assistant writes to
    callers only once the first month is recorded (or "בלי תשלום" is ticked, for a pilot).
 

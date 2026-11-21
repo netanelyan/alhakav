@@ -32,7 +32,8 @@ payment.
 1. **The request.** On the customer's page, the payment card shows what is owed and the exact message, and
    "לשלוח בקשת תשלום בוואטסאפ" sends it. While the customer wrote to the business number in the last 24 hours it goes
    as plain text, otherwise as the template `alhakav_payment` (docs/whatsapp-templates.md). The reminders go by
-   themselves (below).
+   themselves (below). Someone who tells Toran in the chat that they want to join gets the same message by itself, as
+   a new customer (docs/toran.md, "Joining and paying, in the chat").
 2. **The picture.** An image or a PDF from the customer's own number while something is owed is a receipt: fetched from
    Meta (5 MB at most, checked by its first bytes), kept with what was owed at that moment, and the customer gets
    "קיבלנו את האישור, תודה. נבדוק מול הבנק ונעדכן כאן." The very same file again is the same receipt. At most 5 in 24

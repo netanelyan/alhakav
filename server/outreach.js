@@ -1,10 +1,13 @@
 import { DAY, HOUR, MINUTE, afterQuiet, israelDate, now, nowIso, quiet, whenHe } from './clock.js';
-import { CLOSED, MSG, T } from './copy.js';
+import { ALERT, CLOSED, MSG, T } from './copy.js';
 import { num } from './env.js';
-import { GraphError, metaSettings, numberQuality, parseWebhook, sendTemplate, sendText } from './meta.js';
+import { GraphError, assistSettings, metaSettings, numberQuality, parseWebhook, sendTemplate, sendText } from './meta.js';
+import { onAssistMessage, onAssistStatus } from './service.js';
+import { adminLink, alertOwner, whoIs } from './alerts.js';
 import { customerByPhone, takeReceipt } from './pay.js';
 import { isMobile, local, masked } from './phones.js';
 import { asksToStop, automatic } from './stopWords.js';
+import { queueAnswer } from './toran.js';
 
 // Writing to a tradesperson from the business number, and what happens when they answer. The guardrails are
 // openfrequency-toran's (src/ops/outreach.ts), because the number's rating is what everything else rides on: Meta
@@ -293,9 +296,10 @@ async function onMessage(app, m) {
   if (auto) return;
 
   // A customer writing: in a conversation again, so the admin sees it among the leads they answer, and still a
-  // customer (counted as one, and never deleted with the old leads).
+  // customer (counted as one, and never deleted with the old leads). Toran answers them too (toran.js).
   if (isCustomer) {
     db.run("UPDATE leads SET stage = 'talking', replied_at = COALESCE(replied_at, ?), later_until = NULL, updated_at = ? WHERE id = ?", stamp, stamp, lead.id);
+    await queueAnswer(app, lead, m);
     return;
   }
   const isYes = (m.type === 'button' && /^כן/.test(m.text)) || (wroteFirst && !lead.yes_at && YES.test(m.text));
@@ -304,18 +308,30 @@ async function onMessage(app, m) {
     raise(db, lead, 'yes');
     app.log(`[in] ${masked(from)} said yes (lead ${lead.id})`);
     if (!db.get("SELECT 1 FROM messages WHERE lead_id = ? AND kind = 'pitch'", lead.id)) await answer(app, lead, 'pitch', MSG.pitch(outreachSettings(app.env).site));
+    await alertOwner(app, `yes:${lead.id}`, ALERT.yes(whoIs(lead.name, from)), ALERT.body.open(adminLink(app.env, `/admin/leads/${lead.id}`)), 24 * 60);
     return;
   }
   // Anything else they write is an answer: the lead is in a conversation again, unless they asked us to stop before.
+  // Toran answers it (toran.js).
   const reopen = lead.stage !== 'closed' || lead.closed_why !== 'stopped';
   db.run(`UPDATE leads SET replied_at = COALESCE(replied_at, ?), ${reopen ? "stage = 'talking', closed_why = NULL, later_until = NULL," : ''} updated_at = ? WHERE id = ?`, stamp, stamp, lead.id);
   raise(db, lead, 'replied');
+  if (reopen) await queueAnswer(app, { ...lead, stage: 'talking' }, m);
 }
 
+/** Meta's webhook, for both our numbers: the assistant's (service.js) and the business number (here). */
 export async function onWebhook(app, body) {
   const { messages, statuses } = parseWebhook(body);
-  for (const s of statuses) onStatus(app, s);
-  for (const m of messages) await onMessage(app, m);
+  const assist = assistSettings(app.env);
+  const mine = (x) => assist.ready && x.phoneId === assist.phoneId;
+  for (const s of statuses) {
+    if (mine(s)) await onAssistStatus(app, s);
+    else onStatus(app, s);
+  }
+  for (const m of messages) {
+    if (mine(m)) await onAssistMessage(app, m);
+    else await onMessage(app, m);
+  }
   return { messages: messages.length, statuses: statuses.length };
 }
 

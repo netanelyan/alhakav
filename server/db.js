@@ -220,6 +220,11 @@ CREATE TABLE pay_notices (
   PRIMARY KEY (customer_id, until, kind)
 );
 `,
+  // Toran answers on the business number (docs/toran.md): when it last answered each person, so what the admin wrote
+  // to them by hand since then goes to it with their next message.
+  `
+ALTER TABLE leads ADD COLUMN toran_at TEXT;
+`,
 ];
 
 export class Db {

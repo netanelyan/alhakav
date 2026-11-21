@@ -4,31 +4,25 @@ import { createServer } from 'node:http';
 import { afterEach, beforeEach, test } from 'node:test';
 import { handler } from '../server/app.js';
 import { MINUTE, setNow } from '../server/clock.js';
-import { createCustomer, customerFromLead, forwardCodes, registerWa, verifyWa } from '../server/customers.js';
-import { onCall, onWhatsApp, serviceTick, settle } from '../server/service.js';
+import { createCustomer, customerFromLead, forwardCodes } from '../server/customers.js';
+import { onWebhook } from '../server/outreach.js';
+import { onCall, serviceTick, settle } from '../server/service.js';
 import { readEvent, signatureOk } from '../server/telnyx.js';
-import { ENV, addLead, testApp } from './helpers.js';
+import { ENV, addLead, hook, testApp } from './helpers.js';
 
 const SUNDAY = Date.parse('2026-11-22T08:41:00Z'); // 10:41 in Israel
 const OWNER = '972541112222';
-const ASSISTANT = '972771234567';
+const VOICE = '972771234567'; // the customer's own number at Telnyx, where their calls are forwarded
 const CALLER = '972527654321';
+const ASSIST = '456'; // המוקדן's Meta id
 
-/** Telnyx, faked: every message sent answers msg-N; `failNext` makes the next one fail. */
+/** Telnyx, faked, for the calls: every action answers ok. */
 function fakeTelnyx() {
-  const t = { calls: [], n: 0, failNext: null };
+  const t = { calls: [] };
   t.f = async (url, init = {}) => {
-    const body = init.body ? JSON.parse(init.body) : null;
-    t.calls.push({ url: String(url), method: init.method, body });
-    if (t.failNext) {
-      const detail = t.failNext;
-      t.failNext = null;
-      return Response.json({ errors: [{ code: '40008', title: 'failed', detail }] }, { status: 400 });
-    }
-    if (String(url).includes('/messages/whatsapp')) return Response.json({ data: { id: `msg-${++t.n}` } });
+    t.calls.push({ url: String(url), method: init.method, body: init.body ? JSON.parse(init.body) : null });
     return Response.json({ data: {} });
   };
-  t.messages = () => t.calls.filter((c) => c.url.endsWith('/messages/whatsapp')).map((c) => c.body);
   t.actions = () => t.calls.filter((c) => c.url.includes('/actions/')).map((c) => c.url.split('/actions/')[1]);
   return t;
 }
@@ -50,7 +44,7 @@ function fakeClaude(turns) {
   };
 }
 
-const TENV = { ...ENV, TELNYX_API_KEY: 'key', TELNYX_PUBLIC_KEY: 'pk', TELNYX_WABA_ID: 'waba1', TELNYX_API: 'https://telnyx.test/v2', REPLY_DELAY_MS: '0' };
+const TENV = { ...ENV, TELNYX_API_KEY: 'key', TELNYX_PUBLIC_KEY: 'pk', TELNYX_API: 'https://telnyx.test/v2', ASSIST_PHONE_ID: ASSIST, ASSIST_NUMBER: '972501110000', REPLY_DELAY_MS: '0' };
 
 function setup({ claude = null, env = TENV } = {}) {
   const tx = fakeTelnyx();
@@ -59,30 +53,32 @@ function setup({ claude = null, env = TENV } = {}) {
   ctx.app.claude = claude;
   const r = createCustomer(ctx.db, { name: 'אבי כהן', business: 'אבי אינסטלציה', trade: 'plumber', phone: '054-111-2222', assistant: '077-123-4567' });
   assert.ok(r.ok, r.flash);
-  ctx.db.run("UPDATE customers SET status = 'active', wa_status = 'connected', paid_until = '2026-12-21' WHERE id = ?", r.id);
-  return { ...ctx, tx, cid: r.id };
+  ctx.db.run("UPDATE customers SET status = 'active', paid_until = '2026-12-21' WHERE id = ?", r.id);
+  // What המוקדן sent, as Meta got it.
+  const sent = () => ctx.graph.sent().filter((c) => c.url.endsWith(`/${ASSIST}/messages`)).map((c) => c.body);
+  return { ...ctx, tx, cid: r.id, sent };
 }
 
-const call = (from, id = 'call-1') => ({ kind: 'call', type: 'call.initiated', callId: id, from, to: ASSISTANT, direction: 'incoming' });
-const said = (text, id, from = CALLER, extra = {}) => ({ kind: 'whatsapp', type: 'message.received', id, from, to: ASSISTANT, text, ...extra });
+const call = (from, id = 'call-1', to = VOICE) => ({ kind: 'call', type: 'call.initiated', callId: id, from, to, direction: 'incoming' });
+/** Someone writing to המוקדן's number. */
+const said = (app, text, id, from = CALLER) => onWebhook(app, hook({ phoneId: ASSIST, messages: [{ id, from, type: 'text', text: { body: text } }] }));
 const chats = (db) => db.all('SELECT * FROM chats ORDER BY id');
 
 beforeEach(() => setNow(SUNDAY));
 afterEach(() => setNow(null));
 
-test('a missed call: the call ends at once, and the caller gets the first message from the assistant number', async () => {
-  const { app, db, tx } = setup();
+test('a missed call: the call ends at once, and the caller gets the first message from המוקדן', async () => {
+  const { app, db, tx, sent } = setup();
   await onCall(app, call(CALLER));
   assert.deepEqual(tx.actions(), ['reject']);
-  const [m] = tx.messages();
-  assert.equal(m.from, `+${ASSISTANT}`);
-  assert.equal(m.to, `+${CALLER}`);
-  assert.equal(m.whatsapp_message.template.name, 'alhakav_caller');
-  assert.deepEqual(m.whatsapp_message.template.components[0].parameters, [{ type: 'text', text: 'אבי אינסטלציה' }]);
+  const [m] = sent();
+  assert.equal(m.to, CALLER);
+  assert.equal(m.template.name, 'alhakav_caller');
+  assert.deepEqual(m.template.components[0].parameters, [{ type: 'text', text: 'אבי אינסטלציה' }]);
   assert.equal(db.get('SELECT outcome FROM calls').outcome, 'messaged');
   // The same caller again within 24 hours: the same conversation, no second message.
   await onCall(app, call(CALLER, 'call-2'));
-  assert.equal(tx.messages().length, 1);
+  assert.equal(sent().length, 1);
   assert.equal(chats(db)[0].calls, 2);
   // The same event twice is one call.
   await onCall(app, call(CALLER, 'call-2'));
@@ -102,24 +98,23 @@ test('the conversation: Claude asks, the caller answers, and the summary reaches
     { reply: 'מה הכתובת?', done: false, what: 'נזילה חזקה מתחת לכיור', place: '', urgency: '' },
     { reply: 'תודה, הפרטים אצל אבי אינסטלציה והם יחזרו אליך כשיתפנו.', done: true, what: 'נזילה חזקה מתחת לכיור', place: 'הרצל 15, אשדוד, קומה 3', urgency: 'דחוף, המים זורמים' },
   ]);
-  const { app, db, tx } = setup({ claude });
+  const { app, db, sent } = setup({ claude });
   await onCall(app, call(CALLER));
-  await onWhatsApp(app, said('יש לי נזילה במטבח מתחת לכיור', 'in-1'));
+  await said(app, 'יש לי נזילה במטבח מתחת לכיור', 'in-1');
   await settle(app);
-  await onWhatsApp(app, said('הרצל 15 אשדוד קומה 3, זורם חזק', 'in-2'));
+  await said(app, 'הרצל 15 אשדוד קומה 3, זורם חזק', 'in-2');
   await settle(app);
   // Claude saw the whole chat, with the first message, and the business's name in the system prompt.
   assert.match(claude.seen[1].messages[0].content, /העוזר: שלום, כאן העוזר של אבי אינסטלציה/);
   assert.match(claude.seen[1].messages[0].content, /הלקוח: הרצל 15 אשדוד/);
   assert.match(claude.seen[0].system[0].text, /"אבי אינסטלציה"/);
-  assert.equal(claude.seen[0].fallbacks, 'default');
-  const sent = tx.messages();
-  assert.equal(sent[1].whatsapp_message.text.body, 'מה הכתובת?');
-  const summary = sent.at(-1);
-  assert.equal(summary.to, `+${OWNER}`);
-  assert.equal(summary.whatsapp_message.template.name, 'alhakav_summary');
+  const out = sent();
+  assert.equal(out[1].text.body, 'מה הכתובת?');
+  const summary = out.at(-1);
+  assert.equal(summary.to, OWNER);
+  assert.equal(summary.template.name, 'alhakav_summary');
   assert.deepEqual(
-    summary.whatsapp_message.template.components[0].parameters.map((p) => p.text),
+    summary.template.components[0].parameters.map((p) => p.text),
     ['10:41', 'נזילה חזקה מתחת לכיור', 'הרצל 15, אשדוד, קומה 3', 'דחוף, המים זורמים', '052-765-4321']
   );
   assert.equal(chats(db)[0].state, 'done');
@@ -127,113 +122,127 @@ test('the conversation: Claude asks, the caller answers, and the summary reaches
 
 test('three messages in a row get one answer', async () => {
   const claude = fakeClaude([{ reply: 'ובאיזו כתובת?', done: false, what: 'סתימה', place: '', urgency: '' }]);
-  const { app, tx } = setup({ claude, env: { ...TENV, REPLY_DELAY_MS: '50' } });
+  const { app, sent } = setup({ claude, env: { ...TENV, REPLY_DELAY_MS: '50' } });
   await onCall(app, call(CALLER));
-  await onWhatsApp(app, said('היי', 'a'));
-  await onWhatsApp(app, said('יש סתימה', 'b'));
-  await onWhatsApp(app, said('בשירותים', 'c'));
+  await said(app, 'היי', 'a');
+  await said(app, 'יש סתימה', 'b');
+  await said(app, 'בשירותים', 'c');
   await settle(app);
   assert.equal(claude.seen.length, 1);
-  assert.equal(tx.messages().filter((m) => m.whatsapp_message.type === 'text').length, 1);
+  assert.equal(sent().filter((m) => m.type === 'text').length, 1);
 });
 
 test('without Claude, the caller is thanked and what they wrote goes to the customer as it is', async () => {
-  const { app, tx } = setup();
+  const { app, sent } = setup();
   await onCall(app, call(CALLER));
-  await onWhatsApp(app, said('ננעלתי בחוץ, הרא״ה 101 רמת גן', 'x'));
+  await said(app, 'ננעלתי בחוץ, הרא״ה 101 רמת גן', 'x');
   await settle(app);
-  const [, thanks, summary] = tx.messages();
-  assert.match(thanks.whatsapp_message.text.body, /תודה, הפרטים אצל אבי אינסטלציה/);
-  assert.equal(summary.whatsapp_message.template.components[0].parameters[1].text, 'ננעלתי בחוץ, הרא״ה 101 רמת גן');
+  const [, thanks, summary] = sent();
+  assert.match(thanks.text.body, /תודה, הפרטים אצל אבי אינסטלציה/);
+  assert.equal(summary.template.components[0].parameters[1].text, 'ננעלתי בחוץ, הרא״ה 101 רמת גן');
 });
 
 test('"הסר" puts the caller on the list, says so once, and tells the customer', async () => {
-  const { app, db, tx } = setup();
+  const { app, db, sent } = setup();
   await onCall(app, call(CALLER));
-  await onWhatsApp(app, said('הסר', 'stop-1'));
+  await said(app, 'הסר', 'stop-1');
   await settle(app);
   assert.ok(db.get('SELECT 1 FROM skips WHERE phone = ?', CALLER));
-  const sent = tx.messages();
-  assert.equal(sent[1].whatsapp_message.text.body, 'הסרנו את המספר, ולא נכתוב שוב.');
-  assert.equal(sent[2].whatsapp_message.template.name, 'alhakav_call_note');
+  const out = sent();
+  assert.equal(out[1].text.body, 'הסרנו את המספר, ולא נכתוב שוב.');
+  assert.equal(out[2].template.name, 'alhakav_call_note');
   // They call again: nothing goes to them.
   setNow(SUNDAY + 2 * 24 * 60 * MINUTE);
   await onCall(app, call(CALLER, 'call-9'));
-  assert.equal(tx.messages().length, 3);
+  assert.equal(sent().length, 3);
   assert.equal(db.get("SELECT outcome FROM calls WHERE call_id = 'call-9'").outcome, 'skipped');
 });
 
 test('a hidden number, a test call from the customer, and a first message that never arrives', async () => {
-  const { app, db, tx } = setup();
+  const { app, db, sent } = setup();
   await onCall(app, call('', 'hidden'));
-  let note = tx.messages().at(-1);
-  assert.equal(note.whatsapp_message.template.name, 'alhakav_call_note');
-  assert.equal(note.whatsapp_message.template.components[0].parameters[0].text, 'ממספר חסוי');
+  let note = sent().at(-1);
+  assert.equal(note.template.name, 'alhakav_call_note');
+  assert.equal(note.template.components[0].parameters[0].text, 'ממספר חסוי');
   await onCall(app, call(OWNER, 'test'));
-  assert.match(tx.messages().at(-1).whatsapp_message.template.components[0].parameters[2].text, /שיחת בדיקה/);
+  assert.match(sent().at(-1).template.components[0].parameters[2].text, /שיחת בדיקה/);
   await onCall(app, call(CALLER, 'c3'));
   const first = db.get("SELECT msg_id FROM chat_messages WHERE kind = 'first'").msg_id;
-  await onWhatsApp(app, { kind: 'whatsapp', type: 'message.finalized', id: first, status: 'delivery_failed', error: 'undeliverable' });
-  note = tx.messages().at(-1);
-  assert.match(note.whatsapp_message.template.components[0].parameters[2].text, /אין וואטסאפ/);
+  await onWebhook(app, hook({ phoneId: ASSIST, statuses: [{ id: first, status: 'failed', recipient_id: CALLER, errors: [{ code: 131026, title: 'Message undeliverable' }] }] }));
+  note = sent().at(-1);
+  assert.match(note.template.components[0].parameters[2].text, /אין וואטסאפ/);
   assert.equal(chats(db)[0].state, 'failed');
 });
 
 test('no answer after 20 minutes: the customer gets a note; a stalled chat gets the summary it has', async () => {
   const claude = fakeClaude([{ reply: 'מה הכתובת?', done: false, what: 'מזגן מטפטף', place: '', urgency: '' }]);
-  const { app, db, tx } = setup({ claude });
+  const { app, db, sent } = setup({ claude });
   await onCall(app, call(CALLER));
   await onCall(app, call('972501231234', 'c2'));
-  await onWhatsApp(app, said('המזגן מטפטף', 'm1', '972501231234'));
+  await said(app, 'המזגן מטפטף', 'm1', '972501231234');
   await settle(app);
   setNow(SUNDAY + 21 * MINUTE);
   await serviceTick(app);
-  const toOwner = tx.messages().filter((m) => m.to === `+${OWNER}`);
+  const toOwner = sent().filter((m) => m.to === OWNER);
   assert.equal(toOwner.length, 2);
-  assert.match(toOwner[0].whatsapp_message.template.components[0].parameters[2].text, /עוד אין תשובה/);
-  assert.equal(toOwner[1].whatsapp_message.template.name, 'alhakav_summary');
-  assert.equal(toOwner[1].whatsapp_message.template.components[0].parameters[1].text, 'מזגן מטפטף');
+  assert.match(toOwner[0].template.components[0].parameters[2].text, /עוד אין תשובה/);
+  assert.equal(toOwner[1].template.name, 'alhakav_summary');
+  assert.equal(toOwner[1].template.components[0].parameters[1].text, 'מזגן מטפטף');
   await serviceTick(app);
-  assert.equal(tx.messages().filter((m) => m.to === `+${OWNER}`).length, 2, 'each goes once');
+  assert.equal(sent().filter((m) => m.to === OWNER).length, 2, 'each goes once');
   // 90 days on, the callers' chats are gone.
   setNow(SUNDAY + 91 * 24 * 60 * MINUTE);
   await serviceTick(app);
   assert.equal(chats(db).length, 0);
 });
 
-test('the customer writes to their own assistant: the "לא לשלוח" list, a pause, and texts inside the 24 hours', async () => {
-  const { app, db, tx } = setup();
-  await onWhatsApp(app, said('לא לשלוח ל 050-999-8877', 'o1', OWNER));
+test('the customer writes to המוקדן: the "לא לשלוח" list, a pause, and texts inside the 24 hours', async () => {
+  const { app, db, sent } = setup();
+  await said(app, 'לא לשלוח ל 050-999-8877', 'o1', OWNER);
   assert.ok(db.get("SELECT 1 FROM skips WHERE phone = '972509998877' AND why = 'owner'"));
-  assert.match(tx.messages().at(-1).whatsapp_message.text.body, /050-999-8877 לא יקבל/);
+  assert.match(sent().at(-1).text.body, /050-999-8877 לא יקבל/);
   await onCall(app, call('972509998877', 'mom'));
   assert.equal(db.get("SELECT outcome FROM calls WHERE call_id = 'mom'").outcome, 'skipped');
   // The owner wrote in the last 24 hours, so a note goes as text, not a template.
   await onCall(app, call('', 'h'));
-  assert.equal(tx.messages().at(-1).whatsapp_message.type, 'text');
-  await onWhatsApp(app, said('לעצור', 'o2', OWNER));
+  assert.equal(sent().at(-1).type, 'text');
+  await said(app, 'לעצור', 'o2', OWNER);
   assert.equal(db.get('SELECT status FROM customers').status, 'paused');
   await onCall(app, call(CALLER, 'while-paused'));
   assert.equal(db.get("SELECT outcome FROM calls WHERE call_id = 'while-paused'").outcome, 'inactive');
-  await onWhatsApp(app, said('להמשיך', 'o3', OWNER));
+  await said(app, 'להמשיך', 'o3', OWNER);
   assert.equal(db.get('SELECT status FROM customers').status, 'active');
 });
 
-test('registering the assistant on WhatsApp: Meta\'s call is recorded, and the code verifies it', async () => {
-  const { app, db, tx, cid } = setup();
-  db.run("UPDATE customers SET wa_status = 'none', status = 'setup' WHERE id = ?", cid);
-  const c = () => db.get('SELECT * FROM customers WHERE id = ?', cid);
-  assert.ok((await registerWa(app, c())).ok);
-  assert.equal(tx.calls.at(-1).url, 'https://telnyx.test/v2/whatsapp/business_accounts/waba1/phone_numbers');
-  assert.equal(tx.calls.at(-1).body.verification_method, 'voice');
-  await onCall(app, call('15550001111', 'meta-otp'));
-  assert.deepEqual(tx.actions(), ['answer', 'record_start']);
-  await onCall(app, { kind: 'call', type: 'call.recording.saved', callId: 'meta-otp', to: ASSISTANT, recording: 'https://rec.test/otp.mp3' });
-  assert.equal(c().otp_recording, 'https://rec.test/otp.mp3');
-  assert.ok((await verifyWa(app, c(), '123-456')).ok);
-  assert.equal(tx.calls.find((x) => x.url.endsWith('/verify')).body.code, '123456');
-  assert.equal(c().wa_status, 'connected');
-  assert.deepEqual(forwardCodes(c().assistant), ['**61*0771234567**20#', '**67*0771234567#', '**62*0771234567#', '*#61#']);
+test('two customers share המוקדן: a caller is answered in the chat of their latest call; a stranger gets one line a day', async () => {
+  const claude = fakeClaude([{ reply: 'איפה בדיוק?', done: false, what: 'קצר בחשמל', place: '', urgency: '' }]);
+  const { app, db, sent } = setup({ claude });
+  const r = createCustomer(db, { name: 'רון', business: 'רון חשמל', trade: 'electrician', phone: '052-333-4444', assistant: '077-999-0000' });
+  db.run("UPDATE customers SET status = 'active', paid_until = '2026-12-21' WHERE id = ?", r.id);
+  await onCall(app, call(CALLER, 'to-avi'));
+  setNow(SUNDAY + 5 * MINUTE);
+  await onCall(app, call(CALLER, 'to-ron', '972779990000'));
+  assert.deepEqual(sent().filter((m) => m.to === CALLER).map((m) => m.template.components[0].parameters[0].text), ['אבי אינסטלציה', 'רון חשמל']);
+  setNow(SUNDAY + 6 * MINUTE);
+  await said(app, 'יש קצר בסלון', 'q1');
+  await settle(app);
+  // The answer is in רון's chat, the latest call.
+  const ron = db.get('SELECT * FROM chats WHERE customer_id = ?', r.id);
+  assert.equal(db.get("SELECT count(*) AS n FROM chat_messages WHERE chat_id = ? AND dir = 'in'", ron.id).n, 1);
+  assert.match(claude.seen[0].system[0].text, /"רון חשמל"/);
+  // Someone who never called: one line on what this is, not twice in a day.
+  await said(app, 'שלום, מי זה?', 's1', '972509990001');
+  await said(app, 'הלו?', 's2', '972509990001');
+  const toStranger = sent().filter((m) => m.to === '972509990001');
+  assert.equal(toStranger.length, 1);
+  assert.match(toStranger[0].text.body, /כאן המוקדן של על הקו/);
+  // The business number's messages never reach המוקדן.
+  await onWebhook(app, hook({ messages: [{ id: 'biz-1', from: CALLER, type: 'text', text: { body: 'כמה זה עולה?' } }] }));
+  assert.equal(db.get("SELECT count(*) AS n FROM chat_messages WHERE msg_id = 'biz-1'").n, 0);
+});
+
+test('a customer\'s own number at Telnyx gives the forwarding codes', () => {
+  assert.deepEqual(forwardCodes('972771234567'), ['**61*0771234567**20#', '**67*0771234567#', '**62*0771234567#', '*#61#']);
 });
 
 test('a lead that became a customer is set up from the lead', () => {
@@ -250,19 +259,15 @@ test('a lead that became a customer is set up from the lead', () => {
 test("Telnyx's webhook: signed with Ed25519, answered at once, and read", async () => {
   const { publicKey, privateKey } = generateKeyPairSync('ed25519');
   const raw32 = publicKey.export({ format: 'der', type: 'spki' }).subarray(-32).toString('base64');
-  const body = JSON.stringify({ data: { event_type: 'call.initiated', id: 'e1', payload: { call_control_id: 'cc-1', from: `+${CALLER}`, to: `+${ASSISTANT}`, direction: 'incoming' } } });
+  const body = JSON.stringify({ data: { event_type: 'call.initiated', id: 'e1', payload: { call_control_id: 'cc-1', from: `+${CALLER}`, to: `+${VOICE}`, direction: 'incoming' } } });
   const ts = String(Math.floor(SUNDAY / 1000));
   const sig = sign(null, Buffer.from(`${ts}|${body}`), privateKey).toString('base64');
   assert.ok(signatureOk(raw32, body, sig, ts, SUNDAY));
   assert.ok(!signatureOk(raw32, `${body} `, sig, ts, SUNDAY), 'another body');
   assert.ok(!signatureOk(raw32, body, sig, ts, SUNDAY + 10 * MINUTE), 'too old');
-  assert.deepEqual(readEvent(JSON.parse(body)), { kind: 'call', type: 'call.initiated', id: 'e1', callId: 'cc-1', from: CALLER, to: ASSISTANT, direction: 'incoming', recording: null });
-  const wa = readEvent({ data: { event_type: 'message.received', payload: { id: 'm-1', type: 'WHATSAPP', from: { phone_number: `+${CALLER}` }, to: [{ phone_number: `+${ASSISTANT}` }], body: { text: { body: 'היי' } } } } });
-  assert.equal(wa.text, 'היי');
-  assert.equal(wa.from, CALLER);
-  assert.equal(wa.to, ASSISTANT);
+  assert.deepEqual(readEvent(JSON.parse(body)), { kind: 'call', type: 'call.initiated', id: 'e1', callId: 'cc-1', from: CALLER, to: VOICE, direction: 'incoming', recording: null });
 
-  const { app, tx } = setup({ env: { ...TENV, TELNYX_PUBLIC_KEY: raw32 } });
+  const { app, sent } = setup({ env: { ...TENV, TELNYX_PUBLIC_KEY: raw32 } });
   const server = createServer(handler(app));
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   const url = `http://127.0.0.1:${server.address().port}/telnyx/webhook`;
@@ -271,7 +276,7 @@ test("Telnyx's webhook: signed with Ed25519, answered at once, and read", async 
     const ok = await fetch(url, { method: 'POST', body, headers: { 'telnyx-signature-ed25519': sig, 'telnyx-timestamp': ts } });
     assert.equal(ok.status, 200);
     await settle(app);
-    assert.equal(tx.messages()[0].whatsapp_message.template.name, 'alhakav_caller');
+    assert.equal(sent()[0].template.name, 'alhakav_caller');
   } finally {
     server.close();
   }

@@ -20,6 +20,7 @@ import { brave, fromUrls, queriesFor, seeds } from './sources.js';
 //                                [--url site.co.il] [--seeds]
 //                                                 one discovery run now, from Brave, one site, or private/seeds.txt
 //   node server/main.js list [n]                  the newest n leads (default 20)
+//   node server/main.js support [file]            what Toran knows about על הקו, for its company sync (docs/toran.md)
 //
 // Settings: the environment, then private/.env (ENV_FILE moves it). .env.example lists them.
 
@@ -126,9 +127,19 @@ function list() {
   db.close();
 }
 
-const run = { serve, password, discover: discoverNow, list }[cmd];
+/** What Toran knows about על הקו, as a file for openfrequency-toran's company sync (server/support.js). */
+async function support() {
+  const { supportExport } = await import('./support.js');
+  const json = `${JSON.stringify(supportExport(env), null, 2)}\n`;
+  if (rest[0]) {
+    (await import('node:fs')).writeFileSync(rest[0], json);
+    console.log(`wrote ${rest[0]}`);
+  } else process.stdout.write(json);
+}
+
+const run = { serve, password, discover: discoverNow, list, support }[cmd];
 if (!run) {
-  console.error(`unknown command: ${cmd} (serve, password, discover, list)`);
+  console.error(`unknown command: ${cmd} (serve, password, discover, list, support)`);
   process.exit(1);
 }
 await run();
