@@ -26,6 +26,9 @@ test('what it should say goes through untouched: the danger line with 101 and 10
     assert.deepEqual(guardReply(reply, B), { text: reply, cut: [] }, reply);
   }
   assert.ok(guardReply('א'.repeat(900), B).text.length <= 500, 'at most 500 characters');
+  // Its own no promises nothing; any other no is no excuse.
+  for (const reply of ['אני לא יכול לתת מחיר או הנחה, אבי אינסטלציה יחזרו אליך ויסגרו איתך את זה.', 'אני לא יכול להבטיח זמן הגעה.']) assert.deepEqual(guardReply(reply, B).cut, [], reply);
+  assert.deepEqual(guardReply('לא תשלמו כלום, הבדיקה בחינם.', B).cut, ['promise']);
 });
 
 test('the language of a reply, for the line the guard puts in', () => {

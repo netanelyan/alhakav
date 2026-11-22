@@ -65,6 +65,9 @@ const TIME = /תוך\s*(?:כ־?)?\s*(?:\d+|חצי|רבע|שעה|שעתיים)\s*
 const MONEY_OTHER = /\d[\d,.]*\s*(?:шекел|шек\.?|руб|долл|شيكل|شاقل|شواقل)|(?:стоит|стоимость|цена|السعر|سعر|يكلف)\s*(?:около\s*|حوالي\s*)?\d{2,}/i;
 const TIME_OTHER = /в течение\s+(?:\d+\s*)?(?:минут|часа|часов|час)|через\s+(?:\d+\s*)?(?:минут|час)|(?:приедем|приедет|приедут)\s|خلال\s*(?:\d+\s*)?(?:دقيقة|دقائق|ساعة|ساعات)|بعد\s*\d+\s*(?:دقيقة|دقائق|ساعة)|\b(?:in an hour|in half an hour|today at|tomorrow at)\b/i;
 const PROMISE = /מבטיחים|מבטיח|מתחייבים|מתחייב|הנחה|בחינם|חינם|ללא עלות|בלי עלות|\b(?:free|discount|guarantee)\b/i;
+// Saying it cannot ("אני לא יכול להבטיח", "אני לא נותן הנחות") promises nothing: a promise word beside the bot's own no
+// is not cut. Any other no ("לא תשלמו כלום") is no excuse.
+const REFUSES = /(?:לא יכול|לא יכולה|לא יכולים|לא אוכל|לא נותן|לא נותנת|לא נותנים|לא מבטיח|לא מבטיחים|לא מתחייב|לא מתחייבים|אין לי אפשרות|can't|cannot|не могу)/i;
 const LINK = /https?:\/\/|www\.|\b[a-z0-9-]+\.(?:com|co\.il|org\.il|net|org|io|il|me|ly)\b|@[a-z0-9-]+\./i;
 const PHONE = /(?<!\d)(?:\+?972[-\s]?|0)(?:[23489]|5\d|7\d)[-\s]?\d{3}[-\s]?\d{4}(?!\d)|\*\d{4}/;
 
@@ -95,7 +98,7 @@ export function guardReply(reply, business) {
   const cut = new Set();
   const kept = [];
   for (const sentence of String(reply || '').replace(/\s+/g, ' ').trim().split(/(?<=[.?!])\s+/)) {
-    const broke = [(MONEY.test(sentence) || MONEY_OTHER.test(sentence)) && 'price', (TIME.test(sentence) || TIME_OTHER.test(sentence)) && 'time', PROMISE.test(sentence) && 'promise', LINK.test(sentence) && 'link', PHONE.test(sentence) && 'phone'].filter(Boolean);
+    const broke = [(MONEY.test(sentence) || MONEY_OTHER.test(sentence)) && 'price', (TIME.test(sentence) || TIME_OTHER.test(sentence)) && 'time', PROMISE.test(sentence) && !REFUSES.test(sentence) && 'promise', LINK.test(sentence) && 'link', PHONE.test(sentence) && 'phone'].filter(Boolean);
     if (!broke.length) kept.push(sentence);
     for (const b of broke) cut.add(b);
   }
