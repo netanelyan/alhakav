@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { adminLink, alertOwner } from './alerts.js';
 import { intakeTurn } from './claude.js';
 import { DAY, HOUR, hhmm, israelDate, now, nowIso } from './clock.js';
-import { SVC } from './copy.js';
+import { ALERT, SVC } from './copy.js';
 import { num } from './env.js';
 import { assistSettings, sendText } from './meta.js';
 import { local, masked } from './phones.js';
@@ -169,14 +169,14 @@ footer a{color:#fff}
 <img src="/svg/al-hakav-logo-on-dark.svg" alt="על הקו" width="120" height="28">
 <p class="for">בשביל ${esc(biz)}</p>
 <h1>ככה זה ייראה אצלכם</h1>
-<p class="sub">לא עניתם לטלפון? מי שהתקשר מקבל הודעה, ואתם מקבלים סיכום.</p>
+<p class="sub">כשאתם לא עונים, מי שהתקשר מקבל מהמוקדן הודעה בוואטסאפ, ואליכם מגיע סיכום של מה שהוא צריך</p>
 </div></header>
 <main class="wrap">
-<div class="phone" role="img" aria-label="דוגמה לשיחה בוואטסאפ עם מי שהתקשר"><p class="wa"><img src="/svg/al-hakav-mokdan-avatar.svg" alt="" width="30" height="30">המוקדן של על הקו<small>דוגמה</small></p><ol class="chat">${bubbles}</ol></div>
-<p class="arrow">ואליכם מגיע:</p>
+<div class="phone" role="img" aria-label="דוגמה לשיחה בוואטסאפ בין המוקדן למי שהתקשר"><p class="wa"><img src="/svg/al-hakav-mokdan-avatar.svg" alt="" width="30" height="30">המוקדן של על הקו<small>דוגמה</small></p><ol class="chat">${bubbles}</ol></div>
+<p class="arrow">ומה שמגיע אליכם</p>
 <dl class="sum">${rows}</dl>
-${tryLink ? `<div class="cta"><h2>לנסות על עצמכם</h2><p>המוקדן יכתוב לכם כמו ללקוח. לוקח דקה.</p><a class="btn" href="${esc(tryLink)}">${icon}לנסות בוואטסאפ</a></div>` : ''}
-<div class="price"><h2>149 ₪ לחודש</h2><p>לא כולל מע״מ · אין דמי הקמה</p>${talkLink ? `<a class="btn or" href="${esc(talkLink)}">${icon}רוצים את זה? כתבו לנו</a>` : ''}</div>
+${tryLink ? `<div class="cta"><h2>לנסות על עצמכם</h2><p>המוקדן כותב לכם כאילו התקשרתם לעסק, ובסוף מגיע הסיכום. לוקח דקה</p><a class="btn" href="${esc(tryLink)}">${icon}לנסות בוואטסאפ</a></div>` : ''}
+<div class="price"><h2>149 ₪ לחודש</h2><p>לא כולל מע״מ, ואין דמי הקמה</p>${talkLink ? `<a class="btn or" href="${esc(talkLink)}">${icon}רוצים את זה? כתבו לנו</a>` : ''}</div>
 </main>
 <footer><div class="wrap"><a href="/">על הקו</a> · <a href="/terms">תנאים</a> · <a href="/privacy">פרטיות</a> · <a href="/accessibility">נגישות</a></div></footer>
 </body>
@@ -187,7 +187,7 @@ ${tryLink ? `<div class="cta"><h2>לנסות על עצמכם</h2><p>המוקדן
 export async function pageViewed(app, lead) {
   const at = nowIso();
   app.db.run('UPDATE leads SET page_views = page_views + 1, page_first_at = COALESCE(page_first_at, ?), page_last_at = ? WHERE id = ?', at, at, lead.id);
-  await alertOwner(app, `page:${lead.id}`, `על הקו: ${bizOf(lead)} פתחו את הדף שלהם`, `הדף: ${pageUrl(app.env, lead.page_code)}\nהליד: ${adminLink(app.env, `/admin/leads/${lead.id}`)}`, 24 * 60);
+  await alertOwner(app, `page:${lead.id}`, ALERT.page(bizOf(lead)), ALERT.body.open(adminLink(app.env, `/admin/leads/${lead.id}`)), 24 * 60);
 }
 
 // ---- the try, on המוקדן's number
@@ -257,7 +257,7 @@ async function startDemo(app, lead, phone, m) {
   await say(app, id, phone, 'intro', DEMO.intro(biz));
   await say(app, id, phone, 'first', SVC.callerFirst(biz));
   app.log(`[demo] ${masked(phone)} started a try of lead ${lead.id}`);
-  await alertOwner(app, `demo:${lead.id}`, `על הקו: ${biz} מנסים את המוקדן על עצמם`, `הליד: ${adminLink(app.env, `/admin/leads/${lead.id}`)}`, 24 * 60);
+  await alertOwner(app, `demo:${lead.id}`, ALERT.tried(biz), ALERT.body.open(adminLink(app.env, `/admin/leads/${lead.id}`)), 24 * 60);
 }
 
 /** Answer a try a moment after its last message, one turn at a time (the same way service.js answers a caller). */

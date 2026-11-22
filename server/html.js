@@ -27,11 +27,14 @@ export const flashLine = (flash, bad) => (flash ? `<p class="flash${bad ? ' bad'
 
 export const empty = (title, lead = '') => `<div class="card empty"><b>${esc(title)}</b>${lead ? `<p>${esc(lead)}</p>` : ''}</div>`;
 
-/** A whole page: the bar (the lists and sign-out, once signed in) and the content. reload: seconds, while something runs. */
-export function layout({ title, body, csrf = '', active = '', reload = 0, signedIn = true }) {
-  const link = (href, label, on) => `<a href="${href}"${on ? ' aria-current="page"' : ''}>${esc(label)}</a>`;
+/**
+ * A whole page, in the landing page's look: the navy bar with the logo, the lists and sign-out (once signed in), and
+ * the content. reload: seconds, while something runs. wide: the inbox's two columns.
+ */
+export function layout({ title, body, csrf = '', active = '', reload = 0, signedIn = true, wide = false }) {
+  const link = (href, label, on, extra = '') => `<a href="${href}"${on ? ' aria-current="page"' : ''}>${esc(label)}${extra}</a>`;
   const nav = signedIn
-    ? `<nav class="nav" aria-label="${esc(T.brand)}">${link('/admin/leads', T.nav.leads, active === 'leads')}${link('/admin/leads/reached', T.nav.reached, active === 'reached')}${link('/admin/customers', T.nav.customers, active === 'customers')}</nav>${button('/admin/logout', T.nav.logout, csrf, { kind: 'quiet' })}`
+    ? `<nav class="nav" aria-label="${esc(T.brand)}">${link('/admin/inbox', T.nav.inbox, active === 'inbox', '<span class="badge" data-unread hidden></span>')}${link('/admin/leads', T.nav.leads, active === 'leads')}${link('/admin/leads/reached', T.nav.reached, active === 'reached')}${link('/admin/customers', T.nav.customers, active === 'customers')}</nav>${button('/admin/logout', T.nav.logout, csrf, { kind: 'out' })}`
     : '';
   return `<!doctype html>
 <html lang="he" dir="rtl">
@@ -39,14 +42,18 @@ export function layout({ title, body, csrf = '', active = '', reload = 0, signed
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<meta name="theme-color" content="#0a7d4f">
+<meta name="theme-color" content="#0B2340">
 ${reload ? `<meta http-equiv="refresh" content="${Number(reload)}">\n` : ''}<title>${esc(title)} · ${esc(T.brand)}</title>
+<link rel="icon" href="/svg/al-hakav-favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800;900&amp;display=swap">
 <link rel="stylesheet" href="/admin/static/admin.css">
 <script src="/admin/static/admin.js" defer></script>
 </head>
 <body>
-<header class="top"><div class="bar"><a class="brand" href="/admin/leads">${esc(T.brand)}</a>${nav}</div></header>
-<main class="wrap">
+<header class="top"><div class="bar"><a class="brand" href="/admin/inbox"><img src="/svg/al-hakav-logo-on-dark.svg" alt="${esc(T.brand)}" width="118" height="28"></a>${nav}</div></header>
+<main class="wrap${wide ? ' wide' : ''}">
 ${body}
 </main>
 </body>

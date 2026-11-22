@@ -70,7 +70,29 @@ export const MSG = {
 
 export const T = {
   brand: 'על הקו',
-  nav: { leads: 'לידים', reached: 'פנינו אליהם', customers: 'לקוחות', logout: 'לצאת' },
+  nav: { inbox: 'הודעות', leads: 'לידים', reached: 'פנינו אליהם', customers: 'לקוחות', logout: 'לצאת' },
+  inbox: {
+    title: 'הודעות',
+    lead: 'כל מה שנשלח והגיע בוואטסאפ, בשני המספרים. השיחה שזזה אחרונה למעלה.',
+    tabs: { all: 'הכול', unread: 'לא נקראו' },
+    lines: { biz: 'המספר של העסק', assist: 'המוקדן' },
+    search: 'חיפוש לפי שם, מספר או מילה מההודעה',
+    empty: 'אין כאן הודעות',
+    emptyLead: 'שיחה מופיעה כאן מההודעה הראשונה שיוצאת או נכנסת, באחד משני המספרים.',
+    unread: 'לא נקראה',
+    we: 'אנחנו:',
+    me: 'הטלפון שלך',
+    customer: 'לקוח',
+    caller: (biz) => `התקשר ל${biz}`,
+    demo: 'ניסו את המוקדן מהדף שלהם',
+    open: 'לדף שלהם',
+    back: 'לכל ההודעות',
+    write: 'לכתוב הודעה',
+    notYet: 'הם עוד לא כתבו לנו, אז וואטסאפ לא נותן לענות כאן. ההודעה הראשונה יוצאת מהדף שלהם.',
+    assistOnly: 'כאן המוקדן מנהל את השיחה בעצמו, אז אין מכאן תשובה ידנית.',
+    sent: 'נשלח.',
+    kind: { alert: 'עדכון אליך', summary: 'הסיכום ללקוח', note: 'הודעה על שיחה', demoSummary: 'הסיכום בניסיון', intro: 'פתיחת הניסיון', closing: 'סוף הניסיון', owner: '', first: 'ההודעה הראשונה', reply: '' },
+  },
   login: {
     title: 'כניסה',
     password: 'סיסמה',
@@ -492,15 +514,21 @@ export const PAY = {
 // ---- The admin's alerts on their own WhatsApp (alerts.js), through Toran. A title the phone shows, and a body with
 // what happened and the page to open.
 
+// The owner's alerts (alerts.js). "על הקו:" opens each title for Toran's way, where they share a phone with OpenFrequency's
+// alerts; from the business number it is left out, since the chat already says who writes.
 export const ALERT = {
-  fresh: (who) => `על הקו: הודעה חדשה מ־${who}`,
-  yes: (who) => `על הקו: ${who} ביקשו את ההסבר`,
-  join: (who) => `על הקו: ${who} רוצים להצטרף, ופרטי התשלום נשלחו אליהם`,
-  joinFailed: (who) => `על הקו: ${who} רוצים להצטרף, אבל פרטי התשלום לא נשלחו`,
+  fresh: (who) => `על הקו: ${who} כתבו לנו בוואטסאפ`,
+  yes: (who) => `על הקו: ${who} ענו "כן", ושלחתי להם שוב את הדף עם המחיר`,
+  replied: (who) => `על הקו: ${who} ענו להודעה שלנו`,
+  join: (who) => `על הקו: ${who} רוצים להצטרף, ושלחתי להם את פרטי התשלום`,
+  joinFailed: (who) => `על הקו: ${who} רוצים להצטרף, אבל פרטי התשלום לא נשלחו אליהם`,
   handoff: (who) => `על הקו: תורן העביר אליך את ${who}`,
-  receipt: (who) => `על הקו: ${who} שלחו צילום של העברה`,
-  quiet: (who) => `על הקו: תורן לא ענה ל־${who}`,
+  receipt: (who) => `על הקו: ${who} שלחו צילום של העברה בנקאית`,
+  quiet: (who) => `על הקו: תורן לא ענה ל־${who}, אז צריך לענות להם בעצמך`,
+  page: (biz) => `על הקו: ${biz} פתחו את הדף שלהם`,
+  tried: (biz) => `על הקו: ${biz} מנסים את המוקדן על עצמם`,
   body: {
+    said: (text) => `הם כתבו: ${text}`,
     open: (link) => `הדף שלהם: ${link}`,
     check: (link) => `לבדוק מול הבנק ולאשר: ${link}`,
     answer: (link) => `צריך לענות להם מהדף שלהם: ${link}`,
@@ -513,4 +541,27 @@ export const ALERT = {
       customer: 'לא נפתח להם כרטיס לקוח, כנראה כי המספר שלהם לא נייד ישראלי.',
     },
   },
+};
+
+// The owner's evening summary (digest.js): one sentence, only what happened, in the bot's first person.
+const and = (s) => (/^\d/.test(s) ? `ו־${s}` : `ו${s}`);
+export const DIGEST = {
+  title: 'על הקו: מה היה ב־24 השעות האחרונות',
+  text: (c) => {
+    const parts = [
+      c.found && (c.found === 1 ? 'מצאתי בעל מקצוע אחד שמתאים' : `מצאתי ${c.found} בעלי מקצוע שמתאימים`),
+      c.sent && (c.sent === 1 ? 'שלחתי הודעה ראשונה אחת' : `שלחתי ${c.sent} הודעות ראשונות`),
+      c.reminded && (c.reminded === 1 ? 'יצאה תזכורת אחת' : `יצאו ${c.reminded} תזכורות`),
+      c.pages && (c.pages === 1 ? 'עסק אחד פתח את הדף שלו' : `${c.pages} עסקים פתחו את הדף שלהם`),
+      c.tried && (c.tried === 1 ? 'עסק אחד ניסה את המוקדן על עצמו' : `${c.tried} עסקים ניסו את המוקדן על עצמם`),
+      c.answered && (c.answered === 1 ? 'עסק אחד ענה להודעה שלנו' : `${c.answered} עסקים ענו להודעה שלנו`),
+      c.wrote && (c.wrote === 1 ? 'מישהו חדש כתב לנו בוואטסאפ' : `${c.wrote} אנשים חדשים כתבו לנו בוואטסאפ`),
+      c.joined && (c.joined === 1 ? 'לקוח חדש אחד הצטרף' : `${c.joined} לקוחות חדשים הצטרפו`),
+      c.paid && (c.paid === 1 ? 'תשלום אחד אושר' : `${c.paid} תשלומים אושרו`),
+      c.stopped && (c.stopped === 1 ? 'מספר אחד ביקש שלא נכתוב אליו' : `${c.stopped} מספרים ביקשו שלא נכתוב אליהם`),
+    ].filter(Boolean);
+    if (!parts.length) return '';
+    return `${parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(', ')} ${and(parts.at(-1))}`}.`;
+  },
+  link: (url) => `כל ההודעות: ${url}`,
 };

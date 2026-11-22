@@ -320,6 +320,11 @@ async function onMessage(app, m) {
   const reopen = lead.stage !== 'closed' || lead.closed_why !== 'stopped';
   db.run(`UPDATE leads SET replied_at = COALESCE(replied_at, ?), ${reopen ? "stage = 'talking', closed_why = NULL, later_until = NULL," : ''} updated_at = ? WHERE id = ?`, stamp, stamp, lead.id);
   raise(db, lead, 'replied');
+  // Their first answer to our message: the owner hears it with what they wrote (someone who wrote first is told by toran.js).
+  if (wroteFirst && !lead.replied_at && !lead.yes_at) {
+    const said = ALERT.body.said(m.text.replace(/\s+/g, ' ').trim().slice(0, 300));
+    await alertOwner(app, `replied:${lead.id}`, ALERT.replied(whoIs(lead.name, from)), `${said}\n${ALERT.body.open(adminLink(app.env, `/admin/leads/${lead.id}`))}`, 24 * 60);
+  }
   if (reopen) await queueAnswer(app, { ...lead, stage: 'talking' }, m);
 }
 

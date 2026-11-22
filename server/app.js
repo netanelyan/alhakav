@@ -27,11 +27,13 @@ import { toranState } from './toran.js';
 import { leadByCode, pageHtml, pageViewed } from './demo.js';
 import { autopilot } from './autopilot.js';
 import { giveNumber } from './numbers.js';
+import { LINES, conversations, inboxPage, leadOf, markSeen, thread, threadPage, unreadCount } from './inbox.js';
 
 // The one HTTP server, behind Caddy on 127.0.0.1:
 //
 //   /admin/...      the admin's pages and forms (signed in, every POST with its CSRF token and from this origin),
-//                   the transfer receipts among them (/admin/receipts/<id>, docs/payments.md)
+//                   the transfer receipts among them (/admin/receipts/<id>, docs/payments.md), and the inbox of both
+//                   numbers' WhatsApp messages (/admin/inbox, inbox.js)
 //   /meta/webhook   Meta's webhook: GET to verify it once (META_VERIFY_TOKEN), POST for every message and status,
 //                   signed with META_APP_SECRET (the outreach number)
 //   /telnyx/webhook Telnyx's webhook for the customers' own numbers: the calls forwarded to them, signed
@@ -73,7 +75,8 @@ const HEADERS = {
   'x-content-type-options': 'nosniff',
   'referrer-policy': 'same-origin',
   'x-frame-options': 'DENY',
-  'content-security-policy': "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+  // The admin pages load the site's own font, Heebo, from Google Fonts, as the landing page does.
+  'content-security-policy': "default-src 'self'; img-src 'self' data:; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
 };
 
 /** Everything the server works with, so the tests can hand it a database, fake sites and a fake Meta. */
@@ -228,6 +231,24 @@ async function route(app, req, res) {
     const { flash, bad } = takeFlash(res, req, c);
     return send(res, 200, HTML, reachedPage({ csrf, flash, bad, env: app.env, tab, q, rows, counts: countsReached(app.db, q), funnel: funnel(app.db), lastIns, at }));
   }
+  if (p === '/admin/inbox') {
+    const tab = ['unread', ...LINES].includes(url.searchParams.get('tab')) ? url.searchParams.get('tab') : '';
+    const q = String(url.searchParams.get('q') || '').slice(0, 100);
+    const { flash, bad } = takeFlash(res, req, c);
+    return send(res, 200, HTML, inboxPage({ csrf, flash, bad, rows: conversations(app.db, app.env, { tab, q }), tab, q, counts: { unread: unreadCount(app.db, app.env) }, at }));
+  }
+  if (p === '/admin/inbox/unread') return send(res, 200, 'application/json; charset=utf-8', JSON.stringify({ n: unreadCount(app.db, app.env) }));
+  const conv = /^\/admin\/inbox\/(biz|assist)\/(\d{8,15})$/.exec(p);
+  if (conv) {
+    const [, line, phone] = conv;
+    const messages = thread(app.db, line, phone);
+    const rows = conversations(app.db, app.env);
+    const who = rows.find((r) => r.line === line && r.phone === phone);
+    if (!messages.length || !who) return send(res, 404, HTML, notFoundPage(csrf));
+    markSeen(app.db, line, phone);
+    const { flash, bad } = takeFlash(res, req, c);
+    return send(res, 200, HTML, threadPage({ csrf, flash, bad, line, phone, who, messages, lead: line === 'biz' ? leadOf(app.db, phone) : null, metaReady: metaSettings(app.env).ready, rows: rows.map((r) => (r === who ? { ...r, unread: false } : r)), at }));
+  }
   if (p === '/admin/customers') {
     const { flash, bad } = takeFlash(res, req, c);
     return send(res, 200, HTML, customersPage(app, { csrf, flash, bad, rows: listCustomers(app.db, at), waiting: receiptsWaiting(app.db), at }));
@@ -325,6 +346,14 @@ async function post(app, req, res, p, form, token) {
   if (p === '/admin/customers/new') {
     const r = createCustomer(app.db, form);
     return see(res, req, r.ok ? `/admin/customers/${r.id}` : '/admin/customers', r.flash, !r.ok);
+  }
+  const ir = /^\/admin\/inbox\/biz\/(\d{8,15})\/reply$/.exec(p);
+  if (ir) {
+    const back = `/admin/inbox/biz/${ir[1]}`;
+    const lead = leadOf(app.db, ir[1]);
+    if (!lead) return see(res, req, back, T.inbox.notYet, true);
+    const r = await reply(app, lead, form.text);
+    return see(res, req, back, r.ok ? T.inbox.sent : r.flash, !r.ok);
   }
   const cm = /^\/admin\/customers\/(\d+)\/([a-z-]+)$/.exec(p);
   if (cm) return customerAction(app, req, res, Number(cm[1]), cm[2], form, token);

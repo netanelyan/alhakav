@@ -5,7 +5,9 @@ things:
 
 - `index.html`, the landing page.
 - `server/`, the admin's lead desk, built like openfrequency's `/admin/leads`: it finds tradespeople by itself, scores
-  them, and writes to them on WhatsApp from the business number when you press send.
+  them, and writes to them on WhatsApp from the business number when you press send. Its inbox (`/admin/inbox`) shows
+  every WhatsApp message both numbers sent and got, and the owner hears about leads, sales and payments on their own
+  WhatsApp.
 - `terms.html`, `privacy.html`, `accessibility.html`, the legal pages.
 - `docs/connecting.md`, the service itself: each customer's assistant number, how their missed calls reach it (call
   forwarding), the conversation with the caller and the summary, and what to check on the first customer.
@@ -75,9 +77,13 @@ number, and Morning's API keys in `MORNING_CLIENT_ID` and `MORNING_CLIENT_SECRET
 **The scheduled task.** `AUTOPILOT_TOKEN`, `AUTOPILOT=1`, the Caddy route on toran.openfrequency.co.il, and the two
 routines (docs/autopilot.md).
 
-**Toran.** openfrequency-toran answers on the business number as על הקו, sends the admin's alerts to their WhatsApp,
-and hands whoever wants to join to the payment message: `OF_INTERNAL_TOKEN` (the same as Toran's), and על הקו's export
-synced into Toran (`node server/main.js support <file>`, docs/toran.md).
+**The owner's updates.** `OWNER_WA`, the owner's own mobile, and the template `alhakav_update` approved on the business
+number (docs/whatsapp-templates.md). Someone new wrote, a lead answered, a page was opened or tried, someone wants to
+join, a transfer's picture came, and at 19:00 what the day brought.
+
+**Toran.** openfrequency-toran answers on the business number as על הקו, sends the admin's alerts to their WhatsApp when
+`OWNER_WA` cannot, and hands whoever wants to join to the payment message: `OF_INTERNAL_TOKEN` (the same as Toran's),
+and על הקו's export synced into Toran (`node server/main.js support <file>`, docs/toran.md).
 
 **Backups.** Everything is in one SQLite file (`/var/lib/alhakav/leads.db` on the VPS). `sqlite3 <file> ".backup <copy>"`
 copies it safely while the server runs.

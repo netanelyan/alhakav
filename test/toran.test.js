@@ -35,7 +35,7 @@ test('someone new writes: Toran answers from the business number, and the admin 
   assert.equal(toran.alerts.length, 1);
   assert.equal(toran.alerts[0].product, 'alhakav');
   assert.match(toran.alerts[0].key, /^new:\d+$/);
-  assert.match(toran.alerts[0].title, /הודעה חדשה מ־דני, 052-999-8877/);
+  assert.match(toran.alerts[0].title, /דני, 052-999-8877 כתבו לנו בוואטסאפ/);
   assert.match(toran.alerts[0].body, /כמה זה עולה\?[\s\S]*https:\/\/alhakav\.example\/admin\/leads\/\d+/);
   // The next message: answered, no second alert; the same webhook again: nothing.
   await onWebhook(app, hook({ name: 'דני', messages: [text('wamid.b', 'ויש דמי הקמה?')] }));
@@ -103,7 +103,7 @@ test('they want to join: a customer, the amount and the transfer details right a
   assert.match(sent[1].body, /על שם ישראל ישראלי/);
   assert.equal(graph.sent().length, 2);
   const join = toran.alerts.find((a) => a.key.startsWith('join:'));
-  assert.match(join.title, /דני חשמל, 052-999-8877 רוצים להצטרף, ופרטי התשלום נשלחו אליהם/);
+  assert.match(join.title, /דני חשמל, 052-999-8877 רוצים להצטרף, ושלחתי להם את פרטי התשלום/);
   assert.match(join.body, /\/admin\/customers\/\d+/);
   // Now a customer: Toran is told so, and a second "join" within six hours sends the details once.
   toran.answers.push({ reply: 'שלחתי שוב', handoff: { reason: 'join', summary: 'שוב', business: 'דני חשמל' } });
@@ -170,7 +170,7 @@ test('"כן, שלחו" and "לא, תודה" stay ours: the explanation or the st
   await onWebhook(app, hook({ messages: [{ id: 'wamid.y', from: lead.mobile, type: 'button', button: { text: 'כן, שלחו' } }] }));
   assert.equal(toran.calls.length, 0);
   assert.equal(out(db, lead.mobile).at(-1).kind, 'pitch');
-  assert.match(toran.alerts[0].title, /ביקשו את ההסבר/);
+  assert.match(toran.alerts[0].title, /ענו "כן", ושלחתי להם שוב את הדף/);
   // A question after the explanation is Toran's, with who they are.
   await onWebhook(app, hook({ messages: [text('wamid.q', 'מה צריך כדי להתחיל?', lead.mobile)] }));
   assert.match(toran.calls[0].body.context, /A tradesperson we wrote to first \(אבי אינסטלציה\)[\s\S]*linked a page we made for their business \(https:\/\/alhakav\.example\/p\/[a-z0-9]{10}\)[\s\S]*said yes/);

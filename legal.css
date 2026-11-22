@@ -5,7 +5,7 @@ html{scroll-behavior:smooth}
 body{margin:0;background:#fff;color:var(--navy);font:400 1.0625rem/1.75 Heebo,system-ui,"Segoe UI","Arial Hebrew",Arial,sans-serif;direction:rtl;-webkit-text-size-adjust:100%}
 a{color:var(--link)}
 a:focus-visible{outline:3px solid var(--navy);outline-offset:3px;border-radius:2px}
-.wrap{max-width:44rem;margin:0 auto;padding:0 1.25rem}
+.wrap{max-width:44rem;margin:0 auto;padding:0 1rem}
 .skip{position:absolute;inset-inline-start:1rem;top:-4rem;z-index:10;padding:.5rem 1rem;border-radius:.5rem;background:var(--navy);color:#fff}
 .skip:focus{top:1rem}
 .top{border-bottom:4px solid var(--or)}

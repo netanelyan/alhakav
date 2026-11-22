@@ -178,3 +178,28 @@ customer's last message the same words go as plain text.
 
 `{{1}}` is one of five lines in `server/copy.js` (`PAY.lines`): the first month, the next month, the month ended, the
 last day, stopped. `{{3}}` is `PAYMENT_DETAILS`.
+
+## The owner's updates (the business number)
+
+The owner's alerts and evening summary (server/alerts.js, server/digest.js) go from the business number to `OWNER_WA`:
+as plain text while the owner wrote to the business number in the last 24 hours, else as this template. Until it is
+approved, or when Meta refuses it, they go through openfrequency-toran as before. Submitted through the API on
+2026-11-22 (id 2217001215512712).
+
+### alhakav_update
+
+| | |
+|---|---|
+| Category | Utility |
+| Language | Hebrew (he) |
+| Buttons | a link, "לפתוח בדף הניהול", `https://alhakav.com/admin/{{1}}` (sample `https://alhakav.com/admin/leads/12`) |
+| Variables (sample) | `{{1}}` = `אבי אינסטלציה (050-000-0000) ענו להודעה הראשונה שלנו וכתבו: כמה זה עולה?` |
+
+```
+שלום, כאן על הקו. {{1}}
+
+הפרטים בדף הניהול, בכפתור למטה.
+```
+
+`{{1}}` is the alert's title and its lines without their links, in one line (Meta refuses a line break in a variable);
+the button's `{{1}}` is the admin page the alert is about, `leads` when there is none, `inbox` for the summary.

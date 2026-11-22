@@ -7,6 +7,7 @@ import { MIN_PASSWORD, hashPassword } from './auth.js';
 import { DAY, MINUTE, dayNumber, now, nowIso } from './clock.js';
 import { Db } from './db.js';
 import { dailyDiscovery, discover } from './discover.js';
+import { digestTick } from './digest.js';
 import { loadEnv, num } from './env.js';
 import { purgeLeads } from './leads.js';
 import { payTick } from './pay.js';
@@ -52,11 +53,13 @@ async function serve() {
       log(`[serve] the daily tick failed: ${e.message}`);
     }
   };
-  // The service's notes and summaries that wait for time, and the payment reminders, once a minute.
+  // The service's notes and summaries that wait for time, the payment reminders and the owner's evening summary, once a
+  // minute.
   setInterval(() => {
     serviceTick(app).catch((e) => log(`[service] tick failed: ${e.message}`));
     payTick(app).catch((e) => log(`[pay] tick failed: ${e.message}`));
     numbersTick(app).catch((e) => log(`[numbers] tick failed: ${e.message}`));
+    digestTick(app).catch((e) => log(`[digest] tick failed: ${e.message}`));
   }, MINUTE).unref();
   setTimeout(tick, MINUTE).unref();
   setInterval(tick, 30 * MINUTE).unref();
