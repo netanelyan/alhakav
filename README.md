@@ -52,8 +52,11 @@ cd /opt/alhakav && ENV_FILE=/nonexistent /opt/node24/bin/node server/main.js pas
 Then add `deploy/Caddyfile.example`'s block, with the real domain, to /etc/caddy/Caddyfile and reload Caddy. The admin
 is at `https://<domain>/admin`.
 
-**Brave Search.** A key from api-search.brave.com in `BRAVE_API_KEY`. `DISCOVER_QUERIES` searches run each morning
-after 07:00 (0 turns that off).
+**Finding leads.** A Google Maps key with the Places API (New) on, in `GOOGLE_MAPS_KEY`: each search returns up to 20
+businesses with their phone and site (Places' Enterprise request, 1,000 a month free). A key from api-search.brave.com
+in `BRAVE_API_KEY` adds sites from the web. `DISCOVER_QUERIES` searches run each morning after 07:00 on both (0 turns
+that off). מדרג blocks the server and pro.co.il shows its own forwarding numbers, so neither is a source; someone found
+in a Facebook group is added on the leads page, under "להוסיף לפי מספר".
 
 **WhatsApp (Cloud API).** In a Meta app with WhatsApp added, on the business number:
 `META_TOKEN` (a system user token), `META_PHONE_ID`, `META_WABA_ID`. For answers, set the app's webhook to

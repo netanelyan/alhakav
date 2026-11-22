@@ -6,6 +6,7 @@ import { laterDue } from './leads.js';
 import { metaSettings } from './meta.js';
 import { blocked, blockedText, messageText, nameParam, reminderDue, reminderDueAt, unreached, windowOpen, windowUntil } from './outreach.js';
 import { isMobile, local } from './phones.js';
+import { searchKeys } from './discover.js';
 import { SEARCH_CITIES, SEARCH_TRADES } from './sources.js';
 
 // The admin's pages, laid out like openfrequency-accounts' /admin/leads: a list of the leads we have not written to,
@@ -61,29 +62,34 @@ ${notSet ? `<p class="flash bad" role="alert">${esc(T.login.notSet)}</p>` : flas
   return layout({ title: T.login.title, body, signedIn: false });
 }
 
+/** A lead's site as shown. One from Google with no site of its own is kept as g:<place id>, and shown as its Google page. */
+const siteOf = (x, cls = '') => (String(x.domain || '').startsWith('g:') ? `<span${cls ? ` class="${cls}"` : ''}>${esc(T.lead.google)}</span>` : ltr(x.domain || x.url, cls));
+
 // ---- the leads we have not written to
+
+const tradeSelect = (label, any) => `<select name="trade"${any ? '' : ' required'} aria-label="${esc(label)}">${any ? `<option value="">${esc(T.leads.anyTrade)}</option>` : `<option value="">${esc(label)}</option>`}${Object.keys(SEARCH_TRADES).map((k) => `<option value="${k}">${esc(TRADE[k])}</option>`).join('')}</select>`;
+const cityInput = `<input type="text" name="city" list="cities" maxlength="40" placeholder="${esc(T.leads.findCity)}" aria-label="${esc(T.leads.findCity)}"><datalist id="cities">${SEARCH_CITIES.map((c) => `<option value="${esc(c)}">`).join('')}</datalist>`;
 
 function creating(csrf, env, discovery, run, at) {
   const add = `<form class="row" method="post" action="/admin/leads/add">${csrfField(csrf)}<input type="text" name="url" required maxlength="300" dir="ltr" inputmode="url" autocomplete="off" spellcheck="false" placeholder="${esc(T.leads.addPlaceholder)}" aria-label="${esc(T.leads.addLabel)}"><button class="quiet">${esc(T.leads.add)}</button></form>`;
-  const brave = String(env.BRAVE_API_KEY || '').trim();
+  // Someone found by hand, in a Facebook group or anywhere else with no site to read: a name, a mobile, a trade.
+  const byHand = `<details class="find"><summary>${esc(T.leads.hand)}</summary><form class="row" method="post" action="/admin/leads/hand">${csrfField(csrf)}<input type="text" name="name" required maxlength="60" dir="auto" placeholder="${esc(T.leads.handName)}" aria-label="${esc(T.leads.handName)}"><input type="tel" name="mobile" required maxlength="20" dir="ltr" inputmode="tel" autocomplete="off" placeholder="${esc(T.leads.handMobile)}" aria-label="${esc(T.leads.handMobile)}">${tradeSelect(T.leads.findTrade, false)}${cityInput}<input type="text" name="from" maxlength="300" dir="auto" placeholder="${esc(T.leads.handFrom)}" aria-label="${esc(T.leads.handFrom)}"><button class="quiet">${esc(T.leads.add)}</button></form><p class="muted">${esc(T.leads.handHint)}</p></details>`;
+  const k = searchKeys(env);
+  const can = k.google || k.brave;
   let find = '';
-  if (brave && discovery.running) find = `<p class="muted">${esc(T.leads.running)}</p>`;
-  else if (brave) {
-    const trades = `<select name="trade" aria-label="${esc(T.leads.findTrade)}"><option value="">${esc(T.leads.anyTrade)}</option>${Object.keys(SEARCH_TRADES).map((k) => `<option value="${k}">${esc(TRADE[k])}</option>`).join('')}</select>`;
-    const city = `<input type="text" name="city" list="cities" maxlength="40" placeholder="${esc(T.leads.findCity)}" aria-label="${esc(T.leads.findCity)}"><datalist id="cities">${SEARCH_CITIES.map((c) => `<option value="${esc(c)}">`).join('')}</datalist>`;
-    find = `<details class="find"><summary>${esc(T.leads.find)}</summary><form class="row" method="post" action="/admin/discover">${csrfField(csrf)}${trades}${city}<button class="quiet">${esc(T.leads.findGo)}</button></form></details>`;
-  }
+  if (can && discovery.running) find = `<p class="muted">${esc(T.leads.running)}</p>`;
+  else if (can) find = `<details class="find"><summary>${esc(T.leads.find)}</summary><form class="row" method="post" action="/admin/discover">${csrfField(csrf)}${tradeSelect(T.leads.findTrade, true)}${cityInput}<button class="quiet">${esc(T.leads.findGo)}</button></form></details>`;
   const lines = [];
-  if (run?.stats && run.source === 'brave') lines.push(run.error ? T.leads.lastFailed(run.error) : T.leads.last(agoHe(Date.parse(run.finished_at), at), run.stats.looked || 0, run.stats.fit || 0));
+  if (run?.stats && ['brave', 'google', 'mixed'].includes(run.source)) lines.push(run.error ? T.leads.lastFailed(run.error) : T.leads.last(agoHe(Date.parse(run.finished_at), at), run.stats.looked || 0, run.stats.fit || 0));
   const daily = Number(env.DISCOVER_QUERIES ?? 3);
-  if (brave && daily > 0) lines.push(T.leads.daily(daily));
-  return `<div class="card create">${add}${find}${lines.map((l) => `<p class="muted">${esc(l)}</p>`).join('')}</div>`;
+  if (can && daily > 0) lines.push(T.leads.daily(daily, Boolean(k.google)));
+  return `<div class="card create">${add}${byHand}${find}${lines.map((l) => `<p class="muted">${esc(l)}</p>`).join('')}</div>`;
 }
 
 function newRow(csrf, x, metaReady, back) {
   const tags = [tradeTag(x), cityTag(x), tag(T.lead.score(x.score), x.qualified ? '' : 'wait'), x.mobile ? '' : tag(T.lead.noMobile, 'miss'), x.whatsapp_on_site ? tag(T.lead.waOnSite, 'where') : '', x.reject ? tag(x.reject, 'wait') : ''].join('');
   const go = x.mobile && metaReady ? leadButton(csrf, x.id, 'send', T.leads.send, 'primary', { stage: 'first', back }) : `<a class="button primary" href="/admin/leads/${x.id}#send">${esc(T.leads.open)}</a>`;
-  return `<li id="lead-${x.id}"><div class="who"><a href="/admin/leads/${x.id}"><b>${esc(x.name)}</b></a>${x.domain ? ltr(x.domain, 'muted') : ''}</div><div class="acts">${go}${leadButton(csrf, x.id, 'skip', T.leads.skip, 'quiet', { back })}</div><div class="tags">${tags}</div>${x.about ? `<p class="about" dir="auto">${esc(x.about)}</p>` : ''}</li>`;
+  return `<li id="lead-${x.id}"><div class="who"><a href="/admin/leads/${x.id}"><b>${esc(x.name)}</b></a>${x.domain ? siteOf(x, 'muted') : ''}</div><div class="acts">${go}${leadButton(csrf, x.id, 'skip', T.leads.skip, 'quiet', { back })}</div><div class="tags">${tags}</div>${x.about ? `<p class="about" dir="auto">${esc(x.about)}</p>` : ''}</li>`;
 }
 
 export function leadsPage({ csrf, flash = '', bad = false, env, tab, q, rows, counts, reachedAll, discovery, run, at }) {
@@ -123,7 +129,7 @@ function reachedRow(x, last, at, showStage) {
     cityTag(x),
   ].join('');
   const said = last ? `<p class="about"><span dir="auto">${esc(last.body.length > 90 ? `${last.body.slice(0, 90)}…` : last.body)}</span> <span class="muted">${esc(agoHe(Date.parse(last.at), at))}</span></p>` : '';
-  return `<li id="lead-${x.id}"><div class="who"><a href="/admin/leads/${x.id}"><b>${esc(x.name)}</b></a>${x.domain ? ltr(x.domain, 'muted') : x.mobile ? ltr(local(x.mobile), 'muted') : ''}</div><div class="acts"><a class="button${reminderDue(x, at) || x.stage === 'talking' ? ' primary' : ''}" href="/admin/leads/${x.id}">${esc(T.leads.open)}</a></div><div class="tags">${tags}</div>${said}</li>`;
+  return `<li id="lead-${x.id}"><div class="who"><a href="/admin/leads/${x.id}"><b>${esc(x.name)}</b></a>${x.domain ? siteOf(x, 'muted') : x.mobile ? ltr(local(x.mobile), 'muted') : ''}</div><div class="acts"><a class="button${reminderDue(x, at) || x.stage === 'talking' ? ' primary' : ''}" href="/admin/leads/${x.id}">${esc(T.leads.open)}</a></div><div class="tags">${tags}</div>${said}</li>`;
 }
 
 export function reachedPage({ csrf, flash = '', bad = false, env, tab, q, rows, counts, funnel, lastIns, at }) {
@@ -222,13 +228,13 @@ function standsCard(csrf, x, at) {
 function detailsCard(x, at) {
   const p = JSON.parse(x.phones || '{}');
   const detail = JSON.parse(x.detail || '{}');
-  const found = T.details.sources[x.source]?.(detail.query || '') || x.source;
+  const found = T.details.sources[x.source]?.(detail.query || detail.from || '') || x.source;
   const lines = [
     x.mobile ? `<li>${esc(T.details.mobile)}: ${ext(`https://wa.me/${x.mobile}`, ltr(local(x.mobile)))}</li>` : '',
     (p.others || []).length ? `<li>${esc(T.details.others)}: ${p.others.map((n) => `<a href="tel:+${esc(n)}">${ltr(local(n))}</a>`).join(', ')}</li>` : '',
     (p.mobiles || []).filter((n) => n !== x.mobile).length ? `<li>${esc(T.details.others)}: ${p.mobiles.filter((n) => n !== x.mobile).map((n) => ltr(local(n))).join(', ')}</li>` : '',
     (p.specials || []).length ? `<li>${esc(T.details.specials)}: ${p.specials.map((n) => ltr(n)).join(', ')}</li>` : '',
-    x.url ? `<li>${esc(T.details.site)}: ${ext(x.url, ltr(x.domain || x.url))}</li>` : '',
+    x.url ? `<li>${esc(T.details.site)}: ${ext(x.url, siteOf(x))}</li>` : '',
     `<li>${esc(T.details.found)}: ${esc(found)}</li>`,
     `<li>${esc(T.details.added)}: ${esc(`${dayMonth(Date.parse(x.created_at))}, ${agoHe(Date.parse(x.created_at), at)}`)}</li>`,
   ].join('');
@@ -257,7 +263,7 @@ export function leadPage(app, { csrf, flash = '', bad = false, lead: x, messages
   const tags = [tradeTag(x), cityTag(x), x.stage === 'new' ? tag(T.lead.score(x.score), x.qualified ? '' : 'wait') : outTag(x), reminderDue(x, at) ? tag(T.lead.due, 'due') : ''].join('');
   const body = `${flashLine(flash, bad)}
 <p><a href="${back[0]}">← ${esc(back[1])}</a></p>
-<div class="head"><div><h1>${esc(x.name)}</h1><p class="tags">${x.url ? ext(x.url, ltr(x.domain || x.url)) : x.mobile ? ltr(local(x.mobile), 'muted') : ''} ${tags}</p>${x.about ? `<p class="about" dir="auto">${esc(x.about)}</p>` : ''}</div></div>
+<div class="head"><div><h1>${esc(x.name)}</h1><p class="tags">${x.url ? ext(x.url, siteOf(x)) : x.mobile ? ltr(local(x.mobile), 'muted') : ''} ${tags}</p>${x.about ? `<p class="about" dir="auto">${esc(x.about)}</p>` : ''}</div></div>
 <div class="cards">
 ${sendCard(app, csrf, x, isStopped, at)}
 ${chatCard(app, csrf, x, messages, at)}

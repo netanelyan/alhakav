@@ -7,7 +7,7 @@ import { T } from './copy.js';
 import { siteKey } from './detect.js';
 import { discover, lastRun, startDiscovery } from './discover.js';
 import { makeFetcher } from './fetcher.js';
-import { REACHED_TABS, countsNew, countsReached, funnel, getLead, lastIn, later, listNew, listReached, lose, markCustomer, markReplied, messagesOf, removeLead, reopen, saveName, saveNotes, skip, stopLead } from './leads.js';
+import { REACHED_TABS, addByHand, countsNew, countsReached, funnel, getLead, lastIn, later, listNew, listReached, lose, markCustomer, markReplied, messagesOf, removeLead, reopen, saveName, saveNotes, skip, stopLead } from './leads.js';
 import { metaSettings, signatureOk } from './meta.js';
 import { markByHand, onWebhook, reply, sendPitch, stopped } from './outreach.js';
 import { leadPage, leadsPage, loginPage, notFoundPage, reachedPage } from './pages.js';
@@ -340,6 +340,10 @@ async function post(app, req, res, p, form, token) {
     const got = r.results.find((x) => x.id);
     if (!got) return see(res, req, '/admin/leads', T.leads.addFailed(r.results[0]?.error || r.results[0]?.reject || '?'), true);
     return see(res, req, `/admin/leads/${got.id}`, got.qualified ? T.leads.added(got.name, got.score) : T.leads.addedBelow(got.name, got.reject), !got.qualified);
+  }
+  if (p === '/admin/leads/hand') {
+    const r = addByHand(app.db, form);
+    return see(res, req, r.ok ? `/admin/leads/${r.id}` : '/admin/leads', r.flash, !r.ok || r.known);
   }
   if (p === '/admin/discover') {
     const trade = String(form.trade || '');

@@ -1,8 +1,9 @@
 import { dayNumber, israelDate, israelParts, now, nowIso } from './clock.js';
-import { detect, siteKey } from './detect.js';
+import { detect, fromPlace, siteKey } from './detect.js';
 import { num } from './env.js';
+import { isMobile } from './phones.js';
 import { scoreLead } from './score.js';
-import { brave, queriesFor } from './sources.js';
+import { brave, places, queriesFor, together } from './sources.js';
 
 // One discovery run: candidate sites in, leads out (openfrequency-toran's src/leads/discover.ts).
 //
@@ -10,6 +11,10 @@ import { brave, queriesFor } from './sources.js';
 // read it -> score it. A site of one of the four trades with a mobile is saved as a lead, qualified or under the bar,
 // with its reasons; anything else is remembered as rejected and never read again. A mobile that asked us to stop is
 // never added, and a mobile that another lead already has is that lead (one tradesperson, two sites).
+//
+// A business from Google (sources.js places) is read from the site it gave Google, with the listing's mobile when the
+// site shows none; with no site, or one that does not open, it is scored from the listing (detect.js fromPlace) and
+// kept under `g:<Google's place id>` where a site's domain would be.
 //
 // A site the admin adds by its address is read again even when it was looked at, and saved as a lead whatever it
 // scores, so it can be looked at and written to by hand.
@@ -64,14 +69,27 @@ export async function discover(app, candidates, { limit = 30, concurrency = 3, s
 
   async function one(c, key) {
     stats.looked++;
+    const place = c.detail?.place;
     let d;
-    try {
-      d = await detect(c.url, { fetcher: app.fetchSite });
-    } catch (e) {
-      stats.failed++;
-      markSeen(db, key, 'failed', String(e.code || e.message).slice(0, 200));
-      results.push({ key, error: e.message });
-      return;
+    if (key.startsWith('g:')) d = fromPlace(c);
+    else {
+      try {
+        d = await detect(c.url, { fetcher: app.fetchSite });
+      } catch (e) {
+        markSeen(db, key, 'failed', String(e.code || e.message).slice(0, 200));
+        if (!place) {
+          stats.failed++;
+          results.push({ key, error: e.message });
+          return;
+        }
+        // The site Google gave does not open; the listing is still a business with a number.
+        d = fromPlace(c);
+        key = d.domain;
+      }
+    }
+    if (place && d.google?.site !== false) {
+      d.google = { site: true, rating: place.rating, reviews: place.reviews };
+      if (!d.mobile && isMobile(place.phone)) Object.assign(d, { mobile: place.phone, mobiles: [place.phone, ...d.mobiles], mobileFrom: 'google' });
     }
     const site = d.domain || key;
     // A redirect can land on a site we already have (a second domain of the same business).
@@ -114,7 +132,7 @@ export async function discover(app, candidates, { limit = 30, concurrency = 3, s
   try {
     for await (const c of candidates) {
       if (stats.added + stats.updated >= limit) break;
-      const key = siteKey(c.url);
+      const key = c.key || siteKey(c.url);
       if (!key || inFlight.has(key) || (!force && known(db, key))) {
         stats.skipped++;
         continue;
@@ -139,17 +157,29 @@ export function lastRun(db) {
   return r ? { ...r, stats: JSON.parse(r.stats || '{}') } : null;
 }
 
-/** Brave's searches in the background, one run at a time. false when one is running or Brave is not set up. */
+/** The search keys there are: Google's and Brave's. */
+export function searchKeys(env) {
+  return { google: String(env.GOOGLE_MAPS_KEY || '').trim(), brave: String(env.BRAVE_API_KEY || '').trim() };
+}
+
+/**
+ * The searches in the background, one run at a time: Google's listings first (each with its phone), then Brave's
+ * sites, the same queries. false when one is running or neither is set up.
+ */
 export function startDiscovery(app, { trade = '', city = '', queries, limit } = {}) {
-  const key = String(app.env.BRAVE_API_KEY || '').trim();
-  if (app.discovery.running || !key) return false;
+  const k = searchKeys(app.env);
+  if (app.discovery.running || (!k.google && !k.brave)) return false;
   const qs = queriesFor(dayNumber(), queries ?? num(app.env.DISCOVER_QUERIES, 3) ?? 3, { trade, city });
+  const sources = [
+    k.google && places({ apiKey: k.google, queries: qs, fetchImpl: app.apiFetch }),
+    k.brave && brave({ apiKey: k.brave, queries: qs, fetchImpl: app.apiFetch, pause: app.searchPause ?? 1100 }),
+  ].filter(Boolean);
   app.discovery.running = { at: now(), trade, city };
   app.discovery.done = (async () => {
     try {
-      const r = await discover(app, brave({ apiKey: key, queries: qs, fetchImpl: app.apiFetch, pause: app.searchPause ?? 1100 }), {
+      const r = await discover(app, together(...sources), {
         limit: limit ?? num(app.env.DISCOVER_LIMIT, 30),
-        source: 'brave',
+        source: k.google && k.brave ? 'mixed' : k.google ? 'google' : 'brave',
         query: qs.map((q) => q.q).join(' · '),
       });
       app.log(`[discover] ${qs.map((q) => q.q).join(' · ')}: ${JSON.stringify(r.stats)}`);
@@ -162,10 +192,11 @@ export function startDiscovery(app, { trade = '', city = '', queries, limit } = 
   return true;
 }
 
-/** The day's searches, once a day after 07:00 Israel time, while DISCOVER_QUERIES is above 0 and Brave is set up. */
+/** The day's searches, once a day after 07:00 Israel time, while DISCOVER_QUERIES is above 0 and a search is set up. */
 export function dailyDiscovery(app, at = now()) {
   const n = num(app.env.DISCOVER_QUERIES, 3);
-  if (n <= 0 || !String(app.env.BRAVE_API_KEY || '').trim() || israelParts(at).hour < 7) return false;
+  const k = searchKeys(app.env);
+  if (n <= 0 || (!k.google && !k.brave) || israelParts(at).hour < 7) return false;
   const today = israelDate(at);
   if (app.db.kv('daily_discovery') === today) return false;
   if (!startDiscovery(app, { queries: n })) return false;

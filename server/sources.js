@@ -1,15 +1,24 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { siteKey } from './detect.js';
+import { normalize } from './phones.js';
 
 // Where candidate sites come from. Every source yields { url, source, detail }; the discovery run decides what is new
 // (openfrequency-toran's src/leads/sources.ts, for tradespeople instead of stores).
 //
+//   google  Google Places' Text Search (an official API, GOOGLE_MAPS_KEY), the same queries: each business comes with
+//           the phone and the site it gave Google. One with a site of its own is read from that site, as Brave's are
+//           (a site says the most, and the owner said a site makes the better lead); one without is a lead from its
+//           listing alone (detect.js fromPlace). Asking for the phone and the site makes it Places' Enterprise
+//           request: 1,000 a month free, then $35 per 1,000 (2026-11); three a day is 90 a month.
 //   brave   the Brave Search API (an official API, never Google's results page): a trade and a city a query
 //           ("אינסטלטור באשדוד"), rotated by day so each run asks new ones. Needs BRAVE_API_KEY.
 //   seeds   private/seeds.txt: a site's address a line.
 //
 // Directories, marketplaces, social networks and news sites are dropped before they are read: they list
-// tradespeople, they are not one.
+// tradespeople, they are not one. מדרג turns every request from the server away (403 from its CDN, robots.txt too,
+// 2026-11-22), and the numbers pro.co.il shows look like its own forwarding numbers rather than the tradesperson's
+// mobile, so neither is a source; Facebook groups have no API and are behind a login, so a tradesperson found there
+// is added by hand (leads.js addByHand).
 
 export const SEARCH_TRADES = { plumber: 'אינסטלטור', electrician: 'חשמלאי', ac: 'טכנאי מזגנים', locksmith: 'מנעולן' };
 
@@ -44,6 +53,61 @@ export const notABusiness = (host) => NOT_ONE.test(host) || /\.(?:gov|ac|muni|k1
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/** The address to read a site at, or null when it is not a business's own (none, a directory, a social page). */
+function ownSite(raw) {
+  let u;
+  try {
+    u = new URL(raw);
+  } catch {
+    return null;
+  }
+  const key = siteKey(u.href);
+  if (!key || notABusiness(u.hostname.toLowerCase().replace(/^www\./, ''))) return null;
+  // A site of its own is read from its home page; one on a shared builder from its own first segment.
+  return key.includes('/') ? `${u.origin}/${key.split('/')[1]}` : `${u.origin}/`;
+}
+
+/** Candidates, one source after another. */
+export async function* together(...sources) {
+  for (const s of sources) yield* s;
+}
+
+const PLACES = 'https://places.googleapis.com/v1/places:searchText';
+const PLACE_FIELDS = ['id', 'displayName', 'formattedAddress', 'websiteUri', 'nationalPhoneNumber', 'internationalPhoneNumber', 'googleMapsUri', 'businessStatus', 'types', 'rating', 'userRatingCount']
+  .map((f) => `places.${f}`)
+  .join(',');
+
+export async function* places({ apiKey, queries, fetchImpl = fetch }) {
+  for (const q of queries) {
+    const res = await fetchImpl(PLACES, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': apiKey, 'x-goog-fieldmask': PLACE_FIELDS },
+      body: JSON.stringify({ textQuery: q.q, languageCode: 'he', regionCode: 'IL', pageSize: 20 }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (res.status === 401 || res.status === 403) throw new Error(`Google refused the key (${res.status})`);
+    if (res.status === 429) throw new Error('Google rate limit reached');
+    if (!res.ok) continue;
+    const data = await res.json().catch(() => null);
+    for (const p of data?.places || []) {
+      if (!p.id || (p.businessStatus && p.businessStatus !== 'OPERATIONAL')) continue;
+      const place = {
+        id: String(p.id),
+        name: String(p.displayName?.text || '').trim().slice(0, 120),
+        phone: normalize(p.internationalPhoneNumber || p.nationalPhoneNumber),
+        address: String(p.formattedAddress || '').slice(0, 200),
+        maps: String(p.googleMapsUri || `https://www.google.com/maps/place/?q=place_id:${p.id}`),
+        types: (p.types || []).slice(0, 12),
+        rating: Number(p.rating) || null,
+        reviews: Number(p.userRatingCount) || 0,
+      };
+      const detail = { query: q.q, trade: q.trade, city: q.city, title: place.name, place };
+      const site = ownSite(p.websiteUri);
+      yield site ? { url: site, source: 'google', detail } : { url: place.maps, key: `g:${place.id}`, source: 'google', detail };
+    }
+  }
+}
+
 export async function* brave({ apiKey, queries, perQuery = 20, fetchImpl = fetch, pause = 1100 }) {
   for (const [i, q] of queries.entries()) {
     if (i && pause) await sleep(pause); // Brave's free tier takes one query a second
@@ -58,16 +122,8 @@ export async function* brave({ apiKey, queries, perQuery = 20, fetchImpl = fetch
     if (!res.ok) continue;
     const data = await res.json().catch(() => null);
     for (const r of data?.web?.results || []) {
-      let u2;
-      try {
-        u2 = new URL(r.url);
-      } catch {
-        continue;
-      }
-      const key = siteKey(u2.href);
-      if (!key || notABusiness(u2.hostname.toLowerCase().replace(/^www\./, ''))) continue;
-      // A site of its own is read from its home page; one on a shared builder from its own first segment.
-      const url = key.includes('/') ? `${u2.origin}/${key.split('/')[1]}` : `${u2.origin}/`;
+      const url = ownSite(r.url);
+      if (!url) continue;
       yield { url, source: 'brave', detail: { query: q.q, trade: q.trade, city: q.city, title: String(r.title || '').slice(0, 120) } };
     }
   }

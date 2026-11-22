@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { MIN_PASSWORD, hashPassword } from './auth.js';
 import { DAY, MINUTE, dayNumber, now, nowIso } from './clock.js';
 import { Db } from './db.js';
-import { dailyDiscovery, discover } from './discover.js';
+import { dailyDiscovery, discover, searchKeys } from './discover.js';
 import { digestTick } from './digest.js';
 import { loadEnv, num } from './env.js';
 import { purgeLeads } from './leads.js';
@@ -15,7 +15,7 @@ import { payTick } from './pay.js';
 import { numbersTick } from './numbers.js';
 import { serviceTick } from './service.js';
 import { handler, makeApp } from './app.js';
-import { brave, fromUrls, queriesFor, seeds } from './sources.js';
+import { brave, fromUrls, places, queriesFor, seeds, together } from './sources.js';
 
 //   node server/main.js serve                     the admin server (npm start)
 //   node server/main.js password                  a hash for ADMIN_PASSWORD_HASH (npm run admin:password)
@@ -113,14 +113,15 @@ async function discoverNow() {
   if (typeof flag('url') === 'string') [candidates, source] = [fromUrls([flag('url')]), 'admin'];
   else if (flag('seeds')) [candidates, source] = [seeds(path.join(ROOT, 'private', 'seeds.txt')), 'seed'];
   else {
-    const key = String(env.BRAVE_API_KEY || '').trim();
-    if (!key) {
-      console.error('BRAVE_API_KEY is not set: use --url <site> or --seeds');
+    const k = searchKeys(env);
+    if (!k.google && !k.brave) {
+      console.error('Neither GOOGLE_MAPS_KEY nor BRAVE_API_KEY is set: use --url <site> or --seeds');
       process.exit(1);
     }
     const qs = queriesFor(dayNumber(), num(env.DISCOVER_QUERIES, 3) || 3, { trade: flag('trade') || '', city: flag('city') || '' });
     log(`[discover] ${qs.map((q) => q.q).join(' · ')}`);
-    [candidates, source] = [brave({ apiKey: key, queries: qs }), 'brave'];
+    candidates = together(...[k.google && places({ apiKey: k.google, queries: qs }), k.brave && brave({ apiKey: k.brave, queries: qs })].filter(Boolean));
+    source = k.google && k.brave ? 'mixed' : k.google ? 'google' : 'brave';
   }
   const r = await discover(app, candidates, { limit, source, force: source === 'admin' });
   log(`[discover] ${JSON.stringify(r.stats)}`);

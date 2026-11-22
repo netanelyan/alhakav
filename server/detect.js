@@ -170,6 +170,49 @@ export function analyze(pages, finalUrl) {
   };
 }
 
+// Google's own types know three of the four trades (there is none for AC).
+const PLACE_TYPES = { plumber: 'plumber', electrician: 'electrician', locksmith: 'locksmith' };
+
+/**
+ * A business from its Google listing alone, when it has no site of its own (sources.js places): what the score needs,
+ * read from the listing. The trade is the name's, else Google's type, else the search's; the city is the address's.
+ */
+export function fromPlace(c) {
+  const p = c.detail.place;
+  const named = tradeOf({ title: p.name, h1: '', siteName: '', description: '', text: '' });
+  const asked = c.detail.trade || null;
+  const [trade, tradeBy] = named.trade ? [named.trade, 'name'] : asked && p.types.includes(PLACE_TYPES[asked]) ? [asked, 'type'] : [asked, 'search'];
+  const city = citiesIn(p.address)[0] || c.detail.city || null;
+  const mobile = isMobile(p.phone) ? p.phone : null;
+  const letters = p.name.match(/[A-Za-zא-ת]/g) || [];
+  const chain = CHAIN.exec(p.name)?.[0];
+  return {
+    url: p.maps,
+    domain: `g:${p.id}`,
+    name: p.name.slice(0, 60),
+    about: p.address || null,
+    trade,
+    tradeHits: named.hits,
+    tradeBy,
+    city,
+    cities: city ? [city] : [],
+    mobile,
+    mobiles: mobile ? [mobile] : [],
+    others: p.phone && !mobile ? [p.phone] : [],
+    specials: [],
+    whatsappLinked: false,
+    waWidget: false,
+    hebrew: letters.length ? letters.filter((ch) => ch >= 'א').length / letters.length : 0,
+    lang: 'he',
+    dir: 'rtl',
+    chain: chain ? `"${chain}"` : null,
+    directory: null,
+    ownerVoice: false,
+    year: null,
+    google: { site: false, rating: p.rating, reviews: p.reviews },
+  };
+}
+
 /** Read a site: its home page, and its contact page when the home page shows no mobile. */
 export async function detect(url, { fetcher }) {
   const home = await fetcher(url);

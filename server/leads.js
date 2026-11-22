@@ -1,6 +1,7 @@
 import { DAY, now, nowIso } from './clock.js';
-import { LOST, T } from './copy.js';
+import { LOST, T, TRADE } from './copy.js';
 import { reminderDue } from './outreach.js';
+import { isMobile, local, normalize } from './phones.js';
 
 // The two lists and what the admin does to a lead by hand. As in openfrequency-accounts' /admin/leads (the owner
 // there, 2026-11-12: "those that were already reached to, move them to a different page"): the leads we have not
@@ -120,6 +121,42 @@ export function saveName(db, lead, name) {
 }
 
 /** Deleted with its messages; its site stays in `seen`, so a search never adds it again. */
+/**
+ * Someone found by hand with no site to read, such as a tradesperson who answered a "looking for a plumber" post in a
+ * Facebook group (Facebook has no API for that, sources.js): a name, a mobile, a trade and a city, saved as a lead
+ * that passes the bar. Answers { ok, id, known, flash }.
+ */
+export function addByHand(db, form) {
+  const name = String(form.name || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+  const mobile = normalize(form.mobile);
+  const trade = Object.hasOwn(TRADE, String(form.trade || '')) ? String(form.trade) : null;
+  if (!name || !trade || !isMobile(mobile)) return { ok: false, flash: T.leads.handBad };
+  const had = db.get('SELECT id FROM leads WHERE mobile = ?', mobile);
+  if (had) return { ok: true, id: had.id, known: true, flash: T.leads.handKnown };
+  if (db.get('SELECT 1 FROM stops WHERE phone = ?', mobile)) return { ok: false, flash: T.leads.handStopped };
+  const city = String(form.city || '').replace(/[^֐-׿\s'"-]/g, '').trim().slice(0, 40) || null;
+  const breakdown = [
+    { factor: 'trade', points: 25, max: 25, evidence: `${TRADE[trade]}, לפי מה שהוזן ביד` },
+    { factor: 'mobile', points: 30, max: 30, evidence: `נייד שהוזן ביד: ${local(mobile)}` },
+    { factor: 'local', points: city ? 15 : 5, max: 15, evidence: city || 'לא כתובה עיר' },
+  ];
+  const at = nowIso();
+  const r = db.run(
+    "INSERT INTO leads (name, trade, city, mobile, phones, score, breakdown, qualified, source, detail, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 'hand', ?, ?, ?)",
+    name,
+    trade,
+    city,
+    mobile,
+    JSON.stringify({ mobiles: [mobile], others: [], specials: [] }),
+    breakdown.reduce((s, f) => s + f.points, 0),
+    JSON.stringify(breakdown),
+    JSON.stringify({ from: String(form.from || '').trim().slice(0, 300) }),
+    at,
+    at
+  );
+  return { ok: true, id: Number(r.lastInsertRowid), known: false, flash: T.leads.handAdded(name) };
+}
+
 export function removeLead(db, lead) {
   db.tx(() => {
     if (lead.domain) db.run("INSERT INTO seen (domain, status, reason, at) VALUES (?, 'deleted', NULL, ?) ON CONFLICT (domain) DO UPDATE SET status = 'deleted', at = excluded.at", lead.domain, nowIso());
