@@ -19,6 +19,8 @@ import { callAction, telnyxSettings } from './telnyx.js';
 //                      caller's, in the chat of their latest call (7 days); anyone else gets one line on what this is
 //
 //   one conversation   a caller who calls again within 24 hours continues the same chat, with no second message
+//   one call, twice    Telnyx hands one call over twice, 2 seconds apart, each with its own id (both of the owner's
+//                      test calls, 2026-11-22): the same number within TWIN_MS of the last call is ended and no more
 //   no reply           after SUMMARY_WAIT_MINUTES (20) the customer gets a note: who called, and that no answer came
 //   a stalled chat     the same wait after their last message, and the summary goes with what is known
 //   hidden number      nothing to write to: the customer gets a note at once
@@ -35,6 +37,9 @@ import { callAction, telnyxSettings } from './telnyx.js';
 
 /** A caller's messages in one chat that המוקדן answers; past them it sends the summary and goes quiet. */
 export const CALLER_TURNS = 12;
+
+/** A call from the same number to the same customer this soon after the last one is the same call. */
+export const TWIN_MS = MINUTE;
 
 export function serviceSettings(env) {
   return {
@@ -153,6 +158,9 @@ export async function onCall(app, ev) {
 
   const c = customerByAssistant(db, ev.to);
   if (!c) return act('reject', { cause: 'CALL_REJECTED' });
+  if (db.get('SELECT 1 FROM calls WHERE customer_id = ? AND caller IS ? AND call_id != ? AND at > ?', c.id, ev.from || null, ev.callId, nowIso(now() - TWIN_MS))) {
+    return act('reject', { cause: 'USER_BUSY' });
+  }
   const r = db.run('INSERT OR IGNORE INTO calls (customer_id, caller, call_id, outcome, at) VALUES (?, ?, ?, ?, ?)', c.id, ev.from || null, ev.callId, 'received', nowIso());
   if (!r.changes) return; // the same event, again
   const callRow = Number(r.lastInsertRowid);
@@ -367,7 +375,10 @@ async function turn(app, chatId) {
     nowIso(),
     chat.id
   );
-  if (next.done) await sendSummary(app, c, chatOf(db, chat.id));
+  // The summary goes once, when the chat is done. After it, a question like "כמה זה עולה?" sends nothing more (the owner's
+  // test on 2026-11-22 got the same summary twice); only a detail they added or corrected sends it again.
+  const after = chatOf(db, chat.id);
+  if (next.done && (!chat.summary_at || ['what', 'place', 'urgency'].some((k) => after[k] !== chat[k]))) await sendSummary(app, c, after);
 }
 
 /** The customer writing to their own assistant: a few words it understands, and what it is otherwise. */

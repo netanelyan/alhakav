@@ -76,7 +76,14 @@ test('a missed call: the call ends at once, and the caller gets the first messag
   assert.equal(m.template.name, 'alhakav_caller');
   assert.deepEqual(m.template.components[0].parameters, [{ type: 'text', text: 'אבי אינסטלציה' }]);
   assert.equal(db.get('SELECT outcome FROM calls').outcome, 'messaged');
+  // Telnyx hands the same call over again two seconds later, with an id of its own: ended, and nothing more.
+  setNow(SUNDAY + 2000);
+  await onCall(app, call(CALLER, 'call-1b'));
+  assert.deepEqual(tx.actions(), ['reject', 'reject']);
+  assert.equal(db.get('SELECT count(*) AS n FROM calls').n, 1);
+  assert.equal(chats(db)[0].calls, 1);
   // The same caller again within 24 hours: the same conversation, no second message.
+  setNow(SUNDAY + 5 * MINUTE);
   await onCall(app, call(CALLER, 'call-2'));
   assert.equal(sent().length, 1);
   assert.equal(chats(db)[0].calls, 2);
@@ -118,6 +125,29 @@ test('the conversation: Claude asks, the caller answers, and the summary reaches
     ['10:41', 'נזילה חזקה מתחת לכיור', 'הרצל 15, אשדוד, קומה 3', 'דחוף, המים זורמים', '052-765-4321']
   );
   assert.equal(chats(db)[0].state, 'done');
+});
+
+test('after the summary, a question sends nothing more to the customer; a detail the caller adds sends it again', async () => {
+  const done = { done: true, what: 'נזילה מתחת לכיור', place: 'הרצל 15, אשדוד', urgency: 'דחוף' };
+  const claude = fakeClaude([
+    { reply: 'תודה, הפרטים אצל אבי אינסטלציה והם יחזרו אליך כשיתפנו.', ...done },
+    { reply: 'את המחיר אבי אינסטלציה יסגרו איתך כשיחזרו אליך.', ...done },
+    { reply: 'תודה, הוספנו.', ...done, place: 'הרצל 15, אשדוד, קומה 3' },
+  ]);
+  const { app, sent } = setup({ claude });
+  const toOwner = () => sent().filter((m) => m.to === OWNER);
+  await onCall(app, call(CALLER));
+  await said(app, 'נזילה מתחת לכיור, הרצל 15 אשדוד, דחוף', 'in-1');
+  await settle(app);
+  assert.equal(toOwner().length, 1);
+  await said(app, 'כמה זה עולה?', 'in-2');
+  await settle(app);
+  assert.equal(sent().at(-1).text.body, 'את המחיר אבי אינסטלציה יסגרו איתך כשיחזרו אליך.');
+  assert.equal(toOwner().length, 1, 'the same summary is not sent again');
+  await said(app, 'שכחתי, קומה 3', 'in-3');
+  await settle(app);
+  assert.equal(toOwner().length, 2);
+  assert.equal(toOwner()[1].template.components[0].parameters[2].text, 'הרצל 15, אשדוד, קומה 3');
 });
 
 test('three messages in a row get one answer', async () => {
@@ -166,6 +196,9 @@ test('a hidden number, a test call from the customer, and a first message that n
   assert.deepEqual(note.template.components[0].parameters.map((p) => p.text).slice(1), ['חסוי', 'המספר חסוי, אז אי אפשר לכתוב אליו.']);
   await onCall(app, call(OWNER, 'test'));
   assert.match(sent().at(-1).template.components[0].parameters[2].text, /שיחת בדיקה/);
+  const notes = sent().length;
+  await onCall(app, call(OWNER, 'test-again'));
+  assert.equal(sent().length, notes, 'the same test call handed over twice is one note');
   await onCall(app, call(CALLER, 'c3'));
   const first = db.get("SELECT msg_id FROM chat_messages WHERE kind = 'first'").msg_id;
   await onWebhook(app, hook({ phoneId: ASSIST, statuses: [{ id: first, status: 'failed', recipient_id: CALLER, errors: [{ code: 131026, title: 'Message undeliverable' }] }] }));
