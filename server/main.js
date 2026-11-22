@@ -10,6 +10,7 @@ import { dailyDiscovery, discover } from './discover.js';
 import { digestTick } from './digest.js';
 import { loadEnv, num } from './env.js';
 import { purgeLeads } from './leads.js';
+import { purgeOld } from './retention.js';
 import { payTick } from './pay.js';
 import { numbersTick } from './numbers.js';
 import { serviceTick } from './service.js';
@@ -23,6 +24,7 @@ import { brave, fromUrls, queriesFor, seeds } from './sources.js';
 //                                                 one discovery run now, from Brave, one site, or private/seeds.txt
 //   node server/main.js list [n]                  the newest n leads (default 20)
 //   node server/main.js support [file]            what Toran knows about על הקו, for its company sync (docs/toran.md)
+//   node server/main.js eval                      המוקדן's guardrails against the real model (server/eval.js)
 //
 // Settings: the environment, then private/.env (ENV_FILE moves it). .env.example lists them.
 
@@ -49,6 +51,8 @@ async function serve() {
       db.run('DELETE FROM sessions WHERE seen_at < ?', nowIso(now() - 14 * DAY));
       const gone = purgeLeads(db, num(env.LEAD_KEEP_MONTHS, 6));
       if (gone) log(`[serve] ${gone} leads past LEAD_KEEP_MONTHS deleted`);
+      const old = purgeOld(db);
+      if (Object.values(old).some(Boolean)) log(`[serve] past their time and deleted: ${JSON.stringify(old)}`);
     } catch (e) {
       log(`[serve] the daily tick failed: ${e.message}`);
     }
@@ -132,6 +136,31 @@ function list() {
   db.close();
 }
 
+/** המוקדן's guardrails against the real model (server/eval.js): each case graded in code. Exits 1 when one fails. */
+async function evalNow() {
+  const { makeClaude } = await import('./claude.js');
+  const { runEval } = await import('./eval.js');
+  const claude = makeClaude(env);
+  if (!claude) {
+    console.error('ANTHROPIC_API_KEY is not set');
+    process.exit(1);
+  }
+  const results = await runEval(claude);
+  for (const r of results) {
+    console.log(`${r.pass ? 'PASS' : 'FAIL'}  ${r.name}`);
+    if (r.error) console.log(`      error: ${r.error}`);
+    else {
+      console.log(`      reply: ${r.reply}`);
+      if (r.cut.length) console.log(`      the guard cut ${r.cut.join(', ')} from: ${r.raw}`);
+      console.log(`      what: ${r.what} | place: ${r.place} | urgency: ${r.urgency}`);
+    }
+  }
+  const failed = results.filter((r) => !r.pass).length;
+  console.log(`
+${results.length - failed} of ${results.length} passed (${claude.model})`);
+  if (failed) process.exitCode = 1;
+}
+
 /** What Toran knows about על הקו, as a file for openfrequency-toran's company sync (server/support.js). */
 async function support() {
   const { supportExport } = await import('./support.js');
@@ -142,9 +171,9 @@ async function support() {
   } else process.stdout.write(json);
 }
 
-const run = { serve, password, discover: discoverNow, list, support }[cmd];
+const run = { serve, password, discover: discoverNow, list, support, eval: evalNow }[cmd];
 if (!run) {
-  console.error(`unknown command: ${cmd} (serve, password, discover, list, support)`);
+  console.error(`unknown command: ${cmd} (serve, password, discover, list, support, eval)`);
   process.exit(1);
 }
 await run();

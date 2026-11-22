@@ -3,7 +3,7 @@ import { createServer } from 'node:http';
 import { afterEach, beforeEach, test } from 'node:test';
 import { handler } from '../server/app.js';
 import { setNow } from '../server/clock.js';
-import { DEMO_PER_PAGE, codeIn, pageCodeOf, pageHtml } from '../server/demo.js';
+import { DEMO_PER_PAGE, SAMPLE, codeIn, pageCodeOf, pageHtml } from '../server/demo.js';
 import { forgetQuality, onWebhook, sendPitch } from '../server/outreach.js';
 import { settle } from '../server/service.js';
 import { ENV, addLead, fakeToran, hook, testApp } from './helpers.js';
@@ -126,4 +126,47 @@ test('the try has limits: a few a day for one page', async () => {
   for (let i = 0; i < DEMO_PER_PAGE + 1; i++) await toAssist(app, '972501110001', `אני רוצה לנסות (${code})`, `t${i}`);
   assert.equal(db.get('SELECT count(*) AS n FROM demos').n, DEMO_PER_PAGE);
   assert.match(graph.sent().at(-1).body.text.body, /הרבה מנסים היום/);
+});
+
+test('the sample page /p/demo: a made-up business in each trade, said to be a sample, never counted', async () => {
+  const { app, db } = testApp({ env: DENV, toranFetch: fakeToran().f });
+  const server = createServer(handler(app));
+  await new Promise((r) => server.listen(0, '127.0.0.1', r));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const r = await fetch(`${base}/p/demo`);
+    assert.equal(r.status, 200);
+    assert.equal(r.headers.get('x-robots-tag'), 'noindex, nofollow');
+    const html = await r.text();
+    assert.match(html, /זה דף לדוגמה/);
+    assert.match(html, /בשביל אבי אינסטלציה/);
+    assert.ok(html.includes(`https://wa.me/972552735207?text=`) && html.includes(`(${SAMPLE.plumber.code})"`), 'the try goes to המוקדן with the sample code');
+    const ac = await (await fetch(`${base}/p/demo?trade=ac`)).text();
+    assert.match(ac, /בשביל רועי מיזוג אוויר/);
+    assert.match(ac, /המזגן בסלון מטפטף/);
+    assert.match(ac, /<a href="\/p\/demo\?trade=ac" aria-current="page">טכנאי מזגנים<\/a>/);
+    assert.match(await (await fetch(`${base}/p/demo?trade=nonsense`)).text(), /בשביל אבי אינסטלציה/);
+  } finally {
+    server.close();
+  }
+  assert.equal(db.get('SELECT count(*) AS n FROM leads').n, 0);
+});
+
+test("a try from the sample page: המוקדן plays the sample business, with no lead, and the owner is not told", async () => {
+  const toran = fakeToran();
+  const claude = fakeClaude([{ reply: 'תודה, הפרטים אצל דני חשמל והם יחזרו אליך כשיתפנו.', done: true, what: 'אין חשמל במטבח', place: 'ויצמן 8, גבעתיים', urgency: 'עד הערב' }]);
+  const { app, db, graph } = testApp({ env: DENV, toranFetch: toran.f });
+  app.claude = claude;
+  const ME = '972541234567';
+  const sent = () => graph.sent().filter((c) => c.url.endsWith(`/${ASSIST}/messages`) && c.body.to === ME).map((c) => c.body.text.body);
+  assert.match(SAMPLE.electrician.code, /^[a-z0-9]{10}$/);
+  await toAssist(app, ME, `אני רוצה לנסות (${SAMPLE.electrician.code})`, 's1');
+  assert.match(sent()[0], /נגיד שהתקשרתם לדני חשמל/);
+  assert.match(sent()[1], /שלום, כאן העוזר של דני חשמל/);
+  const d = db.get('SELECT lead_id, sample FROM demos');
+  assert.deepEqual({ ...d }, { lead_id: null, sample: 'electrician' });
+  await toAssist(app, ME, 'אין חשמל במטבח, ויצמן 8 גבעתיים, אני בבית עד הערב', 's2');
+  await settle(app);
+  assert.match(sent().at(-2), /מה: אין חשמל במטבח/);
+  assert.equal(toran.alerts.length, 0, 'a sample try tells no one');
 });

@@ -26,7 +26,9 @@ export function fakeGraph() {
     const review = /\/message_templates\?name=([^&]+)/.exec(String(url));
     if (review) {
       const name = decodeURIComponent(review[1]);
-      return Response.json({ data: g.templates[name] ? [{ name, status: g.templates[name], language: 'he' }] : [] });
+      // g.templates: name -> its status, or { status, category }.
+      const t = g.templates[name];
+      return Response.json({ data: t ? [{ name, language: 'he', ...(typeof t === 'string' ? { status: t } : t) }] : [] });
     }
     // A file someone sent: its address first, then its bytes from there (g.media: id -> { mime, bytes }).
     const media = /\/v23\.0\/([\w.-]+)$/.exec(String(url));

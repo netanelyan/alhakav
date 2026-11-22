@@ -1,6 +1,6 @@
 import { DAY, HOUR, israelDate, now, nowIso } from './clock.js';
 import { num } from './env.js';
-import { GraphError, metaSettings, sendTemplate, sendText } from './meta.js';
+import { GraphError, metaSettings, pickTemplate, sendTemplate, sendText } from './meta.js';
 import { isMobile, local, masked, normalize } from './phones.js';
 
 // The admin's alerts on their own WhatsApp: a new person wrote, a lead answered, someone wants to join, Toran passed
@@ -10,8 +10,8 @@ import { isMobile, local, masked, normalize } from './phones.js';
 // are kept with its messages (kind 'alert', no lead), so the inbox shows them:
 //
 //   - plain text while the owner wrote to the business number in the last 24 hours, with the links in it
-//   - otherwise the approved Utility template TEMPLATE_UPDATE (alhakav_update, docs/whatsapp-templates.md): "שלום, כאן
-//     על הקו. {{1}}" with a button to the admin page the alert is about
+//   - otherwise an approved template (updateTemplates, docs/whatsapp-templates.md), what happened and its details,
+//     with a button to the admin page the alert is about
 //
 // Each key is said at most once in its everyMinutes (kept in the database, so a restart does not repeat one), and at
 // most ALERTS_HOURLY (20) go in an hour. The owner, 2026-11-22: "make the bot update me about sells leads etc, to my
@@ -44,7 +44,15 @@ export function ownerNumber(env) {
   return isMobile(n) ? n : '';
 }
 
-export const updateTemplate = (env) => String(env.TEMPLATE_UPDATE || 'alhakav_update');
+/**
+ * The templates an alert may go as, the preferred first (meta.js pickTemplate): alhakav_owner_alert, "מה קרה: {{1}}"
+ * and "פרטים: {{2}}", reworded on 2026-11-22 after Meta made alhakav_update ("{{1}}" alone) a Marketing one.
+ * TEMPLATE_UPDATE names one, and only that one is used.
+ */
+export const updateTemplates = (env) => (String(env.TEMPLATE_UPDATE || '').trim() ? [String(env.TEMPLATE_UPDATE).trim()] : ['alhakav_owner_alert', 'alhakav_update']);
+
+/** A template's variables: alhakav_update takes the alert in one line, the others what happened and the details. */
+export const updateParams = (name, a) => (name === 'alhakav_update' ? [a.param] : [a.head, a.details || 'אין פרטים נוספים.']);
 
 /** The owner wrote to the business number in the last 24 hours: plain text may go. */
 export function ownerWindowOpen(db, owner, at = now()) {
@@ -67,12 +75,14 @@ export function alertText(env, title, body) {
   const admin = adminLink(env, '/admin/');
   const page = lines.map((l) => l.slice(l.indexOf(admin)).split(/\s/)[0]).find((u) => u.startsWith(admin) && u.length > admin.length);
   const words = lines.filter((l) => !/https?:\/\//.test(l));
-  const param = [head, ...words]
-    .map((l) => l.replace(/[.\s]+$/, ''))
-    .join('. ')
-    .replace(/\s+/g, ' ')
-    .slice(0, 900);
-  return { text: [head, ...lines].join('\n'), param: `${param}.`, button: page ? page.slice(admin.length) : 'leads' };
+  const line = (parts, n) =>
+    parts
+      .map((l) => l.replace(/[.\s]+$/, ''))
+      .join('. ')
+      .replace(/\s+/g, ' ')
+      .slice(0, n);
+  const end = (t) => (!t || /[.?!]$/.test(t) ? t : `${t}.`);
+  return { text: [head, ...lines].join('\n'), param: end(line([head, ...words], 900)), head: line([head], 200), details: end(line(words, 700)), button: page ? page.slice(admin.length) : 'leads' };
 }
 
 /** Said within its window already: true. Else marks it said now. */
@@ -96,7 +106,12 @@ async function toOwner(app, owner, key, title, body) {
   const a = alertText(app.env, title, body);
   const plain = ownerWindowOpen(app.db, owner, at);
   try {
-    const id = plain ? await sendText(m, app.graphFetch, owner, a.text) : await sendTemplate(m, app.graphFetch, owner, updateTemplate(app.env), [a.param], 'he', { url: a.button });
+    let id;
+    if (plain) id = await sendText(m, app.graphFetch, owner, a.text);
+    else {
+      const name = await pickTemplate(m, app.graphFetch, updateTemplates(app.env));
+      id = await sendTemplate(m, app.graphFetch, owner, name, updateParams(name, a), 'he', { url: a.button });
+    }
     app.db.run('INSERT INTO messages (lead_id, phone, dir, kind, body, wa_id, status, day, at) VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?)', owner, 'out', 'alert', a.text, id || null, 'sent', israelDate(at), nowIso(at));
     app.db.run("DELETE FROM messages WHERE kind = 'alert' AND at < ?", nowIso(at - 60 * DAY));
     return true;

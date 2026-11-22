@@ -150,7 +150,7 @@ test('"הסר" puts the caller on the list, says so once, and tells the customer
   assert.ok(db.get('SELECT 1 FROM skips WHERE phone = ?', CALLER));
   const out = sent();
   assert.equal(out[1].text.body, 'הסרנו את המספר, ולא נכתוב שוב.');
-  assert.equal(out[2].template.name, 'alhakav_call_note');
+  assert.equal(out[2].template.name, 'alhakav_call_alert');
   // They call again: nothing goes to them.
   setNow(SUNDAY + 2 * 24 * 60 * MINUTE);
   await onCall(app, call(CALLER, 'call-9'));
@@ -162,8 +162,8 @@ test('a hidden number, a test call from the customer, and a first message that n
   const { app, db, sent } = setup();
   await onCall(app, call('', 'hidden'));
   let note = sent().at(-1);
-  assert.equal(note.template.name, 'alhakav_call_note');
-  assert.equal(note.template.components[0].parameters[0].text, 'ממספר חסוי');
+  assert.equal(note.template.name, 'alhakav_call_alert');
+  assert.deepEqual(note.template.components[0].parameters.map((p) => p.text).slice(1), ['חסוי', 'המספר חסוי, אז אי אפשר לכתוב אליו.']);
   await onCall(app, call(OWNER, 'test'));
   assert.match(sent().at(-1).template.components[0].parameters[2].text, /שיחת בדיקה/);
   await onCall(app, call(CALLER, 'c3'));
@@ -280,4 +280,32 @@ test("Telnyx's webhook: signed with Ed25519, answered at once, and read", async 
   } finally {
     server.close();
   }
+});
+
+test("the guard: a price, an arrival time or a link Claude writes never reaches the caller, and the log says so", async () => {
+  const claude = fakeClaude([{ reply: 'זה עולה בערך 350 ₪, ונגיע אליך תוך שעה. מה הכתובת?', done: false, what: 'סתימה', place: '', urgency: '' }]);
+  const { app, sent, logs } = setup({ claude });
+  await onCall(app, call(CALLER));
+  await said(app, 'סתימה בכיור, כמה זה עולה ומתי תגיעו?', 'in-1');
+  await settle(app);
+  const reply = sent().at(-1).text.body;
+  assert.doesNotMatch(reply, /350|תוך שעה/);
+  assert.match(reply, /^מה הכתובת\? את המחיר ואת השעה אבי אינסטלציה יסגרו איתך כשיחזרו אליך\.$/);
+  assert.ok(logs.some((l) => /the guard cut price, time/.test(l)));
+});
+
+test('past 12 of their messages, המוקדן sends the summary once and stops answering', async () => {
+  const turn = { reply: 'ומה עוד?', done: false, what: 'נזילה', place: 'הרצל 1', urgency: '' };
+  const claude = fakeClaude(Array.from({ length: 20 }, () => ({ ...turn })));
+  const { app, db, sent } = setup({ claude });
+  await onCall(app, call(CALLER));
+  for (let i = 1; i <= 15; i++) {
+    setNow(SUNDAY + i * MINUTE);
+    await said(app, `הודעה ${i}`, `in-${i}`);
+    await settle(app);
+  }
+  assert.equal(claude.seen.length, 12, 'Claude answers twelve of their messages, no more');
+  const summaries = sent().filter((m) => m.type === 'template' && m.template.name === 'alhakav_summary');
+  assert.equal(summaries.length, 1);
+  assert.equal(chats(db)[0].state, 'done');
 });

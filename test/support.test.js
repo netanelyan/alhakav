@@ -19,7 +19,8 @@ test("Toran's file: the site's own facts, in the company export's shape, with 'j
   for (const f of onSite) assert.ok(d.faq.some((x) => x.q === f.q && x.a === f.a), f.q);
   assert.ok(d.faq.some((x) => x.q === 'איך משלמים?'));
   assert.equal(new Set(d.faq.map((f) => f.q)).size, d.faq.length);
-  assert.deepEqual(d.pages.map((p) => p.kind), ['about', 'about', 'payment', 'terms', 'privacy', 'accessibility']);
+  assert.deepEqual(d.pages.map((p) => p.kind), ['about', 'about', 'payment', 'about', 'terms', 'privacy', 'accessibility']);
+  assert.ok(d.faq.some((f) => f.url === 'https://alhakav.example/p/demo'), 'the sample page');
   assert.ok(d.pages.every((p) => p.title && p.text.length > 100 && p.url.startsWith('https://alhakav.example/')));
   assert.equal(new Set(d.pages.map((p) => p.url)).size, d.pages.length, 'one page for each address, as Toran keeps them');
   assert.equal(d.contact.whatsapp, '972515310498');

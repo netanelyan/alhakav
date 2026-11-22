@@ -136,11 +136,31 @@ a job: plain words, no office language. A variable's value never has a line brea
 אפשר לחזור בטלפון או בוואטסאפ.
 ```
 
-### alhakav_call_note, to the customer, when there is no conversation to sum up
+### alhakav_call_alert, to the customer, when there is no conversation to sum up
+
+Submitted on 2026-11-22 (id 1292514706400261), in the shape of alhakav_summary, after Meta approved alhakav_call_note
+(below) as Marketing. Until it is approved as Utility, the note goes as alhakav_call_note; then it takes over by itself
+(server/meta.js pickTemplate, read once an hour).
 
 | | |
 |---|---|
 | Category | Utility |
+| Variables (sample) | `{{1}}` = `10:41`, `{{2}}` = `050-000-0000` (or `חסוי`), `{{3}}` = `שלחנו לו הודעה בוואטסאפ ועוד אין תשובה.` |
+
+```
+התקשרו אליכם ב־{{1}} ולא עניתם.
+
+מספר: {{2}}
+מה קרה: {{3}}
+
+אם הוא יענה למוקדן, הסיכום יגיע לכאן.
+```
+
+### alhakav_call_note, the one before it (approved as Marketing)
+
+| | |
+|---|---|
+| Category | Marketing (submitted as Utility) |
 | Variables (sample) | `{{1}}` = `מ־054-123-4567`, `{{2}}` = `10:41`, `{{3}}` = `שלחנו הודעה בוואטסאפ ועוד אין תשובה.` |
 
 ```
@@ -181,16 +201,39 @@ last day, stopped. `{{3}}` is `PAYMENT_DETAILS`.
 
 ## The owner's updates (the business number)
 
+Two templates, the reworded one first: `alhakav_owner_alert` (submitted 2026-11-22, id 40345232861758073) goes once Meta
+approves it as Utility, and `alhakav_update`, approved as Marketing, until then (server/meta.js pickTemplate).
+
+### alhakav_owner_alert
+
+| | |
+|---|---|
+| Category | Utility |
+| Language | Hebrew (he) |
+| Buttons | a link, "לפתוח את הפרטים", `https://alhakav.com/admin/{{1}}` |
+| Variables (sample) | `{{1}}` = `אבי אינסטלציה (050-000-0000) ענו להודעה שלנו`, `{{2}}` = `הם כתבו: כמה זה עולה?` |
+
+```
+התראה מהחשבון שלך בעל הקו.
+
+מה קרה: {{1}}
+פרטים: {{2}}
+
+אפשר לראות הכול בדף הניהול.
+```
+
+`{{1}}` is the alert's title, `{{2}}` its lines without their links ("אין פרטים נוספים." when there are none).
+
 The owner's alerts and evening summary (server/alerts.js, server/digest.js) go from the business number to `OWNER_WA`:
 as plain text while the owner wrote to the business number in the last 24 hours, else as this template. Until it is
 approved, or when Meta refuses it, they go through openfrequency-toran as before. Submitted through the API on
 2026-11-22 (id 2217001215512712).
 
-### alhakav_update
+### alhakav_update, the one before it
 
 | | |
 |---|---|
-| Category | Utility |
+| Category | Marketing (submitted as Utility) |
 | Language | Hebrew (he) |
 | Buttons | a link, "לפתוח בדף הניהול", `https://alhakav.com/admin/{{1}}` (sample `https://alhakav.com/admin/leads/12`) |
 | Variables (sample) | `{{1}}` = `אבי אינסטלציה (050-000-0000) ענו להודעה הראשונה שלנו וכתבו: כמה זה עולה?` |

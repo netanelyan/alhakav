@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { adminLink, alertOwner } from './alerts.js';
 import { intakeTurn } from './claude.js';
 import { DAY, HOUR, hhmm, israelDate, now, nowIso } from './clock.js';
-import { ALERT, SVC } from './copy.js';
+import { ALERT, SVC, TRADE } from './copy.js';
 import { num } from './env.js';
 import { assistSettings, sendText } from './meta.js';
 import { local, masked } from './phones.js';
@@ -88,7 +88,31 @@ const plus = (hhmmText, n) => {
   return `${String(Math.floor(t / 60) % 24).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
 };
 
-/** The page, for one lead: a missed call and what they get from it, then two buttons. Few words: they read it on a job. */
+// ---- the sample page, /p/demo: the same page for a made-up business in each trade (?trade=electrician), so anyone
+// can see what a lead gets and try המוקדן from it. Its codes hold 0 and l, which a lead's code never does (ALPHABET),
+// so they never meet one. A try from it has no lead (demos.sample holds the trade), never tells the owner, and has
+// its own daily limit.
+
+export const SAMPLE = {
+  plumber: { name: 'אבי אינסטלציה', code: 'sample0plb' },
+  electrician: { name: 'דני חשמל', code: 'sample0elc' },
+  ac: { name: 'רועי מיזוג אוויר', code: 'sample0acc' },
+  locksmith: { name: 'משה מנעולן', code: 'sample0lck' },
+};
+export const SAMPLE_PER_DAY = 20;
+
+/** The made-up lead the sample page is for, in one trade (a plumber by default). */
+export function sampleLead(trade) {
+  const t = SAMPLE[trade] ? trade : 'plumber';
+  return { id: null, name: SAMPLE[t].name, trade: t, city: '', page_code: SAMPLE[t].code, sample: t };
+}
+
+const sampleOf = (code) => Object.keys(SAMPLE).find((t) => SAMPLE[t].code === code) || null;
+
+/**
+ * The page, for one lead: a missed call and what they get from it, then two buttons. Few words: they read it on a job.
+ * The sample page (lead.sample) also says it is one, and lets them switch trade.
+ */
 export function pageHtml(env, lead) {
   const biz = bizOf(lead);
   const ex = EXAMPLES[lead.trade] || EXAMPLES.plumber;
@@ -162,11 +186,16 @@ h1{margin-top:.25rem;font-size:clamp(1.9rem,8.5vw,2.4rem);line-height:1.15;font-
 .price p{color:var(--mute)}
 footer{margin-top:2rem;padding:1.25rem 0 2rem;background:var(--navy);color:#a9b9cd;font-size:.85rem;text-align:center}
 footer a{color:#fff}
+.sample{margin:1rem 0 0;padding:.55rem .8rem;border-radius:.8rem;background:#ffffff14;color:#d3dcea;font-size:.92rem}
+.trades{display:flex;flex-wrap:wrap;justify-content:center;gap:.35rem;margin-top:.6rem}
+.trades a{display:inline-flex;align-items:center;min-height:2.4rem;padding:.3rem .8rem;border-radius:999px;box-shadow:inset 0 0 0 2px #ffffff40;color:#fff;font-size:.9rem;font-weight:700;text-decoration:none}
+.trades a[aria-current=page]{background:var(--or);box-shadow:none;color:var(--navy)}
 </style>
 </head>
 <body>
 <header class="top"><div class="wrap">
 <img src="/svg/al-hakav-logo-on-dark.svg" alt="על הקו" width="120" height="28">
+${lead.sample ? `<p class="sample">זה דף לדוגמה. ככה נראה הדף שאנחנו מכינים לכל בעל מקצוע, עם השם של העסק שלו</p><nav class="trades" aria-label="מקצוע">${Object.keys(SAMPLE).map((t) => `<a href="/p/demo${t === 'plumber' ? '' : `?trade=${t}`}"${t === lead.sample ? ' aria-current="page"' : ''}>${esc(TRADE[t])}</a>`).join('')}</nav>` : ''}
 <p class="for">בשביל ${esc(biz)}</p>
 <h1>ככה זה ייראה אצלכם</h1>
 <p class="sub">כשאתם לא עונים, מי שהתקשר מקבל מהמוקדן הודעה בוואטסאפ, ואליכם מגיע סיכום של מה שהוא צריך</p>
@@ -219,7 +248,7 @@ export async function demoMessage(app, phone, m) {
   const { db } = app;
   const text = String(m.text || '').trim();
   const code = codeIn(text);
-  const lead = code && leadByCode(db, code);
+  const lead = code && (sampleOf(code) ? sampleLead(sampleOf(code)) : leadByCode(db, code));
   if (lead) {
     await startDemo(app, lead, phone, m);
     return true;
@@ -239,9 +268,11 @@ async function startDemo(app, lead, phone, m) {
   const today = `${israelDate()}T00:00`;
   db.run("DELETE FROM demos WHERE started_at < ?", nowIso(now() - 30 * DAY));
   if (m.id && db.get('SELECT 1 FROM demo_messages WHERE msg_id = ?', m.id)) return; // the same webhook again
-  const perPage = db.get('SELECT count(*) AS n FROM demos WHERE lead_id = ? AND started_at > ?', lead.id, nowIso(now() - DAY)).n;
+  const perPage = lead.sample
+    ? db.get('SELECT count(*) AS n FROM demos WHERE lead_id IS NULL AND started_at > ?', nowIso(now() - DAY)).n
+    : db.get('SELECT count(*) AS n FROM demos WHERE lead_id = ? AND started_at > ?', lead.id, nowIso(now() - DAY)).n;
   const all = db.get('SELECT count(*) AS n FROM demos WHERE started_at > ?', nowIso(now() - DAY)).n;
-  if (perPage >= DEMO_PER_PAGE || all >= s.daily) {
+  if (perPage >= (lead.sample ? SAMPLE_PER_DAY : DEMO_PER_PAGE) || all >= s.daily) {
     app.log(`[demo] ${masked(phone)} asked for a try of lead ${lead.id}: over the day's limit (${today})`);
     try {
       await sendText(assistSettings(app.env), app.graphFetch, phone, DEMO.full(salesNumber()));
@@ -252,12 +283,12 @@ async function startDemo(app, lead, phone, m) {
   }
   // A new try closes the one before on this phone.
   db.run("UPDATE demos SET state = 'done', updated_at = ? WHERE phone = ? AND state = 'talking'", nowIso(), phone);
-  const id = Number(db.run('INSERT INTO demos (lead_id, phone, started_at, updated_at) VALUES (?, ?, ?, ?)', lead.id, phone, nowIso(), nowIso()).lastInsertRowid);
+  const id = Number(db.run('INSERT INTO demos (lead_id, sample, phone, started_at, updated_at) VALUES (?, ?, ?, ?, ?)', lead.id, lead.sample || null, phone, nowIso(), nowIso()).lastInsertRowid);
   keep(db, id, 'in', 'start', String(m.text || ''), m.id || null);
   await say(app, id, phone, 'intro', DEMO.intro(biz));
   await say(app, id, phone, 'first', SVC.callerFirst(biz));
-  app.log(`[demo] ${masked(phone)} started a try of lead ${lead.id}`);
-  await alertOwner(app, `demo:${lead.id}`, ALERT.tried(biz), ALERT.body.open(adminLink(app.env, `/admin/leads/${lead.id}`)), 24 * 60);
+  app.log(`[demo] ${masked(phone)} started a try of ${lead.sample ? `the sample page (${lead.sample})` : `lead ${lead.id}`}`);
+  if (!lead.sample) await alertOwner(app, `demo:${lead.id}`, ALERT.tried(biz), ALERT.body.open(adminLink(app.env, `/admin/leads/${lead.id}`)), 24 * 60);
 }
 
 /** Answer a try a moment after its last message, one turn at a time (the same way service.js answers a caller). */
@@ -296,7 +327,7 @@ async function turn(app, demoId) {
   try {
     const d = demoOf(db, demoId);
     if (!d || d.state !== 'talking') return;
-    const lead = db.get('SELECT * FROM leads WHERE id = ?', d.lead_id);
+    const lead = d.lead_id ? db.get('SELECT * FROM leads WHERE id = ?', d.lead_id) : d.sample ? sampleLead(d.sample) : null;
     if (!lead) return;
     const biz = bizOf(lead);
     const messages = db.all("SELECT dir, body FROM demo_messages WHERE demo_id = ? AND kind IN ('first', 'in', 'reply') ORDER BY at, id", d.id);
@@ -304,6 +335,7 @@ async function turn(app, demoId) {
     if (d.turns < DEMO_TURNS && app.claude) {
       try {
         next = await intakeTurn(app.claude, { business: biz, trade: lead.trade }, messages);
+        if (next.cut?.length) app.log(`[demo] ${d.id}: the guard cut ${next.cut.join(', ')} from: ${String(next.raw).slice(0, 200)}`);
       } catch (e) {
         app.log(`[demo] ${d.id}: Claude: ${e.message}`);
       }

@@ -24,7 +24,7 @@ import { receiptPage } from './payPages.js';
 import { onCall, serviceState, track } from './service.js';
 import { readEvent, signatureOk as telnyxSigned, telnyxSettings } from './telnyx.js';
 import { toranState } from './toran.js';
-import { leadByCode, pageHtml, pageViewed } from './demo.js';
+import { leadByCode, pageHtml, pageViewed, sampleLead } from './demo.js';
 import { autopilot } from './autopilot.js';
 import { giveNumber } from './numbers.js';
 import { LINES, conversations, inboxPage, leadOf, markSeen, thread, threadPage, unreadCount } from './inbox.js';
@@ -178,6 +178,10 @@ async function route(app, req, res) {
     const raw = req.method === 'POST' ? await readBody(req, 64 * 1024) : '';
     const out = await autopilot(app, req, raw, url, p);
     return send(res, out.status, 'application/json; charset=utf-8', JSON.stringify(out.json));
+  }
+  // The sample page (demo.js): the same page for a made-up business in each trade, never counted.
+  if (p === '/p/demo' && req.method === 'GET') {
+    return send(res, 200, HTML, pageHtml(app.env, sampleLead(url.searchParams.get('trade'))), { 'content-security-policy': "frame-ancestors 'none'", 'x-robots-tag': 'noindex, nofollow' });
   }
   // A lead's own page (demo.js): its code, or not found; never indexed, never cached, each view counted.
   const page = /^\/p\/([a-z0-9]{10})$/.exec(p);

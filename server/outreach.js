@@ -1,9 +1,10 @@
 import { DAY, HOUR, MINUTE, afterQuiet, israelDate, now, nowIso, quiet, whenHe } from './clock.js';
-import { ALERT, CLOSED, MSG, T } from './copy.js';
+import { ALERT, CLOSED, DIGEST, MSG, T } from './copy.js';
 import { num } from './env.js';
 import { GraphError, assistSettings, metaSettings, numberQuality, parseWebhook, sendTemplate, sendText } from './meta.js';
 import { onAssistMessage, onAssistStatus } from './service.js';
-import { adminLink, alertOwner, whoIs } from './alerts.js';
+import { adminLink, alertOwner, ownerNumber, whoIs } from './alerts.js';
+import { dayCounts } from './digest.js';
 import { customerByPhone, takeReceipt } from './pay.js';
 import { isMobile, local, masked } from './phones.js';
 import { asksToStop, automatic } from './stopWords.js';
@@ -249,6 +250,7 @@ async function onMessage(app, m) {
   const from = String(m.from).replace(/\D/g, '');
   if (!from) return;
   const at = m.at && Math.abs(m.at - now()) < DAY ? m.at : now();
+  if (from === ownerNumber(app.env)) return fromOwner(app, from, m, at);
   // The lead we wrote to on this number, else the newest with it.
   let lead = db.get('SELECT * FROM leads WHERE mobile = ? ORDER BY (first_at IS NULL), id DESC LIMIT 1', from);
   const customer = customerByPhone(db, from);
@@ -326,6 +328,24 @@ async function onMessage(app, m) {
     await alertOwner(app, `replied:${lead.id}`, ALERT.replied(whoIs(lead.name, from)), `${said}\n${ALERT.body.open(adminLink(app.env, `/admin/leads/${lead.id}`))}`, 24 * 60);
   }
   if (reopen) await queueAnswer(app, { ...lead, stage: 'talking' }, m);
+}
+
+/**
+ * The owner writing from their own phone (OWNER_WA): kept, so the inbox shows it and their 24 hours open (alerts.js
+ * then sends plain text), and never answered by the sales bot, a stop word or a receipt. The owner, 2026-11-22: "do
+ * that", on the bot answering their replies to an alert as if they were a lead. "סיכום" gets the last 24 hours at once.
+ */
+async function fromOwner(app, owner, m, at) {
+  if (!keep(app.db, { leadId: null, phone: owner, dir: 'in', kind: 'owner', body: m.text, waId: m.id || null, at })) return;
+  const mm = metaSettings(app.env);
+  if (!/^\s*סיכום\s*[.?]*\s*$/.test(m.text) || !mm.ready) return;
+  const body = `${DIGEST.title.replace(/^על הקו:\s*/, '')}\n${DIGEST.text(dayCounts(app.db, app.env, at)) || DIGEST.quiet}`;
+  try {
+    const id = await sendText(mm, app.graphFetch, owner, body);
+    keep(app.db, { leadId: null, phone: owner, dir: 'out', kind: 'alert', body, waId: id || null, status: 'sent' });
+  } catch (e) {
+    app.log(`[out] the summary to the owner not sent: ${e.code || ''} ${e.message}`);
+  }
 }
 
 /** Meta's webhook, for both our numbers: the assistant's (service.js) and the business number (here). */

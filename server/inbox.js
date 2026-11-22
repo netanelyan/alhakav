@@ -41,6 +41,7 @@ function whoOn(db, env, line, phone) {
   if (chat) return { name: local(phone), href: `/admin/customers/${chat.id}`, note: T.inbox.caller(chat.business) };
   const demo = db.get('SELECT l.id, l.name FROM demos d JOIN leads l ON l.id = d.lead_id WHERE d.phone = ? ORDER BY d.id DESC LIMIT 1', phone);
   if (demo) return { name: demo.name, href: `/admin/leads/${demo.id}`, note: T.inbox.demo };
+  if (db.get('SELECT 1 FROM demos WHERE phone = ? AND sample IS NOT NULL LIMIT 1', phone)) return { name: local(phone), href: '', note: T.inbox.sample };
   return { name: local(phone), href: '' };
 }
 

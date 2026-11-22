@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { HOUR, MINUTE, now } from './clock.js';
 
 // WhatsApp's Cloud API, on the business number (developers.facebook.com/docs/whatsapp/cloud-api), the calls
 // openfrequency-toran's src/channels/meta.ts makes for its own number, and no more:
@@ -89,6 +90,35 @@ export async function templateStatus(m, f, name, lang = 'he') {
   const out = await graph(m, f, 'GET', `${m.wabaId}/message_templates?name=${encodeURIComponent(name)}&fields=name,status,language`);
   const t = (out?.data || []).find((x) => x.name === name && (x.language || lang) === lang);
   return t ? String(t.status || 'UNKNOWN').toUpperCase() : 'MISSING';
+}
+
+// Meta's review of each template, read at most once an hour (ten minutes after a failed read).
+const reviews = new Map();
+export const forgetTemplates = () => reviews.clear();
+
+async function review(m, f, name, lang) {
+  const had = reviews.get(name);
+  if (had && now() - had.at < (had.status === 'UNKNOWN' ? 10 * MINUTE : HOUR)) return had;
+  let r = { status: 'UNKNOWN', category: '' };
+  try {
+    const out = await graph(m, f, 'GET', `${m.wabaId}/message_templates?name=${encodeURIComponent(name)}&fields=name,status,category,language`);
+    const t = (out?.data || []).find((x) => x.name === name && (x.language || lang) === lang);
+    r = t ? { status: String(t.status || 'UNKNOWN').toUpperCase(), category: String(t.category || '').toUpperCase() } : { status: 'MISSING', category: '' };
+  } catch {}
+  reviews.set(name, { ...r, at: now() });
+  return r;
+}
+
+/**
+ * The first of `names` Meta approved as Utility, else the first approved, else the first. A reworded template takes
+ * over by itself once it is approved: Meta holds a Marketing one from someone who already gets many (131049), and
+ * charges more for it.
+ */
+export async function pickTemplate(m, f, names, lang = 'he') {
+  if (names.length < 2 || !m.wabaId) return names[0];
+  const seen = [];
+  for (const name of names) seen.push([name, await review(m, f, name, lang)]);
+  return (seen.find(([, r]) => r.status === 'APPROVED' && r.category === 'UTILITY') || seen.find(([, r]) => r.status === 'APPROVED') || seen[0])[0];
 }
 
 export async function numberQuality(m, f) {

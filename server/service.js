@@ -4,7 +4,7 @@ import { DAY, HOUR, MINUTE, hhmm, now, nowIso } from './clock.js';
 import { SVC } from './copy.js';
 import { num } from './env.js';
 import { local, masked, normalize } from './phones.js';
-import { GraphError, assistSettings, sendTemplate, sendText } from './meta.js';
+import { GraphError, assistSettings, pickTemplate, sendTemplate, sendText } from './meta.js';
 import { demoMessage } from './demo.js';
 import { asksToStop, automatic } from './stopWords.js';
 import { callAction, telnyxSettings } from './telnyx.js';
@@ -33,11 +33,16 @@ import { callAction, telnyxSettings } from './telnyx.js';
 // wait for it). A caller who sends three messages in a row gets one answer: a reply waits REPLY_DELAY_MS (3 s) after
 // their last message, and a chat is answered one turn at a time.
 
+/** A caller's messages in one chat that המוקדן answers; past them it sends the summary and goes quiet. */
+export const CALLER_TURNS = 12;
+
 export function serviceSettings(env) {
   return {
     caller: String(env.TEMPLATE_CALLER || 'alhakav_caller'),
     summary: String(env.TEMPLATE_SUMMARY || 'alhakav_summary'),
-    note: String(env.TEMPLATE_NOTE || 'alhakav_call_note'),
+    // The note, the preferred first: alhakav_call_alert, reworded on 2026-11-22 after Meta made alhakav_call_note a
+    // Marketing one; meta.js pickTemplate takes it once it is approved. TEMPLATE_NOTE names one, and only that one.
+    notes: String(env.TEMPLATE_NOTE || '').trim() ? [String(env.TEMPLATE_NOTE).trim()] : ['alhakav_call_alert', 'alhakav_call_note'],
     greeting: String(env.GREETING_URL || '').trim(),
     wait: num(env.SUMMARY_WAIT_MINUTES, 20) * MINUTE,
     replyDelay: num(env.REPLY_DELAY_MS, 3000),
@@ -92,12 +97,20 @@ function addSkip(db, customerId, phone, why) {
 
 // ---- to the customer's own WhatsApp
 
-/** A message to the customer from their assistant: text while they wrote in the last 24 hours, else the template. */
+/**
+ * A message to the customer from their assistant: text while they wrote in the last 24 hours, else the template.
+ * `template` is a name, or a list to pick from with `params(name)` (meta.js pickTemplate).
+ */
 async function toOwner(app, c, { chatId = null, kind, template, params, text }) {
   const a = assistSettings(app.env);
   try {
     if (!a.ready) throw new Error('ASSIST_PHONE_ID is not set');
-    const id = ownerWindowOpen(c) ? await sendText(a, app.graphFetch, c.phone, text) : await sendTemplate(a, app.graphFetch, c.phone, template, params);
+    let id;
+    if (ownerWindowOpen(c)) id = await sendText(a, app.graphFetch, c.phone, text);
+    else {
+      const name = Array.isArray(template) ? await pickTemplate(a, app.graphFetch, template) : template;
+      id = await sendTemplate(a, app.graphFetch, c.phone, name, typeof params === 'function' ? params(name) : params);
+    }
     keep(app.db, { chatId, customerId: c.id, peer: c.phone, dir: 'out', kind, body: text, msgId: id, status: 'sent' });
   } catch (e) {
     app.log(`[service] ${kind} to customer ${c.id} not sent: ${e.code || ''} ${e.message}`);
@@ -107,9 +120,11 @@ async function toOwner(app, c, { chatId = null, kind, template, params, text }) 
 
 /** A short note about a call: no WhatsApp to write to, no answer yet, asked to stop, a test. */
 function note(app, c, { caller, at, line, chatId = null }) {
-  const from = caller ? SVC.from(local(caller)) : SVC.fromHidden;
+  const number = caller ? local(caller) : SVC.hidden;
   const time = hhmm(at);
-  return toOwner(app, c, { chatId, kind: 'note', template: serviceSettings(app.env).note, params: [from, time, line], text: SVC.note({ from, time, line }) });
+  // alhakav_call_note, the old one, says who first: "התקשרו אליכם {{1}} ב־{{2}}".
+  const params = (name) => (name === 'alhakav_call_note' ? [caller ? SVC.from(local(caller)) : SVC.fromHidden, time, line] : [time, number, line]);
+  return toOwner(app, c, { chatId, kind: 'note', template: serviceSettings(app.env).notes, params, text: SVC.note({ time, number, line }) });
 }
 
 /** The summary: what, where, how urgent, and the number, from what the chat holds now. */
@@ -315,10 +330,18 @@ async function turn(app, chatId) {
   if (!chat || chat.state === 'stopped') return;
   const c = db.get('SELECT * FROM customers WHERE id = ?', chat.customer_id);
   const messages = db.all("SELECT dir, body FROM chat_messages WHERE chat_id = ? AND kind != 'auto' AND peer = ? ORDER BY at, id", chat.id, chat.caller);
+  // Past CALLER_TURNS of their messages, המוקדן stops answering: the summary goes with what it has, once, and no more
+  // Claude for this chat, so a caller cannot keep it talking (or run up the bill).
+  if (messages.filter((m) => m.dir === 'in').length > CALLER_TURNS) {
+    if (!chat.summary_at && c) await sendSummary(app, c, chat);
+    db.run("UPDATE chats SET state = 'done', updated_at = ? WHERE id = ?", nowIso(), chat.id);
+    return;
+  }
   let next;
   if (app.claude) {
     try {
       next = await intakeTurn(app.claude, c, messages);
+      if (next.cut?.length) app.log(`[chat] ${chat.id}: the guard cut ${next.cut.join(', ')} from: ${String(next.raw).slice(0, 200)}`);
     } catch (e) {
       app.log(`[chat] ${chat.id}: Claude: ${e.message}`);
     }

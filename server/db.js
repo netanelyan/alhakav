@@ -279,6 +279,10 @@ CREATE TABLE numbers (
   active_at TEXT
 );
 `,
+  // A try of המוקדן from the sample page /p/demo (demo.js): no lead, and the trade it was for.
+  `
+ALTER TABLE demos ADD COLUMN sample TEXT;
+`,
 ];
 
 export class Db {

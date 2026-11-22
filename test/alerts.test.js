@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, test } from 'node:test';
 import { alertOwner, alertText, ownerNumber } from '../server/alerts.js';
+import { forgetTemplates } from '../server/meta.js';
 import { nowIso, setNow } from '../server/clock.js';
 import { digestTick } from '../server/digest.js';
 import { forgetQuality, onWebhook, sendPitch } from '../server/outreach.js';
@@ -40,8 +41,8 @@ test('with OWNER_WA, an alert goes from the business number as the template, onc
   assert.equal(await alertOwner(app, 'k1', 'על הקו: מישהו כתב', 'הדף שלהם: https://alhakav.example/admin/leads/3', 60), true);
   const [sent] = toOwner(graph);
   assert.equal(sent.body.type, 'template');
-  assert.equal(sent.body.template.name, 'alhakav_update');
-  assert.equal(sent.body.template.components[0].parameters[0].text, 'מישהו כתב.');
+  assert.equal(sent.body.template.name, 'alhakav_owner_alert');
+  assert.deepEqual(sent.body.template.components[0].parameters.map((p) => p.text), ['מישהו כתב', 'אין פרטים נוספים.']);
   assert.deepEqual(sent.body.template.components[1].parameters, [{ type: 'text', text: 'leads/3' }]);
   assert.equal(toran.alerts.length, 0, 'Toran is not asked');
   const kept = db.get("SELECT * FROM messages WHERE kind = 'alert'");
@@ -81,7 +82,8 @@ test("a lead's first answer to our message tells the owner what they wrote", asy
   assert.ok((await sendPitch(app, lead, 'first')).ok);
   await onWebhook(app, hook({ messages: [{ id: 'wamid.r1', from: lead.mobile, type: 'text', text: { body: 'כמה זה עולה?' } }] }));
   const alert = toOwner(graph).find((c) => c.body.type === 'template');
-  assert.match(alert.body.template.components[0].parameters[0].text, /אבי אינסטלציה, .* ענו להודעה שלנו\. הם כתבו: כמה זה עולה\?/);
+  assert.match(alert.body.template.components[0].parameters[0].text, /^אבי אינסטלציה, .* ענו להודעה שלנו$/);
+  assert.equal(alert.body.template.components[0].parameters[1].text, 'הם כתבו: כמה זה עולה?');
   await onWebhook(app, hook({ messages: [{ id: 'wamid.r2', from: lead.mobile, type: 'text', text: { body: 'ואיך מתחילים?' } }] }));
   assert.equal(toOwner(graph).length, 1, 'only the first answer');
 });
@@ -96,7 +98,41 @@ test('the evening summary: once a date, after 19:00, only when something happene
   db.run('UPDATE leads SET created_at = ?, page_last_at = ? WHERE id = ?', nowIso(), nowIso(), lead.id);
   assert.equal(await digestTick(app), true);
   const [sent] = toOwner(graph);
-  assert.match(sent.body.template.components[0].parameters[0].text, /^מה היה ב־24 השעות האחרונות\. מצאתי בעל מקצוע אחד שמתאים ועסק אחד פתח את הדף שלו\.$/);
+  assert.deepEqual(sent.body.template.components[0].parameters.map((p) => p.text), ['מה היה ב־24 השעות האחרונות', 'מצאתי בעל מקצוע אחד שמתאים ועסק אחד פתח את הדף שלו.']);
   assert.equal(sent.body.template.components[1].parameters[0].text, 'inbox');
   assert.equal(await digestTick(app), false, 'once a date');
+});
+
+test("the owner writing to the business number: kept, never answered by the bot, and \"סיכום\" gets the day", async () => {
+  const toran = fakeToran();
+  const { app, db, graph } = testApp({ env: OENV, toranFetch: toran.f });
+  await onWebhook(app, hook({ messages: [{ id: 'wamid.o1', from: OWNER, type: 'text', text: { body: 'תודה' } }] }));
+  await onWebhook(app, hook({ messages: [{ id: 'wamid.o2', from: OWNER, type: 'text', text: { body: 'די' } }] }));
+  assert.equal(toran.calls.length, 0, 'Toran is not asked');
+  assert.equal(toOwner(graph).length, 0, 'nothing is answered');
+  assert.equal(db.get('SELECT count(*) AS n FROM leads').n, 0, 'the owner is no lead');
+  assert.equal(db.get('SELECT count(*) AS n FROM stops').n, 0, '"די" from the owner stops nothing');
+  assert.equal(db.get("SELECT count(*) AS n FROM messages WHERE phone = ? AND dir = 'in' AND kind = 'owner'", OWNER).n, 2);
+
+  await onWebhook(app, hook({ messages: [{ id: 'wamid.o3', from: OWNER, type: 'text', text: { body: 'סיכום' } }] }));
+  const [sent] = toOwner(graph);
+  assert.equal(sent.body.type, 'text', 'they just wrote: plain text');
+  assert.equal(sent.body.text.body, 'מה היה ב־24 השעות האחרונות\nלא קרה שום דבר חדש ב־24 השעות האחרונות.');
+});
+
+test('the reworded template goes once Meta approves it as Utility; until then the approved one', async () => {
+  const env = { ...OENV, META_WABA_ID: 'waba' };
+  const run = async (templates) => {
+    forgetTemplates();
+    const { app, graph } = testApp({ env, toranFetch: fakeToran().f });
+    Object.assign(graph.templates, templates);
+    await alertOwner(app, `k-${Math.random()}`, 'על הקו: מישהו כתב', 'הם שאלו כמה זה עולה.\nהדף שלהם: https://alhakav.example/admin/leads/3');
+    return toOwner(graph)[0].body.template;
+  };
+  let t = await run({ alhakav_owner_alert: { status: 'PENDING', category: 'UTILITY' }, alhakav_update: { status: 'APPROVED', category: 'MARKETING' } });
+  assert.equal(t.name, 'alhakav_update');
+  assert.deepEqual(t.components[0].parameters.map((p) => p.text), ['מישהו כתב. הם שאלו כמה זה עולה.']);
+  t = await run({ alhakav_owner_alert: { status: 'APPROVED', category: 'UTILITY' }, alhakav_update: { status: 'APPROVED', category: 'MARKETING' } });
+  assert.equal(t.name, 'alhakav_owner_alert');
+  assert.deepEqual(t.components[0].parameters.map((p) => p.text), ['מישהו כתב', 'הם שאלו כמה זה עולה.']);
 });

@@ -37,4 +37,12 @@ The message the button opens, "אני רוצה לנסות (<code>)", goes to ה�
 
 The admin is told when a try starts ("אבי אינסטלציה מנסים את המוקדן על עצמם"). A try ends after 12 of their messages or 2
 quiet hours; a page gets at most 5 tries a day, and all pages together `DEMO_DAILY` (30), so Claude's bill stays small.
-Past that, one line says to try again tomorrow. The tries are kept 30 days.
+Past that, one line says to try again tomorrow. The tries are kept 30 days (server/retention.js).
+
+## The sample page
+
+`/p/demo` is the same page for a made-up business in each trade (`?trade=electrician`, `ac`, `locksmith`; a plumber by
+default), with a line saying it is a sample. Its views are not counted, and its "לנסות בוואטסאפ" starts a real try of
+המוקדן for that made-up business, with no lead behind it: the owner is not told, and the sample page gets 20 tries a
+day within `DEMO_DAILY`. Its codes (`sample0plb` and so on) hold 0 and l, which a lead's code never does. Toran sends it
+to whoever asks to see an example (server/support.js).

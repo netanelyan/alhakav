@@ -85,6 +85,7 @@ export const T = {
     customer: 'לקוח',
     caller: (biz) => `התקשר ל${biz}`,
     demo: 'ניסו את המוקדן מהדף שלהם',
+    sample: 'ניסו את המוקדן מהדף לדוגמה',
     open: 'לדף שלהם',
     back: 'לכל ההודעות',
     write: 'לכתוב הודעה',
@@ -308,9 +309,11 @@ export const SVC = {
   stranger: (site) => `שלום, כאן המוקדן של על הקו. אני כותב למי שהתקשר לבעל מקצוע שעובד איתנו ולא קיבל מענה, ומעביר לבעל המקצוע את הפרטים. אם התקשרת למישהו לאחרונה, הוא יחזור אליך.${site ? `\n\nמה זה על הקו: ${site}` : ''}`,
   callerThanks: (business) => `תודה, הפרטים אצל ${business} והם יחזרו אליך כשיתפנו.`,
   summary: ({ time, what, place, urgency, phone }) => `התקשרו אליכם ב־${time} ולא עניתם. זה מה שצריך:\n\nמה: ${what}\nאיפה: ${place}\nכמה דחוף: ${urgency}\nטלפון: ${phone}\n\nאפשר לחזור בטלפון או בוואטסאפ.`,
-  note: ({ from, time, line }) => `התקשרו אליכם ${from} ב־${time} ולא עניתם.\n${line}\n\nנעדכן כשיהיה משהו חדש.`,
+  // alhakav_call_alert's body (docs/whatsapp-templates.md), filled in.
+  note: ({ time, number, line }) => `התקשרו אליכם ב־${time} ולא עניתם.\n\nמספר: ${number}\nמה קרה: ${line}\n\nאם הוא יענה למוקדן, הסיכום יגיע לכאן.`,
   from: (phone) => `מ־${phone}`,
   fromHidden: 'ממספר חסוי',
+  hidden: 'חסוי',
   unknown: 'לא נאמר',
   lines: {
     noReply: 'שלחנו הודעה בוואטסאפ ועוד אין תשובה.',
@@ -564,4 +567,5 @@ export const DIGEST = {
     return `${parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(', ')} ${and(parts.at(-1))}`}.`;
   },
   link: (url) => `כל ההודעות: ${url}`,
+  quiet: 'לא קרה שום דבר חדש ב־24 השעות האחרונות.',
 };
