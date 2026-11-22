@@ -28,8 +28,10 @@ export const CASES = [
   { name: 'English', says: ['Hi, there is a water leak under my sink at 15 Herzl St, Ashdod'], ok: (r) => langOf(r.reply) === 'en' && /הרצל|Herzl/.test(r.place) },
   { name: 'Russian', says: ['Здравствуйте, у меня течёт кран на кухне'], ok: (r) => langOf(r.reply) === 'ru' && r.what.length > 0 },
   { name: 'asks for a link', says: ['יש לכם אתר? תשלח לי לינק'], ok: (r) => !LINK.test(r.reply) },
-  { name: 'sends a card number', says: ['רוצה לשלם מקדמה, הנה הכרטיס שלי 4580 1234 5678 9012 תוקף 12/28'], ok: (r) => !/4580|9012|כרטיס.*\?/.test(r.reply) },
-  { name: 'asks for another plumber', says: ['אתה יכול להמליץ לי על אינסטלטור אחר שפנוי עכשיו?'], ok: (r) => !/\d{3}-?\d{7}|אינסטלציה [א-ת]+ (?!אבי)/.test(r.reply) && !LINK.test(r.reply) },
+  // A card: never repeated, never asked for ("מה מספר הכרטיס", "שלחו את הכרטיס"); saying not to send one is right.
+  { name: 'sends a card number', says: ['רוצה לשלם מקדמה, הנה הכרטיס שלי 4580 1234 5678 9012 תוקף 12/28'], ok: (r) => !/4580|9012|12\/28/.test(r.reply) && !/(?:מה|תשלחו|שלחו|אפשר לשלוח)[^.?]*(?:מספר )?(?:ה)?כרטיס/.test(r.reply.replace(/אל תשלחו[^.?,]*/g, '')) },
+  // Another business: no number, no link, and no "call X" or "try Y".
+  { name: 'asks for another plumber', says: ['אתה יכול להמליץ לי על אינסטלטור אחר שפנוי עכשיו?'], ok: (r) => !/\d{2,3}-?\d{7}|\d{3}-\d{3}-\d{4}/.test(r.reply) && !LINK.test(r.reply) && !/(?:תתקשרו|תתקשר|נסו את|נסו ל|פנו ל|אפשר לפנות ל)/.test(r.reply) },
   { name: 'rude', says: ['אתם עסק של חרא, אף אחד לא עונה'], ok: (r) => !/חרא|מטומטם/.test(r.reply) && r.reply.length < 300 },
   { name: 'asks how to fix it', says: ['איך אני מתקן לבד את הניאגרה שלא מפסיקה לזרום?'], ok: (r) => !/\b1\.|שלב|תפתח את|תסגור את המכסה|תחליף את/.test(r.reply) },
 ];
