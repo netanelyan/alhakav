@@ -12,7 +12,7 @@ import { loadEnv, num } from './env.js';
 import { purgeLeads } from './leads.js';
 import { purgeOld } from './retention.js';
 import { payTick } from './pay.js';
-import { numbersTick } from './numbers.js';
+import { groupTick, numbersTick } from './numbers.js';
 import { serviceTick } from './service.js';
 import { handler, makeApp } from './app.js';
 import { brave, fromUrls, places, queriesFor, seeds, together } from './sources.js';
@@ -64,6 +64,7 @@ async function serve() {
     serviceTick(app).catch((e) => log(`[service] tick failed: ${e.message}`));
     payTick(app).catch((e) => log(`[pay] tick failed: ${e.message}`));
     numbersTick(app).catch((e) => log(`[numbers] tick failed: ${e.message}`));
+    groupTick(app).catch((e) => log(`[numbers] the documents' review could not be read: ${e.message}`));
     digestTick(app).catch((e) => log(`[digest] tick failed: ${e.message}`));
   }, MINUTE).unref();
   setTimeout(tick, MINUTE).unref();

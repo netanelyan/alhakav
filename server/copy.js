@@ -384,6 +384,9 @@ export const SVC = {
   },
 };
 
+// The kinds of item in Telnyx's requirement group, as the owner knows them.
+const GROUP_PART = { document: 'מסמך', address: 'כתובת', textual: 'פרט כתוב' };
+
 export const CUST_STATUS = { setup: 'בהקמה', active: 'פעיל', paused: 'עצור', stopped: 'הפסיק' };
 export const CHAT_STATE = { waiting: 'מחכה לתשובה', talking: 'בשיחה', done: 'נשלח סיכום', stopped: 'ביקשו להסיר', failed: 'לא הגיעה' };
 export const CALL_OUTCOME = { messaged: 'נשלחה הודעה', again: 'התקשר שוב', hidden: 'מספר חסוי', skipped: 'ברשימת "לא לשלוח"', test: 'שיחת בדיקה', failed: 'השליחה נכשלה', inactive: 'העוזר לא פעיל', unpaid: 'לא שולם', otp: 'קוד אימות (מההקמה הקודמת)' };
@@ -427,6 +430,17 @@ export const TC = {
       ready: 'הקודים להעברת השיחות נשלחים אליהם לבד, ותגיע על זה הודעה נפרדת.',
       review: (usd) => `${usd ? `${usd}$ לחודש. ` : ''}Telnyx בודקים מספר חדש לפני שהוא עובד, ונודיע כשהוא פעיל.`,
       retry: 'אם חסר כסף ב־Telnyx, טוענים קודם יתרה (portal.telnyx.com, Billing), ואז לוחצים "לקנות מספר" בדף שלהם. ללקוח הבטחנו שתוך 24 שעות מהתשלום הכול מוכן.',
+    },
+    // Telnyx's review of our documents (numbers.js groupTick): the owner waits for it before writing to leads, the
+    // owner, 2026-11-23: "i dont want to go live before this settles".
+    group: {
+      approved: 'על הקו: Telnyx אישרו את המסמכים',
+      approvedBody: 'אפשר לקנות מספרים ישראליים, ומי שישלם יקבל מספר מיד. אפשר להתחיל לכתוב ללידים.',
+      declined: 'על הקו: Telnyx לא אישרו את המסמכים',
+      declinedBody: (lines) => `${lines.length ? `${lines.join('\n')}\n` : ''}מתקנים את מה שלא אושר ושולחים שוב: portal.telnyx.com, Numbers, Requirement Groups.`,
+      other: (status) => `על הקו: המסמכים ב־Telnyx במצב חדש, ${status}`,
+      otherBody: 'עוד לא אישור. נודיע כשיהיה שינוי.',
+      part: (type, status, reason) => `${GROUP_PART[type] || type}: ${status}${reason ? `, ${reason}` : ''}`,
     },
   },
   steps: {

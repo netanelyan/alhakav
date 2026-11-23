@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { afterEach, beforeEach, test } from 'node:test';
 import { setNow } from '../server/clock.js';
 import { createCustomer, getCustomer } from '../server/customers.js';
-import { forgetNumberLook, giveNumber, numberOf, numbersTick } from '../server/numbers.js';
+import { forgetNumberLook, giveNumber, groupTick, numberOf, numbersTick } from '../server/numbers.js';
 import { manualPayment } from '../server/pay.js';
 import { TORAN_ENV, fakeToran, testApp } from './helpers.js';
 
@@ -101,4 +101,39 @@ test('approving a payment gives the customer their number', async () => {
   const c = customer();
   await manualPayment(app, c, '');
   assert.equal(getCustomer(db, c.id).assistant, '97243763889');
+});
+
+test("Telnyx's review of our documents: the first look remembers, then the owner hears approved, or what was not and why", async () => {
+  const t = fakeTelnyx();
+  const group = { status: 'pending-approval', regulatory_requirements: [{ field_type: 'document', status: 'pending-approval' }, { field_type: 'address', status: 'pending-approval' }] };
+  const f = t.f;
+  t.f = async (url, init) => (String(url) === 'https://telnyx.test/v2/requirement_groups/grp1' ? Response.json({ data: group }) : f(url, init));
+  const { app, db, toran } = setup(NENV, t);
+  const look = async (mins) => {
+    setNow(SUNDAY + mins * 60_000);
+    return groupTick(app);
+  };
+  assert.equal(await look(0), 'pending-approval');
+  assert.equal(toran.alerts.length, 0, 'the first look only remembers');
+  assert.equal(await look(10), null, 'not again within 30 minutes');
+  assert.equal(await look(31), 'pending-approval');
+  assert.equal(toran.alerts.length, 0, 'no change, nothing said');
+  // Not approved: what and why.
+  group.status = 'declined';
+  group.regulatory_requirements[0] = { field_type: 'document', status: 'declined', status_reason: 'The document is not legible' };
+  group.regulatory_requirements[1].status = 'approved';
+  assert.equal(await look(62), 'declined');
+  assert.match(toran.alerts.at(-1).title, /Telnyx לא אישרו את המסמכים/);
+  assert.match(toran.alerts.at(-1).body, /^מסמך: declined, The document is not legible\n/);
+  assert.doesNotMatch(toran.alerts.at(-1).body, /כתובת/);
+  // Fixed and approved.
+  group.status = 'approved';
+  assert.equal(await look(93), 'approved');
+  assert.match(toran.alerts.at(-1).title, /Telnyx אישרו את המסמכים/);
+  assert.equal(db.kv('telnyx:group'), 'approved');
+  // A server that starts after it was approved still tells the owner once.
+  forgetNumberLook();
+  const fresh = setup(NENV, t);
+  assert.equal(await (async () => (setNow(SUNDAY), groupTick(fresh.app)))(), 'approved');
+  assert.match(fresh.toran.alerts.at(-1).title, /Telnyx אישרו/);
 });

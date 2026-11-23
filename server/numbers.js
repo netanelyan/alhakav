@@ -4,7 +4,7 @@ import { TC } from './copy.js';
 import { num } from './env.js';
 import { local, normalize } from './phones.js';
 import { sendSetup } from './setup.js';
-import { availableNumbers, numbersOn, orderNumber, telnyxSettings } from './telnyx.js';
+import { availableNumbers, numbersOn, orderNumber, requirementGroup, telnyxSettings } from './telnyx.js';
 
 // A customer's own number at Telnyx (docs/connecting.md), the one their unanswered calls are forwarded to, given when
 // the admin approves their payment (the owner, 2026-11-21: "a number should be bought when i approve the payment").
@@ -115,4 +115,31 @@ export async function numbersTick(app, at = now()) {
 
 export const forgetNumberLook = () => {
   lastLook = 0;
+  lastGroupLook = 0;
 };
+
+let lastGroupLook = 0;
+/**
+ * Once a minute from main.js: every 30 minutes, Telnyx's review of our documents (TELNYX_REQUIREMENT_GROUP), which
+ * every new Israeli number waits for. The owner hears each change: approved, not approved with what and why, or
+ * anything else. The first look only remembers, unless it is approved already. Answers the status, or null.
+ */
+export async function groupTick(app, at = now()) {
+  if (at - lastGroupLook < 30 * MINUTE) return null;
+  lastGroupLook = at;
+  const s = numberSettings(app.env);
+  if (!s.ready) return null;
+  const g = await requirementGroup(s.t, app.telnyxFetch, s.group);
+  const was = app.db.kv('telnyx:group');
+  if (!g.status || g.status === was) return g.status || null;
+  app.db.kv('telnyx:group', g.status);
+  const G = TC.numbers.group;
+  if (g.status === 'approved') await alertOwner(app, 'telnyx-group', G.approved, G.approvedBody, 1);
+  else if (!was) return g.status;
+  else if (['declined', 'rejected', 'unapproved'].includes(g.status)) {
+    const lines = g.requirements.filter((r) => r.status !== 'approved').map((r) => G.part(r.type, r.status, r.reason));
+    await alertOwner(app, 'telnyx-group', G.declined, G.declinedBody(lines), 1);
+  } else await alertOwner(app, 'telnyx-group', G.other(g.status), G.otherBody, 1);
+  app.log(`[numbers] Telnyx's review of our documents: ${was || '-'} -> ${g.status}`);
+  return g.status;
+}

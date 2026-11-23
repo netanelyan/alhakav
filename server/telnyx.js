@@ -72,6 +72,19 @@ export async function orderNumber(t, f, number, connectionId, groupId, reference
   return { id: String(out?.data?.id || ''), status: String(out?.data?.status || '') };
 }
 
+/**
+ * Where Telnyx's review of our documents stands (the requirement group every Israeli number is bought with):
+ * { status, requirements: [{ type, status, reason }] }, with whatever reason Telnyx gives for one it did not approve.
+ */
+export async function requirementGroup(t, f, id) {
+  const d = (await call(t, f, 'GET', `/requirement_groups/${encodeURIComponent(id)}`))?.data || {};
+  const reason = (r) => [r.status_reason, r.rejection_reason, r.reason, r.comment, r.comments].find((x) => typeof x === 'string' && x.trim()) || '';
+  return {
+    status: String(d.status || ''),
+    requirements: (d.regulatory_requirements || []).map((r) => ({ type: String(r.field_type || ''), status: String(r.status || ''), reason: reason(r) })),
+  };
+}
+
 // ---- calls
 
 export const callAction = (t, f, id, action, body = {}) => call(t, f, 'POST', `/calls/${encodeURIComponent(id)}/actions/${action}`, body);
