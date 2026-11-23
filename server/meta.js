@@ -95,8 +95,10 @@ export async function templateStatus(m, f, name, lang = 'he') {
 // Meta's review of each template, read at most once an hour (ten minutes after a failed read).
 const reviews = new Map();
 export const forgetTemplates = () => reviews.clear();
+/** The last review read of a template, with no call to Meta: what the admin's pages show while they wait for none. */
+export const knownStatus = (name) => reviews.get(name)?.status || null;
 
-async function review(m, f, name, lang) {
+export async function review(m, f, name, lang = 'he') {
   const had = reviews.get(name);
   if (had && now() - had.at < (had.status === 'UNKNOWN' ? 10 * MINUTE : HOUR)) return had;
   let r = { status: 'UNKNOWN', category: '' };

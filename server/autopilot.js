@@ -8,7 +8,7 @@ import { discover, lastRun } from './discover.js';
 import { num } from './env.js';
 import { getLead, saveName, skip } from './leads.js';
 import { metaSettings, numberQuality, templateStatus } from './meta.js';
-import { nameParam, outreachSettings, sendPitch, sentToday, stopped } from './outreach.js';
+import { firstTemplate, nameParam, outreachSettings, sendPitch, sentToday, stopped } from './outreach.js';
 import { isMobile } from './phones.js';
 import { fromUrls } from './sources.js';
 import { textOf } from './support.js';
@@ -54,13 +54,14 @@ function limits(env) {
   return { day: outreachSettings(env).daily, batch: num(env.AUTOPILOT_BATCH, AUTOPILOT_BATCH) };
 }
 
-// Meta's review of the first message's template, read at most every ten minutes.
+// Meta's review of the first message's template (outreach.js firstTemplate: in their trade's words once approved),
+// read at most every ten minutes.
 let review = { at: 0, name: '', value: null };
 export const forgetReview = () => {
   review = { at: 0, name: '', value: null };
 };
 async function templateNow(app) {
-  const name = outreachSettings(app.env).first;
+  const name = (await firstTemplate(app)).name;
   if (review.value && review.name === name && now() - review.at < 10 * MINUTE) return review.value;
   let value;
   try {
@@ -115,7 +116,7 @@ async function state(app) {
     limits: l,
     sent: s,
     room: Math.max(0, Math.min(l.batch - s.half, l.day - s.day)),
-    template: { name: outreachSettings(env).first, status: await templateNow(app) },
+    template: { name: (await firstTemplate(app)).name, status: await templateNow(app) },
     quality,
     pool: { ready: db.all(CANDIDATES).filter((x) => isMobile(x.mobile)).length, belowBar: db.get("SELECT count(*) AS n FROM leads WHERE stage = 'new' AND qualified = 0").n },
     last24h: {

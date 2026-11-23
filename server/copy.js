@@ -20,11 +20,23 @@ export const CLOSED = { ...LOST, customer: 'הפכו ללקוחות', stopped: '
 // The first and the reminder go from the business number as Meta-approved templates (docs/whatsapp-templates.md); the
 // text here is the same body, filled in, so the admin sees what the tradesperson will read. {{1}} is "אצל <name>",
 // and the button "לראות את הדף שלכם" opens their page. Sent by hand, the page's address is in the text instead.
+//
+// The opening is a moment from their own work (SCENE), the owner, 2026-11-23: "Each should be customized according to
+// his work". It goes as its own template, alhakav_page_trade, once Meta approves it (outreach.js firstTemplate);
+// until then, and for a lead with no trade, the words everyone gets (SCENE.any).
+
+export const SCENE = {
+  plumber: 'כשאתם מתחת לכיור ולא שומעים את הטלפון',
+  electrician: 'כשאתם על סולם מול לוח חשמל ולא עונים',
+  ac: 'כשאתם על הגג ליד מזגן ולא עונים',
+  locksmith: 'כשאתם באמצע לפתוח דלת ולא עונים',
+  any: 'כשאתם באמצע עבודה ולא עונים',
+};
 
 export const MSG = {
-  first: (n, url, sender, byHand) =>
+  first: (n, url, sender, byHand, scene = SCENE.any) =>
     [
-      'שלום, כאן על הקו. כשאתם באמצע עבודה ולא עונים, מי שהתקשר מקבל מאיתנו הודעה בוואטסאפ בשם העסק, ואתם מקבלים סיכום של מה שהוא צריך.',
+      `שלום, כאן על הקו. ${scene}, מי שהתקשר מקבל מאיתנו הודעה בוואטסאפ בשם העסק, ואתם מקבלים סיכום של מה שהוא צריך.`,
       `הכנו דף קצר שמראה איך זה ייראה ${n}. אפשר גם לנסות שם על עצמכם, לוקח דקה.`,
       byHand ? url : '',
       byHand ? 'לא רלוונטי? עונים "לא" ולא נכתוב שוב.' : 'לא רלוונטי? לוחצים "לא, תודה" ולא נכתוב שוב.',

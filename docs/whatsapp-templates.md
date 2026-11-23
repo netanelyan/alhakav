@@ -39,6 +39,30 @@ is the site's real domain (`SITE_URL`); a new domain means submitting both again
 [שם העסק], [שם מלא], [כתובת].
 ```
 
+## alhakav_page_trade (the first message, in their trade's words)
+
+The same message, opening with a moment from their own work instead of "כשאתם באמצע עבודה ולא עונים"
+(`SCENE` in server/copy.js): under the sink, on a ladder at the panel, on the roof by the AC, opening a door. The
+server sends it by itself once Meta approves it (outreach.js `firstTemplate`), and `alhakav_page` until then.
+
+| | |
+|---|---|
+| Name | `alhakav_page_trade` (or set `TEMPLATE_FIRST_TRADE`; empty turns it off) |
+| Category | Marketing |
+| Language | Hebrew (he) |
+| Buttons | the same two |
+| Variables (sample) | `{{1}}` = `כשאתם מתחת לכיור ולא שומעים את הטלפון`; `{{2}}` = `אצל אבי אינסטלציה`; the link's `{{1}}` = `abcdefgh23` |
+
+```
+שלום, כאן על הקו. {{1}}, מי שהתקשר מקבל מאיתנו הודעה בוואטסאפ בשם העסק, ואתם מקבלים סיכום של מה שהוא צריך.
+
+הכנו דף קצר שמראה איך זה ייראה {{2}}. אפשר גם לנסות שם על עצמכם, לוקח דקה.
+
+לא רלוונטי? לוחצים "לא, תודה" ולא נכתוב שוב.
+
+[שם העסק], [שם מלא], [כתובת].
+```
+
 ## alhakav_page_reminder (the one reminder, four days later, only by the admin)
 
 | | |

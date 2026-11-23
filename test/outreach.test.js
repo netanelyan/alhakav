@@ -3,6 +3,7 @@ import { afterEach, beforeEach, test } from 'node:test';
 import { DAY, HOUR, setNow } from '../server/clock.js';
 import { countsNew, countsReached, funnel, listReached, purgeLeads } from '../server/leads.js';
 import { forgetQuality, markByHand, messageText, onWebhook, reminderDue, reply, sendPitch } from '../server/outreach.js';
+import { forgetTemplates } from '../server/meta.js';
 import { ENV, addLead, hook, testApp } from './helpers.js';
 
 const SUNDAY = Date.parse('2026-11-22T08:00:00Z'); // Sunday 10:00 in Israel
@@ -44,6 +45,31 @@ test('the first message goes as the approved template, with the name, and moves 
   const again = await sendPitch(app, x, 'first');
   assert.ok(!again.ok);
   assert.equal(graph.sent().length, 1);
+});
+
+test("the first message opens with a moment from their trade once Meta approved that template, and until then as before", async () => {
+  forgetTemplates();
+  const { app, db, graph } = testApp({ env: { ...ENV, META_WABA_ID: 'waba' } });
+  const lead = addLead(db);
+  db.run("UPDATE leads SET trade = 'electrician' WHERE id = ?", addLead(db, 'plumber', { mobile: '972501112233', domain: 'eli' }).id);
+  const electrician = db.get("SELECT * FROM leads WHERE domain = 'eli.example'");
+  graph.templates.alhakav_page_trade = 'PENDING';
+  assert.ok((await sendPitch(app, lead, 'first')).ok);
+  assert.equal(graph.sent().at(-1).body.template.name, 'alhakav_page');
+  assert.match(msgs(db, lead.id)[0].body, /^שלום, כאן על הקו\. כשאתם באמצע עבודה ולא עונים, מי שהתקשר/);
+  // By hand it is plain text from the admin's phone, so it is in their trade's words already.
+  assert.match(messageText('first', electrician, app.env, { byHand: true }), /^שלום, כאן על הקו\. כשאתם על סולם מול לוח חשמל ולא עונים, מי שהתקשר/);
+  // Approved: it takes over by itself, with the moment as {{1}} and the name as {{2}}.
+  forgetTemplates();
+  graph.templates.alhakav_page_trade = 'APPROVED';
+  assert.ok((await sendPitch(app, electrician, 'first')).ok);
+  const t = graph.sent().at(-1).body.template;
+  assert.equal(t.name, 'alhakav_page_trade');
+  assert.deepEqual(t.components[0].parameters.map((p) => p.text), ['כשאתם על סולם מול לוח חשמל ולא עונים', `אצל ${leadOf(db, electrician.id).name}`]);
+  assert.match(msgs(db, electrician.id)[0].body, /^שלום, כאן על הקו\. כשאתם על סולם מול לוח חשמל ולא עונים, מי שהתקשר מקבל מאיתנו/);
+  // What the admin's page shows now is the same words.
+  assert.match(messageText('first', leadOf(db, electrician.id), app.env), /כשאתם על סולם מול לוח חשמל/);
+  forgetTemplates();
 });
 
 test('the guardrails: the daily cap, quiet hours, the quality rating, and a lead with no mobile', async () => {

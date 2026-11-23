@@ -1,7 +1,7 @@
 import { DAY, HOUR, MINUTE, afterQuiet, israelDate, now, nowIso, quiet, whenHe } from './clock.js';
-import { ALERT, CLOSED, DIGEST, MSG, T } from './copy.js';
+import { ALERT, CLOSED, DIGEST, MSG, SCENE, T } from './copy.js';
 import { num } from './env.js';
-import { GraphError, assistSettings, metaSettings, numberQuality, parseWebhook, sendTemplate, sendText } from './meta.js';
+import { GraphError, assistSettings, knownStatus, metaSettings, numberQuality, parseWebhook, review, sendTemplate, sendText } from './meta.js';
 import { onAssistMessage, onAssistStatus } from './service.js';
 import { adminLink, alertOwner, ownerNumber, whoIs } from './alerts.js';
 import { dayCounts } from './digest.js';
@@ -41,6 +41,8 @@ export function outreachSettings(env) {
   return {
     daily: num(env.OUTREACH_DAILY, 10),
     first: String(env.TEMPLATE_FIRST || 'alhakav_page'),
+    // The first message opening with a moment from their trade (copy.js SCENE); empty turns it off.
+    firstTrade: String(env.TEMPLATE_FIRST_TRADE ?? 'alhakav_page_trade').trim(),
     reminder: String(env.TEMPLATE_REMINDER || 'alhakav_page_reminder'),
     sender: String(env.SENDER_LINE || '').trim(),
     site: String(env.SITE_URL || '').trim(),
@@ -53,10 +55,31 @@ export function nameParam(lead) {
   return n ? `אצל ${n}` : 'אצלכם';
 }
 
-/** The first message or the reminder, as the tradesperson reads it, with their page (made first: demo.js pageCodeOf). */
-export function messageText(stage, lead, env, { byHand = false } = {}) {
+/** The first message's opening, a moment from their trade's work (copy.js SCENE). */
+export const sceneOf = (lead) => SCENE[lead.trade] || SCENE.any;
+
+/**
+ * The first message or the reminder, as the tradesperson reads it, with their page (made first: demo.js pageCodeOf).
+ * The first opens with their trade's moment when it goes as alhakav_page_trade (`trade`): by hand always, from the
+ * business number once Meta approved it (as last read: meta.js knownStatus).
+ */
+export function messageText(stage, lead, env, { byHand = false, trade } = {}) {
   const o = outreachSettings(env);
-  return MSG[stage](nameParam(lead), pageUrl(env, lead.page_code || ''), o.sender || MSG.senderMissing, byHand);
+  const words = trade ?? (byHand || (Boolean(o.firstTrade) && knownStatus(o.firstTrade) === 'APPROVED'));
+  return MSG[stage](nameParam(lead), pageUrl(env, lead.page_code || ''), o.sender || MSG.senderMissing, byHand, words ? sceneOf(lead) : SCENE.any);
+}
+
+/**
+ * The first message's template: the one that opens with their trade's moment once Meta approved it, until then the
+ * one everyone gets. Answers its name and its body's variables for this lead.
+ */
+export async function firstTemplate(app, lead) {
+  const o = outreachSettings(app.env);
+  const m = metaSettings(app.env);
+  if (o.firstTrade && m.wabaId && (await review(m, app.graphFetch, o.firstTrade)).status === 'APPROVED') {
+    return { name: o.firstTrade, trade: true, params: lead ? [sceneOf(lead), nameParam(lead)] : [] };
+  }
+  return { name: o.first, trade: false, params: lead ? [nameParam(lead)] : [] };
 }
 
 export const stopped = (db, phone) => Boolean(phone && db.get('SELECT 1 FROM stops WHERE phone = ?', phone));
@@ -154,10 +177,11 @@ export async function sendPitch(app, lead, stage) {
   if (q && !['GREEN', 'UNKNOWN'].includes(q)) return { ok: false, why: 'quality', flash: T.guard.quality(q) };
   const o = outreachSettings(app.env);
   const code = pageCodeOf(app.db, lead);
-  const body = messageText(stage, lead, app.env);
+  const t = stage === 'first' ? await firstTemplate(app, lead) : { name: o.reminder, trade: false, params: [nameParam(lead)] };
+  const body = messageText(stage, lead, app.env, { trade: t.trade });
   let id;
   try {
-    id = await sendTemplate(m, app.graphFetch, lead.mobile, stage === 'first' ? o.first : o.reminder, [nameParam(lead)], 'he', { url: code });
+    id = await sendTemplate(m, app.graphFetch, lead.mobile, t.name, t.params, 'he', { url: code });
   } catch (e) {
     app.log(`[out] ${stage} to ${masked(lead.mobile)} (lead ${lead.id}) not sent: ${e.code || ''} ${e.message}`);
     if (e instanceof GraphError && UNDELIVERED.has(e.code)) {
