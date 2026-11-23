@@ -245,7 +245,7 @@ async function afterPaid(app, receiptId) {
     app.log(`[pay] receipt ${receiptId}: Morning: ${e.message}`);
   }
   const c = r?.customer_id && app.db.get('SELECT * FROM customers WHERE id = ?', r.customer_id);
-  if (c) await tell(app, c, 'paid', PAY.paid({ business: c.business, until: dateHe(r.bill.until), url: invoice.url || '' }));
+  if (c) await tell(app, c, 'paid', PAY.paid({ business: c.business, until: dateHe(r.bill.until), url: invoice.url || '', setup: !c.assistant }));
   // Their own number for the forwarded calls, the first time they pay (numbers.js).
   if (c && !c.assistant && c.status !== 'stopped') await giveNumber(app, c);
   return invoice;

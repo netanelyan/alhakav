@@ -384,7 +384,7 @@ export const TC = {
       failed: (biz) => `על הקו: לא הצלחנו לתת מספר ל${biz}`,
       ready: 'אפשר לשלוח להם את קודי ההעברה מהדף שלהם.',
       review: (usd) => `${usd ? `${usd}$ לחודש. ` : ''}Telnyx בודקים מספר חדש לפני שהוא עובד, ונודיע כשהוא פעיל.`,
-      retry: 'אפשר לנסות שוב מהדף שלהם, בכפתור "לקנות מספר".',
+      retry: 'אם חסר כסף ב־Telnyx, טוענים קודם יתרה (portal.telnyx.com, Billing), ואז לוחצים "לקנות מספר" בדף שלהם. ללקוח הבטחנו שתוך 24 שעות מהתשלום הכול מוכן.',
     },
   },
   steps: {
@@ -428,7 +428,10 @@ export const PAY = {
   againPaid: 'את האישור הזה כבר קיבלנו, והתשלום נרשם.',
   unreadable: 'לא הצלחנו לפתוח את הקובץ. אפשר לשלוח אותו שוב, כתמונה או כקובץ PDF?',
   tooLarge: 'הקובץ גדול מדי. אפשר לשלוח צילום מסך של האישור?',
-  paid: ({ business, until, url }) => `התשלום הגיע, תודה. העוזר של ${business} משולם עד ${until}.${url ? `\n\nהחשבונית: ${url}` : ''}`,
+  // `setup`: the first payment, before they have a number (pay.js afterPaid). The owner, 2026-11-23: they hear the
+  // service starts within 24 hours, time to top up Telnyx and give them their number.
+  paid: ({ business, until, url, setup }) =>
+    `התשלום הגיע, תודה. העוזר של ${business} משולם עד ${until}${setup ? ', ותוך 24 שעות נשלח לכם כאן את המספר שאליו יעברו השיחות שלא עניתם ואת הקודים להקליד בטלפון' : ''}.${url ? `\n\nהחשבונית: ${url}` : ''}`,
   invoice: {
     description: 'על הקו, עוזר לשיחות שלא נענו',
     row: (from, until) => `על הקו, ${from} עד ${until}`,
