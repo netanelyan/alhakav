@@ -55,7 +55,9 @@ every one of them against a fake Telnyx (calls), a fake Meta (WhatsApp) and a fa
    `**61*<number>**20#`, `**67*<number>#`, `**62*<number>#`, then `*#61#` to check. Tell them first that it replaces
    voicemail, and that `##002#` undoes it.
 4. **A test:** someone calls the customer and they don't answer. The page shows the call, and the caller gets the
-   message. "להפעיל" turns the assistant on (until then a forwarded call gets no message).
+   message. The assistant is on from the moment the codes go to them (server/setup.js), since that message tells them
+   to test it; "להפעיל" turns on one whose codes went some other way (until then a forwarded call gets no message). A
+   number Telnyx makes active between 21:00 and 08:00 waits for the morning, so the codes never wake them.
 5. **Payment** (docs/payments.md): fill in the invoice details on the customer's page, press "לשלוח בקשת תשלום
    בוואטסאפ", and when their transfer's picture comes, check the bank and press "התשלום הגיע". The assistant writes to
    callers only once the first month is recorded (or "בלי תשלום" is ticked, for a pilot).

@@ -255,10 +255,16 @@ export async function onAssistMessage(app, m) {
   const { db } = app;
   const from = String(m.from || '').replace(/\D/g, '');
   if (!from) return;
-  // A try of המוקדן from a lead's page (demo.js): a page's code starts one, and its turns follow.
-  if (await demoMessage(app, from, m)) return;
   const text = String(m.text || '').trim();
   const owner = ownerOf(db, from);
+  // A customer's command is theirs even in a try they left open (demo.js keeps one for two hours): "לא לשלוח 050…"
+  // written soon after trying it on their page and joining is not a turn of the try. The try ends there.
+  if (owner && COMMAND.test(text)) {
+    db.run("UPDATE demos SET state = 'done', updated_at = ? WHERE phone = ? AND state = 'talking'", nowIso(), from);
+    return fromOwner(app, owner, m, text);
+  }
+  // A try of המוקדן from a lead's page (demo.js): a page's code starts one, and its turns follow.
+  if (await demoMessage(app, from, m)) return;
   if (owner) return fromOwner(app, owner, m, text);
 
   const chat = db.get('SELECT * FROM chats WHERE caller = ? AND opened_at > ? ORDER BY COALESCE(last_in_at, last_out_at, opened_at) DESC, id DESC LIMIT 1', from, nowIso(now() - 7 * DAY));
@@ -385,6 +391,9 @@ async function turn(app, chatId) {
 }
 
 /** The customer writing to their own assistant: a few words it understands, and what it is otherwise. */
+/** The customer's commands to המוקדן, as fromOwner reads them. */
+const COMMAND = /^(?:לא לשלוח|אל תשלח|אל תשלחו|לא לכתוב|תפסיק לשלוח|לשלוח|כן לשלוח|להחזיר|לעצור|עצור|הפסקה|להפסיק|להמשיך|המשך|להפעיל)/;
+
 async function fromOwner(app, c, m, text) {
   const { db } = app;
   if (!keep(db, { customerId: c.id, peer: c.phone, dir: 'in', kind: 'owner', body: text, msgId: m.id })) return;

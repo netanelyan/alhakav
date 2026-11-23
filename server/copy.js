@@ -527,7 +527,7 @@ export const PAY = {
   // `setup`: the first payment, before they have a number (pay.js afterPaid). The owner, 2026-11-23: they hear the
   // service starts within 24 hours, time to top up Telnyx and give them their number.
   paid: ({ business, until, url, setup }) =>
-    `✅ *התשלום הגיע, תודה*\n\nהעוזר של ${business} משולם עד ${until}.${setup ? '\n\n⏰ תוך 24 שעות נשלח לכם כאן את המספר שאליו יעברו השיחות שלא עניתם ואת הקודים להקליד בטלפון.' : ''}${url ? `\n\n🧾 החשבונית: ${url}` : ''}`,
+    `✅ *התשלום הגיע, תודה*\n\nהעוזר של ${business} משולם עד ${until}.${setup ? '\n\n⏰ תוך 24 שעות נשלח לכם כאן שלושה קודים להקליד בחייגן, פעם אחת, ומשם העוזר כותב בוואטסאפ לכל מי שהתקשר ולא עניתם.' : ''}${url ? `\n\n🧾 החשבונית: ${url}` : ''}`,
   invoice: {
     description: 'על הקו, עוזר לשיחות שלא נענו',
     row: (from, until) => `על הקו, ${from} עד ${until}`,

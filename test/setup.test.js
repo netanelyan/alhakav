@@ -81,6 +81,8 @@ test('as text while they wrote in the last 24 hours, else the template with the 
     ['אבי אינסטלציה', `${LRM}**61*043763889**20#${LRM}`, `${LRM}**67*043763889#${LRM}`, `${LRM}**62*043763889#${LRM}`, '055-273-5207']
   );
   assert.match(toran.alerts.at(-1).title, /אבי אינסטלציה קיבלו את הקודים/);
+  // It tells them the assistant is ready and to test it with a call, so a customer in setup is on from now.
+  assert.equal(getCustomer(db, c.id).status, 'active');
   // By itself, once.
   assert.equal((await sendSetup(app, c)).why, 'sent');
   assert.equal(sent().length, 1);

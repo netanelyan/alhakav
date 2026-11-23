@@ -1,5 +1,5 @@
 import { adminLink, alertOwner } from './alerts.js';
-import { MINUTE, now, nowIso } from './clock.js';
+import { MINUTE, israelParts, now, nowIso } from './clock.js';
 import { TC } from './copy.js';
 import { num } from './env.js';
 import { local, normalize } from './phones.js';
@@ -93,10 +93,15 @@ async function failed(app, c, why, detail) {
 export const numberOf = (db, c) => (c.assistant ? db.get('SELECT * FROM numbers WHERE number = ?', c.assistant) : null);
 
 let lastLook = 0;
-/** Once a minute from main.js: every 15 minutes, while a bought number waits for Telnyx, see whether it is active. */
+/**
+ * Once a minute from main.js: every 15 minutes, while a bought number waits for Telnyx, see whether it is active. Not
+ * from 21:00 to 08:00: the codes go to the customer the moment it is, and a message at 3am wakes a tradesperson. The
+ * morning is still within the 24 hours they were promised.
+ */
 export async function numbersTick(app, at = now()) {
   const waiting = app.db.all('SELECT * FROM numbers WHERE active_at IS NULL');
-  if (!waiting.length || at - lastLook < 15 * MINUTE) return;
+  const { hour } = israelParts(at);
+  if (!waiting.length || at - lastLook < 15 * MINUTE || hour < 8 || hour >= 21) return;
   lastLook = at;
   const s = numberSettings(app.env);
   if (!s.ready) return;

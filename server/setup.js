@@ -1,4 +1,5 @@
 import { adminLink, alertOwner } from './alerts.js';
+import { nowIso } from './clock.js';
 import { SETUP } from './copy.js';
 import { forwardCodes } from './customers.js';
 import { assistSettings, metaSettings, sendTemplate, sendText } from './meta.js';
@@ -19,6 +20,8 @@ import { keep, windowOpen } from './toCustomer.js';
 //              inside WhatsApp's monospace (```), which also keeps "*61*" from turning into bold and eating asterisks.
 //   when       numbers.js: a number given that already works, or a bought one the moment Telnyx makes it active; and
 //              "לשלוח ללקוח את הקודים" on their page in the admin, which sends them again
+//   on         the message says the assistant is ready and to test it with a call, so a customer still in setup is
+//              turned on as it goes (in setup, service.js answers no call, not even the test)
 //   the list   how to keep a number off המוקדן's messages ("לא לשלוח") and put it back ("לשלוח"), written to המוקדן
 //              at its own number, which the message gives
 //   how        plain text while they wrote to the business number in the last 24 hours, else the template
@@ -63,6 +66,7 @@ export async function sendSetup(app, c, { again = false } = {}) {
   try {
     const waId = open ? await sendText(m, app.graphFetch, c.phone, body) : await sendTemplate(m, app.graphFetch, c.phone, setupSettings(app.env).template, [c.business, ...codes.map(codeVariable), local(assist)]);
     keep(app.db, c, { kind: 'setup', body, waId: waId || null, status: 'sent' });
+    app.db.run("UPDATE customers SET status = 'active', updated_at = ? WHERE id = ? AND status = 'setup'", nowIso(), c.id);
     await alertOwner(app, `setup:${c.id}`, SETUP.alert.sent(c.business), SETUP.alert.sentBody(local(c.assistant), page), 1);
     return { ok: true, how: open ? 'text' : 'template' };
   } catch (e) {

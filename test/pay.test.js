@@ -106,7 +106,7 @@ test('a picture of the transfer becomes a receipt; "התשלום הגיע" recor
   // This one has its number already. The first payment, with none yet, says the service starts within 24 hours (the
   // owner, 2026-11-23).
   assert.doesNotMatch(texts(graph).at(-1), /24 שעות/);
-  assert.match(PAY.paid({ business: 'אבי אינסטלציה', until: '21.12.2026', url: '', setup: true }), /^✅ \*התשלום הגיע, תודה\*\n\nהעוזר של אבי אינסטלציה משולם עד 21\.12\.2026\.\n\n⏰ תוך 24 שעות נשלח לכם כאן את המספר/);
+  assert.match(PAY.paid({ business: 'אבי אינסטלציה', until: '21.12.2026', url: '', setup: true }), /^✅ \*התשלום הגיע, תודה\*\n\nהעוזר של אבי אינסטלציה משולם עד 21\.12\.2026\.\n\n⏰ תוך 24 שעות נשלח לכם כאן שלושה קודים להקליד בחייגן/);
 
   // Pressed again: nothing recorded, no second invoice.
   await assert.rejects(decideReceipt(app, r.id, 'paid', ''), (e) => e instanceof PayError && e.code === 'already_paid');

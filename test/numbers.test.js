@@ -77,6 +77,10 @@ test('when every number is taken, one is bought with the documents and the voice
   assert.equal(toran.alerts.filter((a) => a.key === `number-active:${c.id}`).length, 0);
   assert.equal(setupSends(graph).filter((m) => m.to === '972543334444').length, 0, 'no codes before the number works');
   telnyx.owned[1][1] = 'active';
+  // Active at 3am: it waits for the morning, so the codes do not wake them.
+  forgetNumberLook();
+  await numbersTick(app, Date.parse('2026-11-22T01:00:00Z'));
+  assert.equal(numberOf(db, getCustomer(db, c.id)).active_at, null);
   await numbersTick(app, SUNDAY + 40 * 60_000);
   assert.ok(numberOf(db, getCustomer(db, c.id)).active_at);
   assert.match(toran.alerts.find((a) => a.key === `number-active:${c.id}`).title, /המספר של החשמלאי של רמת גן פעיל/);

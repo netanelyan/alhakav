@@ -5,8 +5,9 @@ import { isMobile, local, normalize } from './phones.js';
 
 // The customers, as the admin sets them up and looks after them. A customer starts in "setup": their own number is
 // bought at Telnyx (voice only: it takes their forwarded calls and says whose they are) and pasted here, the customer
-// dials the forwarding codes, and the admin turns the assistant on. On WhatsApp every customer's assistant is המוקדן,
-// the one number all of them share (service.js), so nothing is registered for each.
+// dials the forwarding codes, and the assistant is on from the moment the codes go to them (setup.js), or when the admin
+// turns it on. On WhatsApp every customer's assistant is המוקדן, the one number all of them share (service.js), so
+// nothing is registered for each.
 
 export const getCustomer = (db, id) => db.get('SELECT * FROM customers WHERE id = ?', id);
 

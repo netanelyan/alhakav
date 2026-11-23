@@ -123,6 +123,26 @@ test('the try: המוקדן plays their own assistant, and at the end the summar
   assert.equal(db.get('SELECT count(*) AS n FROM demos').n, 1);
 });
 
+test("a customer's command is theirs even in a try they left open, and ends it", async () => {
+  const claude = fakeClaude([{ reply: 'מה הכתובת?', done: false, what: 'נזילה', place: '', urgency: '' }]);
+  const { app, db, graph } = testApp({ env: DENV, toranFetch: fakeToran().f });
+  app.claude = claude;
+  const lead = addLead(db);
+  const ME = '972541234567';
+  const sent = () => graph.sent().filter((c) => c.url.endsWith(`/${ASSIST}/messages`) && c.body.to === ME).map((c) => c.body.text.body);
+  // They tried it on their page and left it midway, then joined and got their codes.
+  await toAssist(app, ME, `אני רוצה לנסות (${pageCodeOf(db, lead)})`, 'd1');
+  await toAssist(app, ME, 'יש נזילה', 'd2');
+  await settle(app);
+  db.run("INSERT INTO customers (name, business, trade, phone, assistant, status, created_at, updated_at) VALUES ('אבי', 'אבי אינסטלציה', 'plumber', ?, '97243763891', 'active', '2026-11-22', '2026-11-22')", ME);
+  await toAssist(app, ME, 'לא לשלוח 0509998877', 'd3');
+  await settle(app);
+  assert.equal(db.get("SELECT count(*) AS n FROM skips WHERE phone = '972509998877'").n, 1);
+  assert.match(sent().at(-1), /050-999-8877 לא יקבל ממני הודעות/);
+  assert.equal(db.get('SELECT state FROM demos').state, 'done');
+  assert.equal(claude.seen.length, 1, 'the command never reached the try');
+});
+
 test('the try has limits: a few a day for one page', async () => {
   const { app, db, graph } = testApp({ env: DENV, toranFetch: fakeToran().f });
   const lead = addLead(db);
