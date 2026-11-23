@@ -111,7 +111,8 @@ const sampleOf = (code) => Object.keys(SAMPLE).find((t) => SAMPLE[t].code === co
 
 /**
  * The page, for one lead: a missed call and what they get from it, then two buttons. Few words: they read it on a job.
- * The sample page (lead.sample) also says it is one, and lets them switch trade.
+ * The sample page (lead.sample) also says it is one, and lets them switch trade. At the bottom, small, who writes to
+ * them (SENDER_LINE), the owner, 2026-11-23: "it can be shown in a small line in the demo bottom".
  */
 export function pageHtml(env, lead) {
   const biz = bizOf(lead);
@@ -136,6 +137,7 @@ export function pageHtml(env, lead) {
   ]
     .map(([k, v]) => `<div><dt>${k}</dt><dd${k === 'טלפון' ? ' dir="ltr"' : ''}>${esc(v)}</dd></div>`)
     .join('');
+  const sender = String(env.SENDER_LINE || '').trim();
   const icon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l1.3-3.9A8 8 0 1 1 8 18.8L4 20z"/></svg>';
   return `<!doctype html>
 <html lang="he" dir="rtl">
@@ -186,6 +188,7 @@ h1{margin-top:.25rem;font-size:clamp(1.9rem,8.5vw,2.4rem);line-height:1.15;font-
 .price p{color:var(--mute)}
 footer{margin-top:2rem;padding:1.25rem 0 2rem;background:var(--navy);color:#a9b9cd;font-size:.85rem;text-align:center}
 footer a{color:#fff}
+footer .who{margin-top:.6rem;font-size:.75rem}
 .sample{margin:1rem 0 0;padding:.55rem .8rem;border-radius:.8rem;background:#ffffff14;color:#d3dcea;font-size:.92rem}
 .trades{display:flex;flex-wrap:wrap;justify-content:center;gap:.35rem;margin-top:.6rem}
 .trades a{display:inline-flex;align-items:center;min-height:2.4rem;padding:.3rem .8rem;border-radius:999px;box-shadow:inset 0 0 0 2px #ffffff40;color:#fff;font-size:.9rem;font-weight:700;text-decoration:none}
@@ -207,7 +210,7 @@ ${lead.sample ? `<p class="sample">זה דף לדוגמה. ככה נראה הד�
 ${tryLink ? `<div class="cta"><h2>לנסות על עצמכם</h2><p>המוקדן כותב לכם כאילו התקשרתם לעסק, ובסוף מגיע הסיכום. לוקח דקה</p><a class="btn" href="${esc(tryLink)}">${icon}לנסות בוואטסאפ</a></div>` : ''}
 <div class="price"><h2>149 ₪ לחודש</h2><p>לא כולל מע״מ, ואין דמי הקמה</p>${talkLink ? `<a class="btn or" href="${esc(talkLink)}">${icon}רוצים את זה? כתבו לנו</a>` : ''}</div>
 </main>
-<footer><div class="wrap"><a href="/">על הקו</a> · <a href="/terms">תנאים</a> · <a href="/privacy">פרטיות</a> · <a href="/accessibility">נגישות</a></div></footer>
+<footer><div class="wrap"><a href="/">על הקו</a> · <a href="/terms">תנאים</a> · <a href="/privacy">פרטיות</a> · <a href="/accessibility">נגישות</a>${sender ? `<p class="who">${esc(sender)}</p>` : ''}</div></footer>
 </body>
 </html>`;
 }

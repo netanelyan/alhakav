@@ -50,6 +50,10 @@ test("a lead's page: their name, an example from their trade and city, the try a
   assert.match(html, new RegExp(`wa\\.me/972552735207\\?text=[^"]*${code}`), 'the try goes to המוקדן with the code');
   assert.match(html, /wa\.me\/972515310498/, 'the talk button goes to the business number');
   assert.match(html, /name="robots" content="noindex/);
+  // Who writes to them, small at the bottom, and only there.
+  assert.ok(html.includes('<p class="who">על הקו, ישראל ישראלי, רחוב הדוגמה 1, אשדוד. alhakav.example</p></div></footer>'));
+  assert.equal(html.split('ישראל ישראלי').length, 2);
+  assert.doesNotMatch(pageHtml({ ...app.env, SENDER_LINE: '' }, db.get('SELECT * FROM leads WHERE id = ?', lead.id)), /class="who"/);
 
   const server = createServer(handler(app));
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
