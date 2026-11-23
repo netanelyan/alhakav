@@ -84,8 +84,12 @@ payments are recorded as before and the receipt's page says the invoice was not 
 The payment is recorded first, always: an invoice that fails never holds it up, and the receipt's page shows Morning's
 code and words and "להפיק חשבונית שוב". One receipt is claimed before Morning is asked, so a double press never makes
 two documents. Read with the business's keys on 2026-11-21: `/documents/info` answers `vatRate` 0.18 and `exemption`
-false. UNVERIFIED until the first invoice, as in openfrequency: the error body's field names, and the client's `taxId`
-and `address` field names.
+false. Checked on 2026-11-23 against Morning's own spec (`developers.morning.co/docs/openapi.bundled.json`): the
+client's `taxId`, `address` and `emails`, payment type 4 for a bank transfer, and the answer's `id`, `number` and
+`url`. The same day the document for a first month went to `POST /documents/preview`, which builds the PDF and issues
+nothing (the next number stayed the same, and no client was added): a חשבונית מס/קבלה, 149 ₪, VAT 18% 26.82 ₪, 175.82 ₪
+by bank transfer, right. What it showed to fix is in Morning's business settings, not here: the business's name, logo and
+website on the document are the ones Morning has for the עוסק.
 
 ## Settings
 

@@ -21,8 +21,11 @@ import { PAY } from './copy.js';
 // out after 10 minutes (the process stopped mid-way) may be tried again, and the page says to look in Morning first.
 //
 // MORNING_CLIENT_ID and MORNING_CLIENT_SECRET turn it on (a Morning plan that includes the API); MORNING_ENV=sandbox
-// points it at Morning's sandbox. vatRate comes as 0.18 (read 2026-11-21; 18 is read too). UNVERIFIED until the first
-// invoice, as in openfrequency: the error body's field names, and the client's taxId and address fields.
+// points it at Morning's sandbox. vatRate comes as 0.18 (read 2026-11-21; 18 is read too). The client's taxId, address
+// and emails, payment type 4 (העברה בנקאית) and the answer's id, number and url { origin, he } are Morning's own
+// (developers.morning.co/docs/openapi.bundled.json, read 2026-11-23), and the document below came back as the right PDF
+// from POST /documents/preview, which issues nothing. The spec gives no error body but OAuth's { error,
+// error_description }: refuse() reads that and the errorCode / errorMessage Morning's documents API answered before.
 
 export const MORNING_URLS = {
   production: { token: 'https://api.morning.co/idp/v1/oauth/token', api: 'https://api.greeninvoice.co.il/api/v1' },
