@@ -3,6 +3,7 @@ import { MINUTE, now, nowIso } from './clock.js';
 import { TC } from './copy.js';
 import { num } from './env.js';
 import { local, normalize } from './phones.js';
+import { sendSetup } from './setup.js';
 import { availableNumbers, numbersOn, orderNumber, telnyxSettings } from './telnyx.js';
 
 // A customer's own number at Telnyx (docs/connecting.md), the one their unanswered calls are forwarded to, given when
@@ -13,7 +14,8 @@ import { availableNumbers, numbersOn, orderNumber, telnyxSettings } from './teln
 //           (TELNYX_REQUIREMENT_GROUP: our business's documents, which Telnyx asks of every Israeli number), at most
 //           NUMBERS_PER_MONTH (5) in a calendar month and NUMBER_MAX_USD ($5) up front and a month
 //   then    it is the customer's at once; the admin hears what happened, and again when Telnyx made a new one active
-//           (its review can take a day or more), so the forwarding codes go to the customer when they work
+//           (its review can take a day or more); the forwarding codes go to the customer by themselves the moment
+//           the number works (setup.js)
 //
 // Also from the customer's page ("לקנות מספר"), for a customer who does not pay (free) or after a failure. Nothing here
 // throws to its caller.
@@ -71,6 +73,8 @@ export async function giveNumber(app, customer) {
     const title = pick.bought ? TC.numbers.alert.bought(c.business, local(pick.digits)) : TC.numbers.alert.given(c.business, local(pick.digits));
     const body = `${pick.active ? TC.numbers.alert.ready : TC.numbers.alert.review(pick.monthly)}\n${page(env, c)}`;
     await alertOwner(app, `number:${c.id}`, title, body, 1);
+    // A number that works already: the customer gets the codes now (setup.js).
+    if (pick.active) await sendSetup(app, { ...c, assistant: pick.digits });
     return { ok: true, number: pick.digits, bought: pick.bought, active: pick.active };
   } catch (e) {
     app.log(`[numbers] customer ${c.id}: ${e.message}`);
@@ -102,7 +106,10 @@ export async function numbersTick(app, at = now()) {
     if (!n || n.status !== 'active') continue;
     app.db.run('UPDATE numbers SET active_at = ? WHERE id = ?', nowIso(at), w.id);
     const c = w.customer_id && app.db.get('SELECT * FROM customers WHERE id = ?', w.customer_id);
-    if (c && c.assistant === w.number) await alertOwner(app, `number-active:${c.id}`, TC.numbers.alert.active(c.business, local(w.number)), `${TC.numbers.alert.ready}\n${page(app.env, c)}`, 1);
+    if (c && c.assistant === w.number) {
+      await alertOwner(app, `number-active:${c.id}`, TC.numbers.alert.active(c.business, local(w.number)), `${TC.numbers.alert.ready}\n${page(app.env, c)}`, 1);
+      await sendSetup(app, c);
+    }
   }
 }
 

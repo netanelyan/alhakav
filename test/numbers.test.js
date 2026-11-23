@@ -6,6 +6,9 @@ import { forgetNumberLook, giveNumber, numberOf, numbersTick } from '../server/n
 import { manualPayment } from '../server/pay.js';
 import { TORAN_ENV, fakeToran, testApp } from './helpers.js';
 
+/** The setup messages Meta was sent (setup.js), on the business number. */
+const setupSends = (graph) => graph.calls.filter((x) => x.body?.template?.name === 'alhakav_setup' || (x.body?.type === 'text' && /שלושת הקודים/.test(x.body.text.body))).map((x) => x.body);
+
 const SUNDAY = Date.parse('2026-11-22T08:00:00Z');
 const NENV = { ...TORAN_ENV, TELNYX_API_KEY: 'key', TELNYX_PUBLIC_KEY: 'pub', TELNYX_API: 'https://telnyx.test/v2', TELNYX_CONNECTION_ID: 'conn1', TELNYX_REQUIREMENT_GROUP: 'grp1' };
 
@@ -45,20 +48,22 @@ beforeEach(() => {
 afterEach(() => setNow(null));
 
 test('a number we already have and no customer uses is given first, nothing bought', async () => {
-  const { app, toran, telnyx, customer } = setup(NENV, fakeTelnyx({ owned: [['+97243763889', 'active']] }));
+  const { app, graph, toran, telnyx, customer } = setup(NENV, fakeTelnyx({ owned: [['+97243763889', 'active']] }));
   const c = customer();
   const r = await giveNumber(app, c);
   assert.deepEqual(r, { ok: true, number: '97243763889', bought: false, active: true });
   assert.equal(getCustomer(app.db, c.id).assistant, '97243763889');
   assert.equal(telnyx.orders.length, 0);
   assert.match(toran.alerts[0].title, /אבי אינסטלציה קיבלו את המספר 04-376-3889/);
-  assert.match(toran.alerts[0].body, /קודי ההעברה/);
+  assert.match(toran.alerts[0].body, /הקודים להעברת השיחות נשלחים אליהם לבד/);
+  // The number works already, so the codes went to the customer at once (setup.js).
+  assert.deepEqual(setupSends(graph).map((m) => m.to), ['972541112222']);
   // Once they have one, nothing more.
   assert.equal((await giveNumber(app, getCustomer(app.db, c.id))).why, 'not_needed');
 });
 
 test('when every number is taken, one is bought with the documents and the voice app, and the admin hears when it works', async () => {
-  const { app, db, toran, telnyx, customer } = setup(NENV, fakeTelnyx({ owned: [['+97243763889', 'active']], available: [['+97243763891', 3, 3]] }));
+  const { app, db, graph, toran, telnyx, customer } = setup(NENV, fakeTelnyx({ owned: [['+97243763889', 'active']], available: [['+97243763891', 3, 3]] }));
   await giveNumber(app, customer('054-111-2222', 'אבי אינסטלציה'));
   const c = customer('054-333-4444', 'החשמלאי של רמת גן');
   const r = await giveNumber(app, c);
@@ -70,10 +75,14 @@ test('when every number is taken, one is bought with the documents and the voice
   // Telnyx still reviewing: nothing; once active: the admin hears.
   await numbersTick(app, SUNDAY + 20 * 60_000);
   assert.equal(toran.alerts.filter((a) => a.key === `number-active:${c.id}`).length, 0);
+  assert.equal(setupSends(graph).filter((m) => m.to === '972543334444').length, 0, 'no codes before the number works');
   telnyx.owned[1][1] = 'active';
   await numbersTick(app, SUNDAY + 40 * 60_000);
   assert.ok(numberOf(db, getCustomer(db, c.id)).active_at);
-  assert.match(toran.alerts.at(-1).title, /המספר של החשמלאי של רמת גן פעיל/);
+  assert.match(toran.alerts.find((a) => a.key === `number-active:${c.id}`).title, /המספר של החשמלאי של רמת גן פעיל/);
+  // And the codes went to the customer, on the new number.
+  const [sent] = setupSends(graph).filter((m) => m.to === '972543334444');
+  assert.equal(sent.template.components[0].parameters[1].text, '‎**61*043763891**20#‎');
 });
 
 test('limits: a few a month and a price ceiling, and the admin hears why', async () => {

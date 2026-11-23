@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { DAY, HOUR, israelDate, now, nowIso, quiet } from './clock.js';
+import { DAY, israelDate, now, nowIso, quiet } from './clock.js';
 import { addDays, billingOf, daysBetween, dateHe, money } from './billing.js';
 import { adminLink, alertOwner, whoIs } from './alerts.js';
 import { ALERT, PAY } from './copy.js';
@@ -8,6 +8,7 @@ import { GraphError, downloadMedia, metaSettings, sendTemplate, sendText } from 
 import { invoiceReceipt } from './morning.js';
 import { masked } from './phones.js';
 import { giveNumber } from './numbers.js';
+import { keep, windowOpen } from './toCustomer.js';
 
 // Paying (docs/payments.md), as openfrequency pays over WhatsApp, on the business number: the customer gets the
 // amount and the transfer details on WhatsApp, transfers, and sends the transfer's picture back to the business number.
@@ -80,19 +81,6 @@ export const noticesOf = (db, customerId, limit = 8) => db.all('SELECT * FROM pa
 export const customerByPhone = (db, phone) => (phone ? db.get("SELECT * FROM customers WHERE phone = ? ORDER BY status = 'stopped', id DESC LIMIT 1", phone) : null);
 
 // ---- to the customer, from the business number
-
-/** Until when we may write to this number in plain text: 24 hours after its last message to the business number. */
-function windowOpen(db, phone, at = now()) {
-  const last = db.get('SELECT max(last_in_at) AS t FROM leads WHERE mobile = ?', phone)?.t;
-  return Boolean(last && at - Date.parse(last) < 24 * HOUR - 5 * 60_000);
-}
-
-const leadOf = (db, c) => db.get('SELECT id FROM leads WHERE id = ?', c.lead_id ?? -1)?.id ?? db.get('SELECT id FROM leads WHERE mobile = ? ORDER BY id DESC LIMIT 1', c.phone)?.id ?? null;
-
-function keep(db, c, { kind, body, waId = null, status, error = null }) {
-  const at = nowIso();
-  db.run('INSERT INTO messages (lead_id, phone, dir, kind, body, wa_id, status, error, day, at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', leadOf(db, c), c.phone, 'out', kind, body, waId, status, error, israelDate(), at);
-}
 
 /** Plain text to the customer, inside the 24 hours. Answers whether it went. */
 async function tell(app, c, kind, body) {

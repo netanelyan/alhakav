@@ -1,5 +1,5 @@
 import { agoHe, dayMonth, hhmm } from './clock.js';
-import { CALL_OUTCOME, CHAT_STATE, CUST_STATUS, TC, TRADE } from './copy.js';
+import { CALL_OUTCOME, CHAT_STATE, CUST_STATUS, SETUP, TC, TRADE } from './copy.js';
 import { forwardCodes } from './customers.js';
 import { button, csrfField, empty, esc, flashLine, layout, ltr, tag } from './html.js';
 import { billingCard, payCard, payState, waitingCard } from './payPages.js';
@@ -62,8 +62,13 @@ function setupCard(app, csrf, c, at) {
   const assistant = c.assistant
     ? `<p>${ltr(local(c.assistant))}</p>${nr && !nr.active_at ? `<p class="note">${esc(TC.numbers.review)}</p>` : ''}`
     : `<p class="muted">${esc(TC.steps.assistantHint)}</p>${c.status === 'stopped' ? '' : `<div class="ops">${custButton(csrf, c.id, 'number', TC.numbers.buy, 'primary')}</div>`}`;
+  // The setup message (setup.js): when it last went, and the button that sends it again.
+  const sent = c.assistant && app.db.get("SELECT status, at FROM messages WHERE phone = ? AND kind = 'setup' ORDER BY id DESC LIMIT 1", c.phone);
+  const setupLine = c.assistant
+    ? `${sent ? `<p class="muted">${esc(SETUP.admin.last(`${dayMonth(Date.parse(sent.at))} ${hhmm(Date.parse(sent.at))}`, sent.status !== 'failed'))}</p>` : ''}<div class="ops">${custButton(csrf, c.id, 'setup-send', SETUP.admin.send, sent ? 'quiet' : 'primary')}</div>`
+    : '';
   const codes = c.assistant
-    ? `<p class="muted">${esc(TC.steps.forwardHint)}</p><textarea id="codes" rows="4" readonly dir="ltr">${esc(forwardCodes(c.assistant).join('\n'))}</textarea><p class="note">${esc(TC.steps.forwardWarn)}</p><p class="muted">${esc(c.last_call_at ? TC.steps.lastCall(`${agoHe(Date.parse(c.last_call_at), at)}, ${dayMonth(Date.parse(c.last_call_at))} ${hhmm(Date.parse(c.last_call_at))}`) : TC.steps.noCall)}</p>`
+    ? `${setupLine}<p class="muted">${esc(TC.steps.forwardHint)}</p><textarea id="codes" rows="4" readonly dir="ltr">${esc(forwardCodes(c.assistant).join('\n'))}</textarea><p class="note">${esc(TC.steps.forwardWarn)}</p><p class="muted">${esc(c.last_call_at ? TC.steps.lastCall(`${agoHe(Date.parse(c.last_call_at), at)}, ${dayMonth(Date.parse(c.last_call_at))} ${hhmm(Date.parse(c.last_call_at))}`) : TC.steps.noCall)}</p>`
     : '';
   const acts =
     c.status === 'active'
