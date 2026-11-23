@@ -109,6 +109,21 @@ test("a site Google gave: read as any site, with Google's mobile when the site s
   assert.equal(db.get("SELECT status FROM seen WHERE domain = 'down.example'").status, 'failed');
 });
 
+test('a shop is not a tradesperson: by its title, by its name on Google, or by Google calling it a store', async () => {
+  const pages = { 'https://edior.example/': '<html lang="he"><title>חנות חשמל בהרצליה | אינסטלציה ואביזרים</title><body><h1>אינסטלציה, ברזים, סתימות</h1>אינסטלציה אינסטלציה פתיחת סתימות. 050-765-4321</body></html>' };
+  const { app, db } = testApp({ fetchSite: async (url) => ({ url, status: 200, text: pages[url] || '' }) });
+  const g = fakePlaces([
+    place('s', { websiteUri: 'https://edior.example/' }),
+    place('n', { displayName: { text: 'חנות האינסטלציה של יוסי' }, nationalPhoneNumber: '052-111-2233' }),
+    place('h', { displayName: { text: 'ברזי השרון' }, types: ['hardware_store', 'store'], nationalPhoneNumber: '053-444-5566' }),
+    place('ok', { displayName: { text: 'יוסי אינסטלציה' }, types: ['plumber', 'store'], nationalPhoneNumber: '054-777-8899' }),
+  ]);
+  await discover(app, places({ apiKey: 'gk', queries: Q, fetchImpl: g.f }), { source: 'google' });
+  for (const key of ['edior.example', 'g:n', 'g:h']) assert.match(db.get('SELECT reason FROM seen WHERE domain = ?', key).reason, /נראה כמו חנות/, key);
+  // A plumber Google also files as a store is still a plumber.
+  assert.equal(db.get("SELECT qualified FROM leads WHERE domain = 'g:ok'").qualified, 1);
+});
+
 test('with only a Google key, the search runs on Google', async () => {
   const g = fakePlaces([place('b')]);
   const { app, db } = testApp({ env: { ...ENV, GOOGLE_MAPS_KEY: 'gk', BRAVE_API_KEY: '' } });

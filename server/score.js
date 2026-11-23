@@ -18,7 +18,8 @@ import { local } from './phones.js';
 //   chain    -40  a call centre, branches, "בכל הארץ", or eight or more cities
 //   special  -15  a 1-700, 1-800 or *XXXX number
 //
-// Rejected outright, whatever the score: a directory (six or more mobiles), a site not in Hebrew, none of the four
+// Rejected outright, whatever the score: a directory (six or more mobiles), a shop ("חנות" in its name, title or
+// headline, or a store on Google that is not one of the trades: it sells the parts), a site not in Hebrew, none of the four
 // trades, and no mobile, since a mobile is the only number we write to. Qualified: no rejection and 55 or more.
 //
 // Google (sources.js places): a site Google gave is scored as above, with the listing's mobile when the site shows
@@ -75,6 +76,7 @@ export function scoreLead(d, at = Date.now()) {
 
   let reject = null;
   if (d.directory) reject = `אתר של רשימות, לא של בעל מקצוע אחד (${d.directory})`;
+  else if (d.store) reject = `נראה כמו חנות, לא בעל מקצוע שמגיע לתקן ("${d.store}")`;
   else if (!listing && he < 0.15 && !d.lang?.startsWith('he') && d.dir !== 'rtl') reject = 'האתר לא בעברית';
   else if (!d.trade) reject = 'לא אינסטלטור, חשמלאי, טכנאי מזגנים או מנעולן';
   else if (!d.mobile) reject = `אין נייד ${where}, אז אין לאן לכתוב בוואטסאפ`;

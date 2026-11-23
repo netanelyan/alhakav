@@ -29,6 +29,10 @@ const CITY_RE = CITIES.map((c) => [CITY_AS[c] || c, new RegExp(`(?:^|[^\\u0590-\
 
 // A chain, a call centre or a company with branches, in what such sites say about themselves.
 const CHAIN = /מוקד (?:ארצי|שירות|הזמנות)|סניפי(?:ם|נו)|פריסה ארצית|בכל (?:רחבי )?(?:הארץ|ישראל)|רשת (?:ה)?(?:מנעולנים|אינסטלטורים|חשמלאים|טכנאים)|זכיינ/;
+// A shop that sells the parts, not someone who comes to fix: "חנות חשמל בהרצליה" scored 95 as a plumber on
+// 2026-11-23, its site full of plumbing products. Read in the name, title, headline and site name only.
+const STORE = /(?:^|[^֐-׿])(?:חנות|חנויות|חומרי בניין|כלי עבודה|סיטונא(?:ות|י)|אביזרי (?:חשמל|אינסטלציה))(?![֐-׿])/;
+const STORE_TYPES = ['store', 'hardware_store', 'home_goods_store', 'electronics_store', 'home_improvement_store', 'shopping_mall'];
 // A person talking about their own work: a sign of one tradesperson rather than a company.
 const OWNER = /(?:^|[^֐-׿])(?:שמי|נעים מאוד|אני (?:אינסטלטור|חשמלאי|טכנאי|מנעולן|מגיע|עובד|נותן))(?![֐-׿])/;
 const GENERIC = /^(?:דף הבית|עמוד הבית|ראשי|בית|home(?: ?page)?|main)$/i;
@@ -165,6 +169,7 @@ export function analyze(pages, finalUrl) {
     dir: home.dir,
     chain: chainWords ? `"${chainWords}"` : cities.length >= 8 ? `${cities.length} ערים באתר` : null,
     directory: mobiles.length >= 6 ? `${mobiles.length} מספרי נייד שונים באתר` : null,
+    store: STORE.exec(head)?.[0].trim() || null,
     ownerVoice: OWNER.test(text),
     year: year || null,
   };
@@ -207,6 +212,7 @@ export function fromPlace(c) {
     dir: 'rtl',
     chain: chain ? `"${chain}"` : null,
     directory: null,
+    store: STORE.exec(p.name)?.[0].trim() || (p.types.some((t) => STORE_TYPES.includes(t)) && !p.types.includes(PLACE_TYPES[trade]) ? 'חנות לפי גוגל' : null),
     ownerVoice: false,
     year: null,
     google: { site: false, rating: p.rating, reviews: p.reviews },
