@@ -33,6 +33,16 @@ const CHAIN = /מוקד (?:ארצי|שירות|הזמנות)|סניפי(?:ם|נ�
 // 2026-11-23, its site full of plumbing products. Read in the name, title, headline and site name only.
 const STORE = /(?:^|[^֐-׿])(?:חנות|חנויות|חומרי בניין|כלי עבודה|סיטונא(?:ות|י)|אביזרי (?:חשמל|אינסטלציה))(?![֐-׿])/;
 const STORE_TYPES = ['store', 'hardware_store', 'home_goods_store', 'electronics_store', 'home_improvement_store', 'shopping_mall'];
+// Another kind of business that a search for a trade brings up, read in the same places: one for cars, whose callers
+// are drivers and not homes ("אלכס חשמל רכב הרצליה", "כולבו רכב אבי", 2026-11-23; a locksmith who opens cars is still a
+// locksmith), and a handyman or a renovator that does not name one of the four ("איצקו | הנדימן ושיפוצים", filed as an
+// AC technician by the search alone). "הרכבת מזגנים" is installing, not a car: nothing may be glued after the word.
+const CAR = /(?:^|[^֐-׿])[ובלמהש]{0,2}(?:רכב|רכבים|מוסך|מוסכים)(?![֐-׿])/;
+const CAR_TYPES = ['car_repair', 'car_dealer', 'auto_parts_store', 'car_wash', 'car_rental'];
+const HANDY = /(?:^|[^֐-׿])ו?(?:הנדימן|שיפוצים|שיפוצניק|אחזקת מבנים)(?![֐-׿])|handyman/i;
+// No name but the trade's: a page that sells the calls it gets, not one tradesperson's own site ("חשמלאי" on a
+// subdomain of an unrelated site, "צוות מומחים", 2026-11-23).
+const NAMELESS = /^ה?(?:חשמלאי|אינסטלטור|טכנאי מזגנים|טכנאי מיזוג(?: אוויר)?|מנעולן|plumber|electrician|locksmith)(?:\s+(?:זמין|מוסמך|מומלץ|מקצועי|מהיר|24\/7|24 שעות))*$/i;
 // A person talking about their own work: a sign of one tradesperson rather than a company.
 const OWNER = /(?:^|[^֐-׿])(?:שמי|נעים מאוד|אני (?:אינסטלטור|חשמלאי|טכנאי|מנעולן|מגיע|עובד|נותן))(?![֐-׿])/;
 const GENERIC = /^(?:דף הבית|עמוד הבית|ראשי|בית|home(?: ?page)?|main)$/i;
@@ -114,6 +124,15 @@ export function tradeOf(p) {
   return n >= 3 ? { trade, hits: n } : { trade: null, hits: 0 };
 }
 
+/** Why a business found as a tradesperson is another kind (CAR, HANDY), from its name or headings, else null. */
+function otherKind(head, trade, types = []) {
+  const car = CAR.exec(head)?.[0].trim();
+  if (trade !== 'locksmith' && (car || types.some((t) => CAR_TYPES.includes(t)))) return `נראה כמו עסק לרכב${car ? ` ("${car}")` : ' לפי גוגל'}, לא בעל מקצוע שמגיע לבית`;
+  const handy = HANDY.exec(head)?.[0].trim();
+  if (handy && !tradeOf({ title: head, h1: '', siteName: '', description: '', text: '' }).trade) return `נראה כמו הנדימן או שיפוצים ("${handy}"), לא אחד מארבעת המקצועות`;
+  return null;
+}
+
 /** The cities a text names, each once, in the order they first appear. */
 export function citiesIn(text) {
   const found = [];
@@ -170,6 +189,8 @@ export function analyze(pages, finalUrl) {
     chain: chainWords ? `"${chainWords}"` : cities.length >= 8 ? `${cities.length} ערים באתר` : null,
     directory: mobiles.length >= 6 ? `${mobiles.length} מספרי נייד שונים באתר` : null,
     store: STORE.exec(head)?.[0].trim() || null,
+    other: otherKind(`${home.title} ${home.h1} ${home.siteName}`, trade),
+    nameless: NAMELESS.test(nameOf(home).trim()),
     ownerVoice: OWNER.test(text),
     year: year || null,
   };
@@ -213,6 +234,8 @@ export function fromPlace(c) {
     chain: chain ? `"${chain}"` : null,
     directory: null,
     store: STORE.exec(p.name)?.[0].trim() || (p.types.some((t) => STORE_TYPES.includes(t)) && !p.types.includes(PLACE_TYPES[trade]) ? 'חנות לפי גוגל' : null),
+    other: otherKind(p.name, trade, p.types),
+    nameless: NAMELESS.test(p.name.trim()),
     ownerVoice: false,
     year: null,
     google: { site: false, rating: p.rating, reviews: p.reviews },

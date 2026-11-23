@@ -59,6 +59,15 @@ export function saveLead(db, d, s, c) {
   return { id: Number(r.lastInsertRowid), created: true };
 }
 
+/** A site Google gave, with what its listing adds: the reviews, and the listing's mobile when the site shows none. */
+function withListing(d, place) {
+  if (place && d.google?.site !== false) {
+    d.google = { site: true, rating: place.rating, reviews: place.reviews };
+    if (!d.mobile && isMobile(place.phone)) Object.assign(d, { mobile: place.phone, mobiles: [place.phone, ...d.mobiles], mobileFrom: 'google' });
+  }
+  return d;
+}
+
 export async function discover(app, candidates, { limit = 30, concurrency = 3, source = 'mixed', query = null, force = false } = {}) {
   const { db } = app;
   const run = Number(db.run('INSERT INTO runs (source, query, started_at) VALUES (?, ?, ?)', source, query, nowIso()).lastInsertRowid);
@@ -87,10 +96,7 @@ export async function discover(app, candidates, { limit = 30, concurrency = 3, s
         key = d.domain;
       }
     }
-    if (place && d.google?.site !== false) {
-      d.google = { site: true, rating: place.rating, reviews: place.reviews };
-      if (!d.mobile && isMobile(place.phone)) Object.assign(d, { mobile: place.phone, mobiles: [place.phone, ...d.mobiles], mobileFrom: 'google' });
-    }
+    withListing(d, place);
     const site = d.domain || key;
     // A redirect can land on a site we already have (a second domain of the same business).
     if (site !== key && !force && known(db, site)) {
@@ -149,6 +155,36 @@ export async function discover(app, candidates, { limit = 30, concurrency = 3, s
   db.run('UPDATE runs SET finished_at = ?, stats = ?, error = ? WHERE id = ?', nowIso(), JSON.stringify(stats), error, run);
   if (error) throw Object.assign(new Error(error), { stats });
   return { stats, results };
+}
+
+/**
+ * The leads not written to yet, read and scored again under today's rules: one that passed under the old ones and no
+ * longer does is set aside with its reason, and one that passes now is offered. Only the ones a search found: a lead
+ * added by hand or by its address stays as the admin left it. A site that does not open keeps what it was.
+ */
+export async function rescore(app, { concurrency = 3 } = {}) {
+  const { db } = app;
+  const rows = db.all("SELECT * FROM leads WHERE stage = 'new' AND first_at IS NULL AND source IN ('google', 'brave', 'seed') ORDER BY id");
+  const changed = [];
+  let failed = 0;
+  const one = async (x) => {
+    const c = { url: x.url, source: x.source, detail: JSON.parse(x.detail || '{}') };
+    let d;
+    try {
+      d = x.domain?.startsWith('g:') ? fromPlace(c) : withListing(await detect(x.url, { fetcher: app.fetchSite }), c.detail.place);
+    } catch {
+      failed++;
+      return;
+    }
+    d.domain = x.domain;
+    const s = scoreLead(d, now());
+    saveLead(db, d, s, c);
+    if (s.qualified !== Boolean(x.qualified) || s.score !== x.score || s.reject !== x.reject || d.trade !== x.trade) {
+      changed.push({ id: x.id, name: d.name, was: { fit: Boolean(x.qualified), score: x.score, trade: x.trade }, now: { fit: s.qualified, score: s.score, trade: d.trade, reject: s.reject } });
+    }
+  };
+  for (let i = 0; i < rows.length; i += concurrency) await Promise.all(rows.slice(i, i + concurrency).map(one));
+  return { looked: rows.length, failed, changed: changed.sort((a, b) => a.id - b.id) };
 }
 
 /** The last run, for the leads page: when, what it looked at, what it added, and why it stopped. */

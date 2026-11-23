@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { MIN_PASSWORD, hashPassword } from './auth.js';
 import { DAY, MINUTE, dayNumber, now, nowIso } from './clock.js';
 import { Db } from './db.js';
-import { dailyDiscovery, discover, searchKeys } from './discover.js';
+import { dailyDiscovery, discover, rescore, searchKeys } from './discover.js';
 import { digestTick } from './digest.js';
 import { loadEnv, num } from './env.js';
 import { purgeLeads } from './leads.js';
@@ -23,6 +23,7 @@ import { brave, fromUrls, places, queriesFor, seeds, together } from './sources.
 //                                [--url site.co.il] [--seeds]
 //                                                 one discovery run now, from Brave, one site, or private/seeds.txt
 //   node server/main.js list [n]                  the newest n leads (default 20)
+//   node server/main.js rescore                   the leads not written to yet, read and scored again (discover.js)
 //   node server/main.js support [file]            what Toran knows about על הקו, for its company sync (docs/toran.md)
 //   node server/main.js templates [file]          the WhatsApp templates to submit to Meta (server/templates.js)
 //   node server/main.js eval                      המוקדן's guardrails against the real model (server/eval.js)
@@ -130,6 +131,19 @@ async function discoverNow() {
   db.close();
 }
 
+/** The leads not written to yet, scored again after the rules change: each one whose verdict moved, and why. */
+async function rescoreNow() {
+  const db = openDb();
+  const app = makeApp({ db, env, log });
+  const r = await rescore(app);
+  for (const x of r.changed) {
+    const was = `${x.was.fit ? '✓' : '–'}${x.was.score} ${x.was.trade || '-'}`;
+    log(`  ${x.id} ${x.name}: ${was} -> ${x.now.fit ? '✓' : '–'}${x.now.score} ${x.now.trade || '-'}${x.now.reject ? ` (${x.now.reject})` : ''}`);
+  }
+  log(`[rescore] ${r.looked} looked at, ${r.changed.length} changed, ${r.failed} did not open`);
+  db.close();
+}
+
 function list() {
   const db = openDb();
   const n = Number(rest[0]) || 20;
@@ -184,9 +198,9 @@ async function templates() {
   } else process.stdout.write(json);
 }
 
-const run = { serve, password, discover: discoverNow, list, support, templates, eval: evalNow }[cmd];
+const run = { serve, password, discover: discoverNow, rescore: rescoreNow, list, support, templates, eval: evalNow }[cmd];
 if (!run) {
-  console.error(`unknown command: ${cmd} (serve, password, discover, list, support, templates, eval)`);
+  console.error(`unknown command: ${cmd} (serve, password, discover, rescore, list, support, templates, eval)`);
   process.exit(1);
 }
 await run();

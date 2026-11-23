@@ -19,8 +19,9 @@ import { local } from './phones.js';
 //   special  -15  a 1-700, 1-800 or *XXXX number
 //
 // Rejected outright, whatever the score: a directory (six or more mobiles), a shop ("חנות" in its name, title or
-// headline, or a store on Google that is not one of the trades: it sells the parts), a site not in Hebrew, none of the four
-// trades, and no mobile, since a mobile is the only number we write to. Qualified: no rejection and 55 or more.
+// headline, or a store on Google that is not one of the trades: it sells the parts), a business for cars or a handyman
+// (detect.js CAR, HANDY), a site not in Hebrew, none of the four trades, no name but the trade's (a page that sells
+// its calls), and no mobile, since a mobile is the only number we write to. Qualified: no rejection and 55 or more.
 //
 // Google (sources.js places): a site Google gave is scored as above, with the listing's mobile when the site shows
 // none, and 3 or more Google reviews count as alive. A business with no site of its own is scored from its listing
@@ -77,8 +78,10 @@ export function scoreLead(d, at = Date.now()) {
   let reject = null;
   if (d.directory) reject = `אתר של רשימות, לא של בעל מקצוע אחד (${d.directory})`;
   else if (d.store) reject = `נראה כמו חנות, לא בעל מקצוע שמגיע לתקן ("${d.store}")`;
+  else if (d.other) reject = d.other;
   else if (!listing && he < 0.15 && !d.lang?.startsWith('he') && d.dir !== 'rtl') reject = 'האתר לא בעברית';
   else if (!d.trade) reject = 'לא אינסטלטור, חשמלאי, טכנאי מזגנים או מנעולן';
+  else if (d.nameless) reject = `אין שם של עסק, רק "${d.name}": נראה כמו דף שמוכר פניות, לא בעל מקצוע אחד`;
   else if (!d.mobile) reject = `אין נייד ${where}, אז אין לאן לכתוב בוואטסאפ`;
 
   return { score, breakdown: b, qualified: !reject && score >= QUALIFY_AT, reject };

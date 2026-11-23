@@ -53,8 +53,8 @@ test('a directory, a chain and a bakery are told apart from a tradesperson', () 
   const dir = scoreLead(detected('directory'));
   assert.match(dir.reject, /רשימות/);
   const chain = scoreLead(detected('chain'));
-  assert.equal(chain.reject, null);
-  assert.ok(!chain.qualified, `a chain scores under the bar (${chain.score})`);
+  assert.match(chain.reject, /אין שם של עסק, רק "מנעולן 24\/7"/, 'a call centre with no name but the trade');
+  assert.ok(chain.score < 55, `a chain scores under the bar too (${chain.score})`);
   assert.ok(chain.breakdown.some((f) => f.factor === 'chain' && f.points < 0));
   assert.ok(chain.breakdown.some((f) => f.factor === 'special' && f.points < 0));
   assert.match(scoreLead(detected('bakery')).reject, /לא אינסטלטור/);

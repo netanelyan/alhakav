@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { discover, startDiscovery } from '../server/discover.js';
+import { discover, rescore, startDiscovery } from '../server/discover.js';
 import { addByHand } from '../server/leads.js';
 import { places } from '../server/sources.js';
 import { ENV, fixture, testApp } from './helpers.js';
@@ -122,6 +122,51 @@ test('a shop is not a tradesperson: by its title, by its name on Google, or by G
   for (const key of ['edior.example', 'g:n', 'g:h']) assert.match(db.get('SELECT reason FROM seen WHERE domain = ?', key).reason, /נראה כמו חנות/, key);
   // A plumber Google also files as a store is still a plumber.
   assert.equal(db.get("SELECT qualified FROM leads WHERE domain = 'g:ok'").qualified, 1);
+});
+
+test('a business for cars, a handyman, or a page with no name but the trade is not a tradesperson to write to', async () => {
+  const pages = {
+    'https://electric.unrelated.example/': '<html lang="he"><title>חשמלאי - חשמלאי זמין</title><body><h1>חשמלאי זמין</h1>חשמלאי חשמלאי עבודות חשמל, צוות מומחים. 055-930-2129</body></html>',
+    'https://carfix.example/': '<html lang="he"><title>חשמלאי רכב בהרצליה | יוסי</title><body><h1>חשמלאי רכב</h1>חשמלאי חשמלאי עבודות חשמל. 050-765-4321</body></html>',
+  };
+  const { app, db } = testApp({ fetchSite: async (url) => ({ url, status: 200, text: pages[url] || '' }) });
+  const ac = [{ q: 'טכנאי מזגנים בהרצליה', trade: 'ac', city: 'הרצליה' }];
+  const g = fakePlaces([
+    place('car', { displayName: { text: 'אלכס חשמל רכב הרצליה' }, types: ['electrician'], nationalPhoneNumber: '052-111-2233' }),
+    place('garage', { displayName: { text: 'כולבו רכב אבי' }, types: ['car_repair'], nationalPhoneNumber: '052-111-2234' }),
+    place('handy', { displayName: { text: 'איצקו | הנדימן ושיפוצים' }, types: ['service'], nationalPhoneNumber: '052-111-2235' }),
+    place('plumbs', { displayName: { text: 'משה אינסטלציה ושיפוצים' }, types: ['plumber'], nationalPhoneNumber: '052-111-2236' }),
+    place('fitter', { displayName: { text: "גולצ'י מזגנים - הרכבת מזגנים" }, types: ['service'], nationalPhoneNumber: '052-111-2237' }),
+    place('keys', { displayName: { text: 'דני מנעולן - פריצת רכב ודלתות' }, types: ['locksmith'], nationalPhoneNumber: '052-111-2238' }),
+    place('site1', { websiteUri: 'https://electric.unrelated.example/', nationalPhoneNumber: '055-930-2129' }),
+    place('site2', { websiteUri: 'https://carfix.example/', nationalPhoneNumber: '050-765-4321' }),
+  ]);
+  await discover(app, places({ apiKey: 'gk', queries: ac, fetchImpl: g.f }), { source: 'google' });
+  const reason = (key) => db.get('SELECT reason FROM seen WHERE domain = ?', key)?.reason;
+  assert.match(reason('g:car'), /עסק לרכב \("רכב"\)/);
+  assert.match(reason('g:garage'), /עסק לרכב/);
+  assert.match(reason('g:handy'), /הנדימן או שיפוצים/, 'not an AC technician because the search was for one');
+  assert.match(reason('carfix.example'), /עסק לרכב/);
+  assert.match(reason('electric.unrelated.example'), /אין שם של עסק, רק "חשמלאי"/);
+  // A plumber who also renovates, an AC technician who installs ("הרכבת"), and a locksmith who opens cars stay.
+  for (const key of ['g:plumbs', 'g:fitter', 'g:keys']) assert.equal(db.get('SELECT qualified FROM leads WHERE domain = ?', key)?.qualified, 1, key);
+});
+
+test('the leads not written to yet are scored again under the new rules: the misfits are set aside, the rest stay', async () => {
+  const { app, db } = testApp();
+  const g = fakePlaces([place('car', { displayName: { text: 'אלכס חשמל רכב הרצליה' }, types: ['electrician'] }), place('ok', { nationalPhoneNumber: '052-111-2233' })]);
+  await discover(app, places({ apiKey: 'gk', queries: Q, fetchImpl: g.f }), { source: 'google', force: true });
+  // As this morning's search left them, before the rule: both fit, and one was written to already.
+  db.run("UPDATE leads SET qualified = 1, reject = NULL, score = 70 WHERE domain = 'g:car'");
+  db.run("INSERT INTO leads (domain, name, mobile, source, qualified, score, trade, created_at, updated_at, first_at, stage) VALUES ('g:sent', 'כולבו רכב אבי', '972521112299', 'google', 1, 60, 'electrician', '2026-11-23', '2026-11-23', '2026-11-23', 'waiting')");
+  const r = await rescore(app);
+  assert.equal(r.looked, 2, 'the one written to is not looked at');
+  assert.deepEqual(r.changed.map((x) => [x.name, x.was.fit, x.now.fit]), [['אלכס חשמל רכב הרצליה', true, false]]);
+  const car = db.get("SELECT qualified, reject FROM leads WHERE domain = 'g:car'");
+  assert.equal(car.qualified, 0);
+  assert.match(car.reject, /עסק לרכב/);
+  assert.equal(db.get("SELECT qualified FROM leads WHERE domain = 'g:ok'").qualified, 1);
+  assert.equal(db.get("SELECT qualified FROM leads WHERE domain = 'g:sent'").qualified, 1);
 });
 
 test('with only a Google key, the search runs on Google', async () => {
