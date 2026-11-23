@@ -98,6 +98,8 @@ test('a picture of the transfer becomes a receipt; "התשלום הגיע" recor
   assert.equal(doc.type, 320);
   assert.deepEqual(doc.client, { name: 'אבי אינסטלציה', taxId: '012345678', emails: ['avi@example.com'], add: true });
   assert.deepEqual(doc.income.map((i) => [i.price, i.vatType]), [[149, 0]]);
+  // The head is the עוסק's, shared with the owner's other businesses; the document itself says it is על הקו.
+  assert.match(doc.footer, /^על הקו( · \S+)?$/);
   assert.deepEqual(doc.payment, [{ date: '2026-11-22', type: 4, price: 175.82, currency: 'ILS' }]);
   const after = db.get('SELECT * FROM receipts WHERE id = ?', r.id);
   assert.deepEqual([after.decision, after.morning_state, after.morning_number], ['paid', 'issued', '1001']);

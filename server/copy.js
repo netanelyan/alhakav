@@ -531,6 +531,8 @@ export const PAY = {
   invoice: {
     description: 'על הקו, עוזר לשיחות שלא נענו',
     row: (from, until) => `על הקו, ${from} עד ${until}`,
+    // The site as people type it: "alhakav.com", not "https://alhakav.com/".
+    footer: (site) => ['על הקו', String(site || '').trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '')].filter(Boolean).join(' · '),
     email: 'קיבלנו את התשלום על החודש, והחשבונית מצורפת.',
   },
   state: {

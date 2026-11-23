@@ -105,8 +105,13 @@ export function vatProblem(info) {
   return Math.abs(rate - VAT) > 1e-9 ? { reason: 'vat_rate', rate: `${Math.round(rate * 10000) / 100}%` } : null;
 }
 
-/** The document Morning is asked for (step 3 above), from the receipt's bill and the customer's invoice details. */
-export function documentFor({ name, taxId, address, email, bill, today = israelDate() }) {
+/**
+ * The document Morning is asked for (step 3 above), from the receipt's bill and the customer's invoice details. The
+ * document's head is the עוסק's as Morning has it, shared by the owner's other businesses under the same name (the
+ * owner, 2026-11-23), so what says על הקו is in the document itself: its description, its row, and the footer with
+ * the site.
+ */
+export function documentFor({ name, taxId, address, email, bill, site = '', today = israelDate() }) {
   return {
     type: 320,
     lang: 'he',
@@ -114,6 +119,7 @@ export function documentFor({ name, taxId, address, email, bill, today = israelD
     vatType: 0,
     date: today,
     description: PAY.invoice.description,
+    footer: PAY.invoice.footer(site),
     client: { name, ...(taxId ? { taxId } : {}), ...(address ? { address } : {}), ...(email ? { emails: [email] } : {}), add: true },
     income: [{ description: PAY.invoice.row(dateHe(bill.from), dateHe(bill.until)), quantity: 1, price: bill.net, currency: 'ILS', vatType: 0 }],
     payment: [{ date: today, type: 4, price: bill.total, currency: 'ILS' }],
@@ -159,7 +165,7 @@ export async function invoiceReceipt(app, receiptId, today = israelDate()) {
   try {
     const problem = vatProblem(await app.morning.info());
     if (problem) return stop('blocked', problem);
-    doc = await app.morning.issue(documentFor({ name: r.invoice_name || r.business, taxId: r.tax_id, address: r.address, email: r.email, bill, today }));
+    doc = await app.morning.issue(documentFor({ name: r.invoice_name || r.business, taxId: r.tax_id, address: r.address, email: r.email, bill, site: app.env.SITE_URL, today }));
     if (doc?.id == null || doc.number == null) throw new MorningError('bad_answer', { step: 'issue' });
   } catch (e) {
     return stop('failed', e instanceof MorningError ? { code: e.code, status: e.status, detail: e.detail, step: e.step } : { code: 'error', status: null, detail: '', step: '' });
