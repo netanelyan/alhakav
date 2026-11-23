@@ -33,13 +33,31 @@ test('in the Hebrew message each code stands alone on its line, left to right, i
   assert.equal(codeLine('**61*043763889**20#'), '```‎**61*043763889**20#‎```');
   // The three come in the order they are explained: not answered, busy, off.
   assert.ok(text.indexOf(codes[0]) < text.indexOf(codes[1]) && text.indexOf(codes[1]) < text.indexOf(codes[2]));
-  assert.match(text, /^העוזר של אבי אינסטלציה מוכן\./);
+  assert.match(text, /^✅ \*העוזר של אבי אינסטלציה מוכן\*\n/);
+});
+
+test('the bold and the emojis: every other line reads right to left, and each bold part opens and closes on its line', () => {
+  const codes = setupCodes('97243763889');
+  const text = setupText({ business: 'אבי אינסטלציה' }, codes, '972552735207');
+  const words = text.split('\n').filter((l) => l && !l.startsWith('```'));
+  for (const l of words) {
+    // An emoji, then Hebrew; or Hebrew from the first letter. Never a digit, a Latin letter or a bare * first.
+    assert.match(l, /^(?:\p{Extended_Pictographic}️? \*?)?[א-ת]/u, l);
+    // WhatsApp's bold: *, a letter, ..., a letter or ? , *. Never an * next to a space inside, never one left open.
+    const stars = l.match(/\*/g) || [];
+    assert.equal(stars.length % 2, 0, l);
+    for (const b of l.match(/\*[^*]*\*/g) || []) assert.match(b, /^\*\S[^*]*\S\*$/, b);
+  }
+  assert.deepEqual(
+    words.filter((l) => /^\p{Extended_Pictographic}/u.test(l)).map((l) => l.split(' ')[0]),
+    ['✅', '📞', '🧪', '🚫', '💬']
+  );
 });
 
 test("it also says how to keep a number off המוקדן's messages and put it back, written to המוקדן at its own number", () => {
   const text = setupText({ business: 'אבי אינסטלציה' }, setupCodes('97243763889'), '972552735207');
   const [para] = text.split('\n\n').filter((x) => x.includes('לא לשלוח'));
-  assert.equal(para, 'מישהו לא צריך לקבל הודעה מהמוקדן, כמו אמא או ספק? כותבים למוקדן בוואטסאפ, למספר 055-273-5207, "לא לשלוח" ואת המספר שלו. למשל: לא לשלוח 0501234567. כדי שהוא יקבל שוב הודעות, כותבים למוקדן "לשלוח" ואת המספר.');
+  assert.equal(para, '🚫 *מישהו לא צריך לקבל הודעה מהמוקדן?*\nלמשל אמא או ספק. כותבים למוקדן בוואטסאפ, למספר 055-273-5207, "לא לשלוח" ואת המספר שלו, ככה: לא לשלוח 0501234567\nכדי שהוא יקבל שוב הודעות, כותבים למוקדן "לשלוח" ואת המספר.');
   // After the codes and the check, before the way to reach us.
   assert.ok(text.indexOf('**62*') < text.indexOf(para) && text.indexOf(para) < text.indexOf('אם משהו לא עובד'));
 });
