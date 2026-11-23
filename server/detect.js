@@ -21,7 +21,8 @@ export const CITIES = [
   'דימונה', 'אופקים', 'שדרות', 'נתיבות', 'גדרה', 'גן יבנה', 'קריית מלאכי', 'קרית מלאכי', 'זכרון יעקב', 'פרדס חנה', 'כפר יונה', 'אור עקיבא',
   'טירת כרמל', 'קריית שמונה', 'קרית שמונה', 'מעלה אדומים', 'ביתר עילית', 'מודיעין עילית', 'עכו', 'נצרת', 'רהט', 'גבעת שמואל',
   'קריית טבעון', 'יקנעם', 'מגדל העמק', 'בית שאן', 'ערד', 'אריאל', 'באר יעקב', 'מזכרת בתיה', 'קדימה', 'תל מונד', 'אבן יהודה', 'גבעת זאב',
-  'כוכב יאיר', 'ראש פינה', 'קצרין', 'מבשרת ציון', 'אלפי מנשה', 'קריית ארבע', 'שוהם',
+  'כוכב יאיר', 'ראש פינה', 'קצרין', 'מבשרת ציון', 'אלפי מנשה', 'קריית ארבע', 'שוהם', 'רמת השרון', 'כפר קאסם', 'טירה', 'טייבה',
+  'אום אל פחם', 'קלנסווה', 'גני תקווה', 'סביון', 'כפר שמריהו', 'בנימינה', 'חריש', 'צור הדסה', 'קריית עקרון',
 ];
 const CITY_AS = { 'פתח תקוה': 'פתח תקווה', 'קרית גת': 'קריית גת', 'קרית אתא': 'קריית אתא', 'קרית מוצקין': 'קריית מוצקין', 'קרית ביאליק': 'קריית ביאליק', 'קרית ים': 'קריית ים', 'קרית אונו': 'קריית אונו', 'קרית מלאכי': 'קריית מלאכי', 'קרית שמונה': 'קריית שמונה' };
 // A city's name with its one or two prefix letters (באשדוד, ובאשדוד, לחיפה) and nothing glued after it.
@@ -31,7 +32,7 @@ const CITY_RE = CITIES.map((c) => [CITY_AS[c] || c, new RegExp(`(?:^|[^\\u0590-\
 const CHAIN = /מוקד (?:ארצי|שירות|הזמנות)|סניפי(?:ם|נו)|פריסה ארצית|בכל (?:רחבי )?(?:הארץ|ישראל)|רשת (?:ה)?(?:מנעולנים|אינסטלטורים|חשמלאים|טכנאים)|זכיינ/;
 // A shop that sells the parts, not someone who comes to fix: "חנות חשמל בהרצליה" scored 95 as a plumber on
 // 2026-11-23, its site full of plumbing products. Read in the name, title, headline and site name only.
-const STORE = /(?:^|[^֐-׿])(?:חנות|חנויות|חומרי בניין|כלי עבודה|סיטונא(?:ות|י)|אביזרי (?:חשמל|אינסטלציה))(?![֐-׿])/;
+const STORE = /(?:^|[^֐-׿])[ובלמה]{0,2}(?:חנות|חנויות|חומרי בניין|כלי עבודה|סיטונא(?:ות|י)|אביזרי (?:חשמל|אינסטלציה|מיזוג))(?![֐-׿])|\b(?:store|shop)\b/i;
 const STORE_TYPES = ['store', 'hardware_store', 'home_goods_store', 'electronics_store', 'home_improvement_store', 'shopping_mall'];
 // Another kind of business that a search for a trade brings up, read in the same places: one for cars, whose callers
 // are drivers and not homes ("אלכס חשמל רכב הרצליה", "כולבו רכב אבי", 2026-11-23; a locksmith who opens cars is still a
@@ -39,13 +40,18 @@ const STORE_TYPES = ['store', 'hardware_store', 'home_goods_store', 'electronics
 // AC technician by the search alone). "הרכבת מזגנים" is installing, not a car: nothing may be glued after the word.
 const CAR = /(?:^|[^֐-׿])[ובלמהש]{0,2}(?:רכב|רכבים|מוסך|מוסכים)(?![֐-׿])/;
 const CAR_TYPES = ['car_repair', 'car_dealer', 'auto_parts_store', 'car_wash', 'car_rental'];
-const HANDY = /(?:^|[^֐-׿])ו?(?:הנדימן|שיפוצים|שיפוצניק|אחזקת מבנים)(?![֐-׿])|handyman/i;
+const HANDY = /(?:^|[^֐-׿])[והל]{0,2}(?:הנדימן|שיפוצים|שיפוצניק|אחזקת מבנים)(?![֐-׿])|handyman/i;
+// A technician of another trade the search for an AC technician or an electrician brings up: fridges, gas, household
+// appliances ("טכנאי מקררים", "טכנאי גז", "טכנאי מוצרי חשמל ביתיים", 2026-11-23), unless it names one of the four too.
+const OTHER_TECH = /(?:^|[^֐-׿])(?:טכנאי (?:מקררים|גז|מכונות כביסה|מוצרי חשמל)|תיקון מקררים|מוצרי חשמל)(?![֐-׿])/;
+// A site that lists and recommends tradespeople, in what it says about itself ("כל הטובים", 2026-11-23).
+const LISTS = /תמצאו (?:המלצות|בעלי מקצוע)|בעלי מקצוע מומלצים|אינדקס (?:בעלי מקצוע|עסקים)|מאגר (?:בעלי מקצוע|נותני שירות)/;
 // No name but the trade's: a page that sells the calls it gets, not one tradesperson's own site ("חשמלאי" on a
 // subdomain of an unrelated site, "צוות מומחים", 2026-11-23).
 const NAMELESS = /^ה?(?:חשמלאי|אינסטלטור|טכנאי מזגנים|טכנאי מיזוג(?: אוויר)?|מנעולן|plumber|electrician|locksmith)(?:\s+(?:זמין|מוסמך|מומלץ|מקצועי|מהיר|24\/7|24 שעות))*$/i;
 // A person talking about their own work: a sign of one tradesperson rather than a company.
 const OWNER = /(?:^|[^֐-׿])(?:שמי|נעים מאוד|אני (?:אינסטלטור|חשמלאי|טכנאי|מנעולן|מגיע|עובד|נותן))(?![֐-׿])/;
-const GENERIC = /^(?:דף הבית|עמוד הבית|ראשי|בית|home(?: ?page)?|main)$/i;
+const GENERIC = /^(?:דף הבית|עמוד הבית|ראשי|בית|אתר חדש|home(?: ?page)?|main|my ?site(?:[ -]?\d+)?|new site|untitled)$/i;
 // Site builders that host many businesses on one host: the first path segment is part of who the site is.
 const SHARED = /(?:^|\.)(?:wixsite\.com|site123\.me|mystrikingly\.com|webnode\.(?:com|co\.il)|wordpress\.com|business\.site|godaddysites\.com|weebly\.com|jimdosite\.com|carrd\.co|my\.canva\.site|ueniweb\.com)$/i;
 
@@ -128,8 +134,25 @@ export function tradeOf(p) {
 function otherKind(head, trade, types = []) {
   const car = CAR.exec(head)?.[0].trim();
   if (trade !== 'locksmith' && (car || types.some((t) => CAR_TYPES.includes(t)))) return `נראה כמו עסק לרכב${car ? ` ("${car}")` : ' לפי גוגל'}, לא בעל מקצוע שמגיע לבית`;
+  const names = tradeOf({ title: head, h1: '', siteName: '', description: '', text: '' }).trade;
   const handy = HANDY.exec(head)?.[0].trim();
-  if (handy && !tradeOf({ title: head, h1: '', siteName: '', description: '', text: '' }).trade) return `נראה כמו הנדימן או שיפוצים ("${handy}"), לא אחד מארבעת המקצועות`;
+  if (handy && !names) return `נראה כמו הנדימן או שיפוצים ("${handy}"), לא אחד מארבעת המקצועות`;
+  const tech = OTHER_TECH.exec(head)?.[0].trim();
+  if (tech && !names) return `נראה כמו מקצוע אחר ("${tech}"), לא אחד מארבעת המקצועות`;
+  return null;
+}
+
+/**
+ * The city of a Google address ("שדרות בן גוריון 17, חולון"): its parts read from the end, where the city is, so a
+ * street named after a city or a "שדרות" (an avenue, not Sderot) is not taken for one.
+ */
+export function cityOfAddress(address) {
+  const parts = String(address || '').split(',').map((x) => x.trim()).filter(Boolean).reverse();
+  for (const part of parts) {
+    const words = part.replace(/\d[\d/-]*/g, ' ').trim();
+    const [city] = citiesIn(words);
+    if (city && !/^שדרות\s+\S/.test(words)) return city;
+  }
   return null;
 }
 
@@ -187,7 +210,7 @@ export function analyze(pages, finalUrl) {
     lang: home.lang,
     dir: home.dir,
     chain: chainWords ? `"${chainWords}"` : cities.length >= 8 ? `${cities.length} ערים באתר` : null,
-    directory: mobiles.length >= 6 ? `${mobiles.length} מספרי נייד שונים באתר` : null,
+    directory: mobiles.length >= 6 ? `${mobiles.length} מספרי נייד שונים באתר` : LISTS.test(head) ? `"${LISTS.exec(head)[0]}"` : null,
     store: STORE.exec(head)?.[0].trim() || null,
     other: otherKind(`${home.title} ${home.h1} ${home.siteName}`, trade),
     nameless: NAMELESS.test(nameOf(home).trim()),
@@ -208,7 +231,7 @@ export function fromPlace(c) {
   const named = tradeOf({ title: p.name, h1: '', siteName: '', description: '', text: '' });
   const asked = c.detail.trade || null;
   const [trade, tradeBy] = named.trade ? [named.trade, 'name'] : asked && p.types.includes(PLACE_TYPES[asked]) ? [asked, 'type'] : [asked, 'search'];
-  const city = citiesIn(p.address)[0] || c.detail.city || null;
+  const city = cityOfAddress(p.address) || c.detail.city || null;
   const mobile = isMobile(p.phone) ? p.phone : null;
   const letters = p.name.match(/[A-Za-zא-ת]/g) || [];
   const chain = CHAIN.exec(p.name)?.[0];

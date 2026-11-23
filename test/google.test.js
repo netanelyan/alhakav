@@ -152,6 +152,39 @@ test('a business for cars, a handyman, or a page with no name but the trade is n
   for (const key of ['g:plumbs', 'g:fitter', 'g:keys']) assert.equal(db.get('SELECT qualified FROM leads WHERE domain = ?', key)?.qualified, 1, key);
 });
 
+test("six more cities: another trade's technician, a shop in English, a site of recommendations, and the city from the address", async () => {
+  const pages = {
+    'https://allgood.example/': '<html lang="he"><title>כל הטובים</title><meta name="description" content="באתר כל הטובים תמצאו המלצות על מנעולנים"><body><h1>מנעולן</h1>מנעולן מנעולן פריצת דלתות. 050-765-4321</body></html>',
+    'https://accessories.example/': '<html lang="he"><title>תריסים למזגן</title><meta name="description" content="המזגן לצרכן מתמחה באביזרי מיזוג אוויר"><body><h1>מזגנים</h1>מזגנים מזגנים מיזוג אוויר. 050-765-4322</body></html>',
+    'https://yarden.wixsite.com/mysite-1': '<html lang="he"><title>Mysite 1</title><meta property="og:site_name" content="Mysite 1"><body><h1>ירדן בנדל חשמלאי מוסמך</h1>חשמלאי חשמלאי עבודות חשמל. 050-765-4323</body></html>',
+  };
+  const { app, db } = testApp({ fetchSite: async (url) => ({ url, status: 200, text: pages[url] || '' }) });
+  const g = fakePlaces([
+    place('fridge', { displayName: { text: 'טכנאי מקררים ברעננה איציק-קור' }, types: ['service'], nationalPhoneNumber: '052-111-2241' }),
+    place('gas', { displayName: { text: 'טכנאי גז' }, types: ['service'], nationalPhoneNumber: '052-111-2242' }),
+    place('appliances', { displayName: { text: 'רצון טובי- טכנאי מוצרי חשמל ביתיים' }, types: ['service'], nationalPhoneNumber: '052-111-2243' }),
+    place('both', { displayName: { text: 'קור טכנאי מזגנים ומקררים' }, types: ['service'], nationalPhoneNumber: '052-111-2244' }),
+    place('keys', { displayName: { text: 'KEY STORE' }, types: ['locksmith'], nationalPhoneNumber: '052-111-2245' }),
+    place('renovator', { displayName: { text: 'אליה השיפוצניק שלך' }, types: ['service'], nationalPhoneNumber: '052-111-2246' }),
+    place('avenue', { displayName: { text: 'אדיר מזגנים' }, formattedAddress: 'שדרות בן גוריון 17, חולון', nationalPhoneNumber: '052-111-2247' }),
+    place('street', { displayName: { text: 'לוי אינסטלציה' }, formattedAddress: 'פתח תקווה 54, נתניה', nationalPhoneNumber: '052-111-2248' }),
+    place('s1', { websiteUri: 'https://allgood.example/', nationalPhoneNumber: '050-765-4321' }),
+    place('s2', { websiteUri: 'https://accessories.example/', nationalPhoneNumber: '050-765-4322' }),
+    place('s3', { websiteUri: 'https://yarden.wixsite.com/mysite-1', nationalPhoneNumber: '050-765-4323' }),
+  ]);
+  await discover(app, places({ apiKey: 'gk', queries: [{ q: 'טכנאי מזגנים ברעננה', trade: 'ac', city: 'רעננה' }], fetchImpl: g.f }), { source: 'google' });
+  const reason = (key) => db.get('SELECT reason FROM seen WHERE domain = ?', key)?.reason;
+  for (const key of ['g:fridge', 'g:gas', 'g:appliances']) assert.match(reason(key), /מקצוע אחר/, key);
+  assert.match(reason('g:keys'), /נראה כמו חנות/);
+  assert.match(reason('g:renovator'), /הנדימן או שיפוצים \("השיפוצניק"\)/);
+  assert.match(reason('allgood.example'), /רשימות/);
+  assert.match(reason('accessories.example'), /נראה כמו חנות.*"באביזרי מיזוג"/);
+  assert.equal(db.get("SELECT qualified FROM leads WHERE domain = 'g:both'").qualified, 1, 'an AC technician who also fixes fridges');
+  assert.equal(db.get("SELECT city FROM leads WHERE domain = 'g:avenue'").city, 'חולון', 'שדרות בן גוריון is an avenue in Holon, not Sderot');
+  assert.equal(db.get("SELECT city FROM leads WHERE domain = 'g:street'").city, 'נתניה', 'a street named after a city');
+  assert.notEqual(db.get("SELECT name FROM leads WHERE domain = 'yarden.wixsite.com/mysite-1'").name, 'Mysite 1', "the site builder's default name");
+});
+
 test('the leads not written to yet are scored again under the new rules: the misfits are set aside, the rest stay', async () => {
   const { app, db } = testApp();
   const g = fakePlaces([place('car', { displayName: { text: 'אלכס חשמל רכב הרצליה' }, types: ['electrician'] }), place('ok', { nationalPhoneNumber: '052-111-2233' })]);
