@@ -95,6 +95,12 @@ const MORE = [
   { q: 'למי זה מתאים?', a: 'לבעלי מקצוע שעונים לבד לטלפון ולא תמיד יכולים: אינסטלטורים, חשמלאים, טכנאי מזגנים, מנעולנים, וכל מי שהידיים שלו עסוקות כשהטלפון מצלצל.' },
   { q: 'מי שמתקשר משלם משהו על ההודעות?', a: 'לא. הוא מקבל הודעה בוואטסאפ ועונה בוואטסאפ, כמו כל הודעה אחרת.' },
   { q: 'כמה שיחות זה כולל?', a: 'כל שיחה שלא עניתם, באותו מחיר חודשי.' },
+  // From the first run of these questions through Toran (2026-11-23): what it answered thin or wrong.
+  { q: 'מה זה על הקו?', a: `שירות לבעלי מקצוע לשיחות שלא הספקתם לענות. על הקו לא עונה לשיחה: כשלא עניתם, מי שהתקשר מקבל תוך כמה שניות הודעה בוואטסאפ בשם העסק שלכם. המוקדן שלנו שואל אותו מה קרה, איפה וכמה דחוף, ושולח לכם סיכום עם המספר שלו, כדי שתחזרו אליו כשתתפנו. ${PRICE} ₪ לחודש לפני מע״מ.` },
+  { q: 'אני עונה לרוב השיחות, למה אני צריך את זה?', a: 'בשביל השיחות שלא יוצא לענות: כשאתם על סולם, מתחת לכיור או באמצע שיחה אחרת. כל שיחה כזאת מקבלת מיד תשובה בוואטסאפ בשם העסק, ואתם מקבלים סיכום של מה צריך, כך ששום שיחה לא נשארת בלי מענה. השיחות שאתם עונים להן נשארות כמו היום.' },
+  { q: 'הלקוחות שלי לא אוהבים לדבר עם רובוט', a: 'המוקדן לא מנסה להחליף אתכם. הוא כותב למי שהתקשר הודעה קצרה בשם העסק, שראו שהוא התקשר ושיחזרו אליו, ושואל שתיים שלוש שאלות: מה קרה, איפה וכמה דחוף. את השיחה עצמה, המחיר והמועד אתם עושים כמו היום. אפשר לראות בדף לדוגמה בדיוק מה הוא כותב.' },
+  { q: 'מי רואה את הפרטים של מי שהתקשר אליי?', a: 'אתם. הסיכום מגיע אליכם לוואטסאפ, ואנחנו מחזיקים את השיחה בשבילכם רק כדי לתת את השירות. כדי לנסח את השאלות ואת הסיכום ההודעות עוברות למודל Claude של Anthropic, שלא מתאמן עליהן, ואנחנו לא מוכרים אותן. השיחות והסיכומים נמחקים אצלנו 90 יום אחרי השיחה. הפרטים המלאים במדיניות הפרטיות.' },
+  { q: 'זה עובד בכל חברה סלולרית? פלאפון, סלקום, פרטנר?', a: 'ההעברה נעשית בקודים הרגילים להעברת שיחות בטלפון נייד, שמקלידים בחייגן. אם אצלכם משהו לא עובד אחרי שהקלדתם, כותבים לנו כאן ונעזור.' },
 ];
 
 /** The export, from the pages in this repository and SITE_URL. */
@@ -103,13 +109,21 @@ export function supportExport(env, at = new Date()) {
   if (!/^https:\/\//.test(site)) throw new Error('SITE_URL must be the https address of the site');
   const domain = String(env.TORAN_DOMAIN || new URL(site).hostname).toLowerCase();
   const index = page('index.html');
-  const terms = page('terms.html');
-  // The owner's name is on the privacy page because the law asks for it there; Toran does not repeat it in a chat, it
-  // sends the page instead.
-  const privacy = page('privacy.html').replace(/,?\s*עסק של <bdi>[^<]*<\/bdi>/g, '');
-  const accessibility = page('accessibility.html');
+  // The owner's name and personal email are on the legal pages because the law asks for them there; Toran does not
+  // repeat them in a chat (it gave the email in one, 2026-11-23): where a page says to email us, Toran's copy says
+  // WhatsApp, this very chat, and the page itself stays as it is.
+  const noEmail = (html) =>
+    html
+      .replace(/ או שולחים מייל ל־<a href="mailto:[^"]*"[^>]*>[^<]*<\/a>/g, '')
+      .replace(/במייל ל־<a href="mailto:[^"]*"[^>]*>[^<]*<\/a> או /g, '')
+      .replace(/(?:במייל )?ל־<a href="mailto:[^"]*"[^>]*>[^<]*<\/a>/g, 'בוואטסאפ')
+      .replace(/<a href="mailto:[^"]*"[^>]*>[^<]*<\/a>/g, 'בוואטסאפ')
+      .replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, '');
+  const terms = noEmail(page('terms.html'));
+  const privacy = noEmail(page('privacy.html').replace(/,?\s*עסק של <bdi>[^<]*<\/bdi>/g, ''));
+  const accessibility = noEmail(page('accessibility.html'));
   const whatsapp = (/wa\.me\/(\d{11,15})/.exec(index) || [])[1] || null;
-  const email = (/mailto:([^"?]+)/.exec(terms) || [])[1] || null;
+  const email = null;
   const onSite = faqOf(index);
   // The sample page (demo.js): what a tradesperson's own page looks like, with the try of המוקדן on it.
   const sample = { q: 'אפשר לראות דוגמה לפני שמצטרפים?', a: `כן, בדף לדוגמה: ${site}/p/demo. רואים שם מה מקבל מי שהתקשר ומה מגיע אליכם, ואפשר לנסות את המוקדן על עצמכם בוואטסאפ, זה לוקח דקה.`, url: `${site}/p/demo` };

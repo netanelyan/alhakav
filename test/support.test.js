@@ -27,6 +27,11 @@ test("Toran's file: the site's own facts, in the company export's shape, with 'j
   assert.equal(d.generatedAt, '2026-11-21T10:00:00.000Z');
   // The owner's name stays on the privacy page, where the law asks for it, and out of what Toran says.
   assert.doesNotMatch(JSON.stringify(d), /יאנצבסקי/);
+  // And the personal email: Toran gave it in a chat once (2026-11-23). Where a page says to email us, Toran says WhatsApp.
+  assert.doesNotMatch(JSON.stringify(d), /@|mailto/);
+  assert.equal(d.contact.email, null);
+  assert.ok(d.pages.find((p) => p.kind === 'privacy').text.includes('שולחים את הבקשה בוואטסאפ'));
+  assert.doesNotMatch(JSON.stringify(d), /בוואטסאפ או בוואטסאפ/);
   assert.throws(() => supportExport({ SITE_URL: 'http://localhost:4760' }), /https/);
 });
 
