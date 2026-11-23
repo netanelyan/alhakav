@@ -183,6 +183,11 @@ them with `SENDER_LINE`, ready for the API, and test/look.test.js holds them to 
 The reminders' and the first message's buttons are the same two as before. While an older one still goes, the
 admin's copy of the message shows the new look.
 
+Submitted through the API on 2026-11-23, all eight pending review: alhakav_page_trade (2605834013249563),
+alhakav_page_reminder_v2 (1174068245182901), alhakav_caller_v2 (1798911834564939), alhakav_summary_v2
+(1141012425427865), alhakav_call_alert_v2 (1898699341126549), alhakav_payment_v2 (2285617828684895),
+alhakav_owner_alert_v2 (1467965415285156) and alhakav_setup (1669685337996120).
+
 ### alhakav_page_reminder_v2
 
 | | |
