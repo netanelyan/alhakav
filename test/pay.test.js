@@ -106,7 +106,7 @@ test('a picture of the transfer becomes a receipt; "התשלום הגיע" recor
   // This one has its number already. The first payment, with none yet, says the service starts within 24 hours (the
   // owner, 2026-11-23).
   assert.doesNotMatch(texts(graph).at(-1), /24 שעות/);
-  assert.match(PAY.paid({ business: 'אבי אינסטלציה', until: '21.12.2026', url: '', setup: true }), /^התשלום הגיע, תודה\. העוזר של אבי אינסטלציה משולם עד 21\.12\.2026, ותוך 24 שעות נשלח לכם כאן את המספר/);
+  assert.match(PAY.paid({ business: 'אבי אינסטלציה', until: '21.12.2026', url: '', setup: true }), /^✅ \*התשלום הגיע, תודה\*\n\nהעוזר של אבי אינסטלציה משולם עד 21\.12\.2026\.\n\n⏰ תוך 24 שעות נשלח לכם כאן את המספר/);
 
   // Pressed again: nothing recorded, no second invoice.
   await assert.rejects(decideReceipt(app, r.id, 'paid', ''), (e) => e instanceof PayError && e.code === 'already_paid');
@@ -160,7 +160,7 @@ test('the reminders: before the end, after it, the last day, after it stopped, e
   await payTick(app);
   let sent = templates(graph);
   assert.equal(sent.length, 1);
-  assert.equal(sent[0].name, 'alhakav_payment');
+  assert.equal(sent[0].name, 'alhakav_payment_v2');
   assert.deepEqual(
     sent[0].components[0].parameters.map((p) => p.text),
     ['העוזר של אבי אינסטלציה משולם עד 24.11.2026. זה התשלום על החודש הבא, מ־25.11.2026 עד 24.12.2026.', '175.82', PENV.PAYMENT_DETAILS]

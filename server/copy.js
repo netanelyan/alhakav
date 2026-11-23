@@ -24,6 +24,13 @@ export const CLOSED = { ...LOST, customer: 'הפכו ללקוחות', stopped: '
 // The opening is a moment from their own work (SCENE), the owner, 2026-11-23: "Each should be customized according to
 // his work". It goes as its own template, alhakav_page_trade, once Meta approves it (outreach.js firstTemplate);
 // until then, and for a lead with no trade, the words everyone gets (SCENE.any).
+//
+// Every message the system writes has one look, the setup message's, the owner, 2026-11-23: "The format is nice
+// though, i want it to bee in all system messages". An emoji at the head of each part, WhatsApp's *bold* for what
+// to see first, short parts. Every line starts with an emoji or a Hebrew letter, so it reads right to left; the
+// identification line at the end stays plain. A message that goes as a template has a new one in this look
+// (docs/whatsapp-templates.md, "_v2"), which takes over by itself once Meta approves it (meta.js pickTemplate);
+// alhakav_page, the first message everyone got, stays as it was approved (MSG.first).
 
 export const SCENE = {
   plumber: 'כשאתם מתחת לכיור ולא שומעים את הטלפון',
@@ -34,9 +41,10 @@ export const SCENE = {
 };
 
 export const MSG = {
-  first: (n, url, sender, byHand, scene = SCENE.any) =>
+  // alhakav_page, as Meta approved it on 2026-11-21: what goes until alhakav_page_trade is approved.
+  first: (n, url, sender, byHand) =>
     [
-      `שלום, כאן על הקו. ${scene}, מי שהתקשר מקבל מאיתנו הודעה בוואטסאפ בשם העסק, ואתם מקבלים סיכום של מה שהוא צריך.`,
+      `שלום, כאן על הקו. ${SCENE.any}, מי שהתקשר מקבל מאיתנו הודעה בוואטסאפ בשם העסק, ואתם מקבלים סיכום של מה שהוא צריך.`,
       `הכנו דף קצר שמראה איך זה ייראה ${n}. אפשר גם לנסות שם על עצמכם, לוקח דקה.`,
       byHand ? url : '',
       byHand ? 'לא רלוונטי? עונים "לא" ולא נכתוב שוב.' : 'לא רלוונטי? לוחצים "לא, תודה" ולא נכתוב שוב.',
@@ -44,9 +52,23 @@ export const MSG = {
     ]
       .filter(Boolean)
       .join('\n\n'),
+  // alhakav_page_trade: {{1}} the moment from their trade, {{2}} "אצל <name>".
+  firstTrade: (n, url, sender, byHand, scene) =>
+    [
+      '👋 שלום, כאן *על הקו*.',
+      `📞 ${scene}, מי שהתקשר מקבל מאיתנו הודעה בוואטסאפ בשם העסק, ואתם מקבלים *סיכום של מה שהוא צריך*.`,
+      `👇 הכנו דף קצר שמראה איך זה ייראה ${n}. אפשר גם לנסות שם על עצמכם, לוקח דקה.`,
+      byHand ? url : '',
+      byHand ? 'לא רלוונטי? עונים "לא" ולא נכתוב שוב.' : 'לא רלוונטי? לוחצים "לא, תודה" ולא נכתוב שוב.',
+      sender,
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
+  // alhakav_page_reminder_v2.
   reminder: (n, url, sender, byHand) =>
     [
-      `שלום שוב, כאן על הקו. לפני כמה ימים שלחנו לכם דף שמראה איך זה ייראה ${n}: מי שמתקשר ולא מקבל מענה מקבל מאיתנו הודעה בוואטסאפ, ואתם מקבלים סיכום.`,
+      '👋 שלום שוב, כאן *על הקו*.',
+      `📄 לפני כמה ימים שלחנו לכם דף שמראה איך זה ייראה ${n}: מי שמתקשר ולא מקבל מענה מקבל מאיתנו הודעה בוואטסאפ, ואתם מקבלים סיכום.`,
       byHand ? url : '',
       byHand ? 'זו ההודעה האחרונה שלנו בנושא. לא רלוונטי? עונים "לא" ולא נכתוב שוב.' : 'זו ההודעה האחרונה שלנו בנושא. לא רלוונטי? לוחצים "לא, תודה" ולא נכתוב שוב.',
       sender,
@@ -56,25 +78,25 @@ export const MSG = {
   // After "כן, שלחו": they wrote to us, so this goes as plain text, at once, with the page we made them (demo.js).
   pitch: (biz, url) =>
     [
-      `תודה שעניתם. הכנו דף קטן רק בשביל ${biz}: מה מקבל מי שהתקשר ולא עניתם, ומה מגיע אליכם אחר כך.`,
+      `🙏 תודה שעניתם. הכנו דף קטן רק בשביל ${biz}: מה מקבל מי שהתקשר ולא עניתם, ומה מגיע אליכם אחר כך.`,
       url,
-      'בדף יש כפתור לנסות את זה על עצמכם בוואטסאפ. לוקח דקה.',
-      '149 ₪ לחודש, לא כולל מע״מ, ואין דמי הקמה. אם משהו לא ברור, אפשר לשאול כאן.',
+      '📱 בדף יש כפתור לנסות את זה על עצמכם בוואטסאפ. לוקח דקה.',
+      '💰 *149 ₪ לחודש*, לא כולל מע״מ, ואין דמי הקמה. אם משהו לא ברור, אפשר לשאול כאן.',
     ]
       .filter(Boolean)
       .join('\n\n'),
   // To someone who wrote to us first, when Toran could not answer them (docs/toran.md): once, and a person follows.
   welcome: (site) =>
     [
-      'היי, תודה על ההודעה. ככה על הקו עובד:',
-      'כשאתם לא עונים לשיחה, מי שהתקשר מקבל מאיתנו הודעה בוואטסאפ מיד כשהשיחה נגמרת. אנחנו שואלים אותו מה קרה, איפה, ואם זה דחוף, ושולחים לכם סיכום אחד עם המספר שלו.',
-      '149 ₪ לחודש, לא כולל מע״מ. אין דמי הקמה, ומשלמים חודש בחודש.',
-      site ? `ככה זה נראה: ${site}` : '',
-      'ההודעה שלכם אצלנו, ונחזור אליכם כאן.',
+      '👋 היי, תודה על ההודעה. ככה *על הקו* עובד:',
+      '📞 כשאתם לא עונים לשיחה, מי שהתקשר מקבל מאיתנו הודעה בוואטסאפ מיד כשהשיחה נגמרת. אנחנו שואלים אותו מה קרה, איפה, ואם זה דחוף, ושולחים לכם *סיכום אחד* עם המספר שלו.',
+      '💰 *149 ₪ לחודש*, לא כולל מע״מ. אין דמי הקמה, ומשלמים חודש בחודש.',
+      site ? `👀 ככה זה נראה: ${site}` : '',
+      '💬 ההודעה שלכם אצלנו, ונחזור אליכם כאן.',
     ]
       .filter(Boolean)
       .join('\n\n'),
-  stopped: 'הסרנו את המספר שלכם, ולא נכתוב אליכם שוב.',
+  stopped: '✅ הסרנו את המספר שלכם, ולא נכתוב אליכם שוב.',
   senderMissing: '[שורת הזיהוי: שם העסק, שם מלא, כתובת ואתר]',
 };
 
@@ -325,14 +347,16 @@ export const T = {
 // in a form that fits anyone; the business in plural, by its name.
 
 export const SVC = {
-  callerFirst: (business) => `שלום, כאן העוזר של ${business}. ראינו שהתקשרת ולא הצליחו לענות. מה קרה, ואיפה? הפרטים יעברו אליהם, והם יחזרו אליך כשיתפנו.\n\nלא רלוונטי? אפשר לכתוב "הסר".`,
-  callerStopped: 'הסרנו את המספר, ולא נכתוב שוב.',
+  // alhakav_caller_v2.
+  callerFirst: (business) => `👋 שלום, כאן העוזר של ${business}.\n\nראינו שהתקשרת ולא הצליחו לענות. *מה קרה, ואיפה?* הפרטים יעברו אליהם, והם יחזרו אליך כשיתפנו.\n\nלא רלוונטי? אפשר לכתוב "הסר".`,
+  callerStopped: '✅ הסרנו את המספר, ולא נכתוב שוב.',
   // To someone who wrote to המוקדן and neither called one of our customers lately nor is one.
-  stranger: (site) => `שלום, כאן המוקדן של על הקו. אני כותב למי שהתקשר לבעל מקצוע שעובד איתנו ולא קיבל מענה, ומעביר לבעל המקצוע את הפרטים. אם התקשרת למישהו לאחרונה, הוא יחזור אליך.${site ? `\n\nמה זה על הקו: ${site}` : ''}`,
-  callerThanks: (business) => `תודה, הפרטים אצל ${business} והם יחזרו אליך כשיתפנו.`,
-  summary: ({ time, what, place, urgency, phone }) => `התקשרו אליכם ב־${time} ולא עניתם. זה מה שצריך:\n\nמה: ${what}\nאיפה: ${place}\nכמה דחוף: ${urgency}\nטלפון: ${phone}\n\nאפשר לחזור בטלפון או בוואטסאפ.`,
-  // alhakav_call_alert's body (docs/whatsapp-templates.md), filled in.
-  note: ({ time, number, line }) => `התקשרו אליכם ב־${time} ולא עניתם.\n\nמספר: ${number}\nמה קרה: ${line}\n\nאם הוא יענה למוקדן, הסיכום יגיע לכאן.`,
+  stranger: (site) => `👋 שלום, כאן המוקדן של *על הקו*. אני כותב למי שהתקשר לבעל מקצוע שעובד איתנו ולא קיבל מענה, ומעביר לבעל המקצוע את הפרטים. אם התקשרת למישהו לאחרונה, הוא יחזור אליך.${site ? `\n\nמה זה על הקו: ${site}` : ''}`,
+  callerThanks: (business) => `🙏 תודה, הפרטים אצל ${business} והם יחזרו אליך כשיתפנו.`,
+  // alhakav_summary_v2.
+  summary: ({ time, what, place, urgency, phone }) => `📋 *התקשרו אליכם ב־${time} ולא עניתם*\n\n📝 *מה:* ${what}\n📍 *איפה:* ${place}\n⏰ *כמה דחוף:* ${urgency}\n📞 *טלפון:* ${phone}\n\nאפשר לחזור בטלפון או בוואטסאפ.`,
+  // alhakav_call_alert_v2.
+  note: ({ time, number, line }) => `📞 *התקשרו אליכם ב־${time} ולא עניתם*\n\n📱 *מספר:* ${number}\n💬 *מה קרה:* ${line}\n\nאם הוא יענה למוקדן, הסיכום יגיע לכאן.`,
   from: (phone) => `מ־${phone}`,
   fromHidden: 'ממספר חסוי',
   hidden: 'חסוי',
@@ -346,11 +370,17 @@ export const SVC = {
     test: 'זו שיחת בדיקה, והעוזר קיבל אותה. הכול מחובר.',
   },
   owner: {
-    help: () => `כאן המוקדן של על הקו. כשאתם לא עונים, אני כותב למי שהתקשר, ושולח לכם לכאן מה הוא צריך.\n\nמישהו לא צריך לקבל ממני הודעה, כמו אמא או ספק? כתבו "לא לשלוח" ואת המספר שלו.\n\nרוצים שאפסיק לכתוב לכולם לזמן מה? כתבו "לעצור". כדי שאחזור, "להמשיך".\n\nעל תשלום כותבים למספר של על הקו, זה ששלח לכם את פרטי התשלום.`,
-    skipped: (phone) => `סגור, ${phone} לא יקבל ממני הודעות.`,
-    unskipped: (phone) => `סגור, ${phone} יקבל שוב הודעות כשלא תענו לו.`,
-    paused: 'עצרתי. לא אכתוב למתקשרים עד שתכתבו "להמשיך".',
-    resumed: 'ממשיכים. מעכשיו אכתוב שוב למי שלא עניתם לו.',
+    help: () =>
+      [
+        '👋 כאן המוקדן של *על הקו*. כשאתם לא עונים, אני כותב למי שהתקשר, ושולח לכם לכאן מה הוא צריך.',
+        '🚫 *מישהו לא צריך לקבל ממני הודעה?*\nלמשל אמא או ספק. כתבו "לא לשלוח" ואת המספר שלו. כדי שיקבל שוב, כתבו "לשלוח" ואת המספר.',
+        '⏸️ *רוצים שאפסיק לכתוב לכולם לזמן מה?*\nכתבו "לעצור". כדי שאחזור, כתבו "להמשיך".',
+        '💰 על תשלום כותבים למספר של על הקו, זה ששלח לכם את פרטי התשלום.',
+      ].join('\n\n'),
+    skipped: (phone) => `🚫 סגור, ${phone} לא יקבל ממני הודעות.`,
+    unskipped: (phone) => `✅ סגור, ${phone} יקבל שוב הודעות כשלא תענו לו.`,
+    paused: '⏸️ עצרתי. לא אכתוב למתקשרים עד שתכתבו "להמשיך".',
+    resumed: '▶️ ממשיכים. מעכשיו אכתוב שוב למי שלא עניתם לו.',
   },
 };
 
@@ -466,7 +496,8 @@ export const SETUP = {
 };
 
 export const PAY = {
-  message: ({ line, amount, details }) => `שלום, כאן על הקו. ${line}\n\nלתשלום: ${amount} ₪ כולל מע״מ, בהעברה בנקאית: ${details}\n\nאחרי ההעברה שולחים כאן צילום מסך או PDF של האישור, ונעדכן כשהתשלום הגיע.`,
+  // alhakav_payment_v2.
+  message: ({ line, amount, details }) => `👋 שלום, כאן *על הקו*.\n\n📅 ${line}\n\n💰 *לתשלום:* ${amount} ₪ כולל מע״מ\n🏦 *בהעברה בנקאית:* ${details}\n\n📸 אחרי ההעברה שולחים כאן צילום מסך או PDF של האישור, ונעדכן כשהתשלום הגיע.`,
   lines: {
     first: ({ business, from, until }) => `זה התשלום על החודש הראשון של העוזר של ${business}, מ־${from} עד ${until}.`,
     soon: ({ business, paidUntil, from, until }) => `העוזר של ${business} משולם עד ${paidUntil}. זה התשלום על החודש הבא, מ־${from} עד ${until}.`,
@@ -474,15 +505,15 @@ export const PAY = {
     last: ({ business }) => `העוזר של ${business} עובד עד סוף היום. אם התשלום על החודש החדש לא יגיע עד אז, הוא ייעצר עד שיגיע.`,
     stopped: ({ business, since }) => `העוזר של ${business} עצור מ־${since}, כי התשלום על החודש החדש לא הגיע. כשהתשלום יגיע, העוזר יחזור לעבוד.`,
   },
-  received: 'קיבלנו את האישור, תודה. נבדוק מול הבנק ונעדכן כאן.',
-  again: 'את האישור הזה כבר קיבלנו. נעדכן כאן כשנבדוק מול הבנק.',
-  againPaid: 'את האישור הזה כבר קיבלנו, והתשלום נרשם.',
-  unreadable: 'לא הצלחנו לפתוח את הקובץ. אפשר לשלוח אותו שוב, כתמונה או כקובץ PDF?',
-  tooLarge: 'הקובץ גדול מדי. אפשר לשלוח צילום מסך של האישור?',
+  received: '📥 קיבלנו את האישור, תודה. נבדוק מול הבנק ונעדכן כאן.',
+  again: '📥 את האישור הזה כבר קיבלנו. נעדכן כאן כשנבדוק מול הבנק.',
+  againPaid: '✅ את האישור הזה כבר קיבלנו, והתשלום נרשם.',
+  unreadable: '⚠️ לא הצלחנו לפתוח את הקובץ. אפשר לשלוח אותו שוב, כתמונה או כקובץ PDF?',
+  tooLarge: '⚠️ הקובץ גדול מדי. אפשר לשלוח צילום מסך של האישור?',
   // `setup`: the first payment, before they have a number (pay.js afterPaid). The owner, 2026-11-23: they hear the
   // service starts within 24 hours, time to top up Telnyx and give them their number.
   paid: ({ business, until, url, setup }) =>
-    `התשלום הגיע, תודה. העוזר של ${business} משולם עד ${until}${setup ? ', ותוך 24 שעות נשלח לכם כאן את המספר שאליו יעברו השיחות שלא עניתם ואת הקודים להקליד בטלפון' : ''}.${url ? `\n\nהחשבונית: ${url}` : ''}`,
+    `✅ *התשלום הגיע, תודה*\n\nהעוזר של ${business} משולם עד ${until}.${setup ? '\n\n⏰ תוך 24 שעות נשלח לכם כאן את המספר שאליו יעברו השיחות שלא עניתם ואת הקודים להקליד בטלפון.' : ''}${url ? `\n\n🧾 החשבונית: ${url}` : ''}`,
   invoice: {
     description: 'על הקו, עוזר לשיחות שלא נענו',
     row: (from, until) => `על הקו, ${from} עד ${until}`,
@@ -584,6 +615,8 @@ export const PAY = {
 // The owner's alerts (alerts.js). "על הקו:" opens each title for Toran's way, where they share a phone with OpenFrequency's
 // alerts; from the business number it is left out, since the chat already says who writes.
 export const ALERT = {
+  // alhakav_owner_alert_v2's body (templates.js): {{1}} the title, {{2}} the lines without their links.
+  template: '🔔 *התראה מהחשבון שלך בעל הקו*\n\n📌 *מה קרה:* {{1}}\n📝 *פרטים:* {{2}}\n\n👇 אפשר לראות הכול בדף הניהול.',
   fresh: (who) => `על הקו: ${who} כתבו לנו בוואטסאפ`,
   yes: (who) => `על הקו: ${who} ענו "כן", ושלחתי להם שוב את הדף עם המחיר`,
   replied: (who) => `על הקו: ${who} ענו להודעה שלנו`,

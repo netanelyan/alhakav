@@ -24,6 +24,7 @@ import { brave, fromUrls, places, queriesFor, seeds, together } from './sources.
 //                                                 one discovery run now, from Brave, one site, or private/seeds.txt
 //   node server/main.js list [n]                  the newest n leads (default 20)
 //   node server/main.js support [file]            what Toran knows about על הקו, for its company sync (docs/toran.md)
+//   node server/main.js templates [file]          the WhatsApp templates to submit to Meta (server/templates.js)
 //   node server/main.js eval                      המוקדן's guardrails against the real model (server/eval.js)
 //
 // Settings: the environment, then private/.env (ENV_FILE moves it). .env.example lists them.
@@ -172,9 +173,19 @@ async function support() {
   } else process.stdout.write(json);
 }
 
-const run = { serve, password, discover: discoverNow, list, support, eval: evalNow }[cmd];
+/** The WhatsApp templates in the look of every message, as Meta's API takes them (server/templates.js). */
+async function templates() {
+  const { templateDefs } = await import('./templates.js');
+  const json = `${JSON.stringify(templateDefs(env), null, 2)}\n`;
+  if (rest[0]) {
+    (await import('node:fs')).writeFileSync(rest[0], json);
+    console.log(`wrote ${rest[0]}`);
+  } else process.stdout.write(json);
+}
+
+const run = { serve, password, discover: discoverNow, list, support, templates, eval: evalNow }[cmd];
 if (!run) {
-  console.error(`unknown command: ${cmd} (serve, password, discover, list, support, eval)`);
+  console.error(`unknown command: ${cmd} (serve, password, discover, list, support, templates, eval)`);
   process.exit(1);
 }
 await run();

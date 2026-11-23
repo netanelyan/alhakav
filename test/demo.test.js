@@ -115,8 +115,8 @@ test('the try: המוקדן plays their own assistant, and at the end the summar
   await toAssist(app, ME, 'הרצל 3 אשדוד, זה דחוף', 'd3');
   await settle(app);
   const out = sent();
-  assert.match(out.at(-2), /וזה מה שהיה מגיע אליכם לוואטסאפ:[\s\S]*מה: נזילה מתחת לכיור[\s\S]*איפה: הרצל 3, אשדוד[\s\S]*טלפון: 054-123-4567/);
-  assert.match(out.at(-1), /רוצים את זה על המספר שלכם\? כתבו לנו כאן: https:\/\/wa\.me\/972515310498/);
+  assert.match(out.at(-2), /וזה מה שהיה מגיע אליכם לוואטסאפ:[\s\S]*\*מה:\* נזילה מתחת לכיור[\s\S]*\*איפה:\* הרצל 3, אשדוד[\s\S]*\*טלפון:\* 054-123-4567/);
+  assert.match(out.at(-1), /\*רוצים את זה על המספר שלכם\?\* כתבו לנו כאן: https:\/\/wa\.me\/972515310498/);
   assert.equal(db.get('SELECT state FROM demos').state, 'done');
   // Done: what they write next is not the try any more, and the same webhook again starts nothing.
   await toAssist(app, ME, `אני רוצה לנסות (${code})`, 'd1');
@@ -171,6 +171,6 @@ test("a try from the sample page: המוקדן plays the sample business, with n
   assert.deepEqual({ ...d }, { lead_id: null, sample: 'electrician' });
   await toAssist(app, ME, 'אין חשמל במטבח, ויצמן 8 גבעתיים, אני בבית עד הערב', 's2');
   await settle(app);
-  assert.match(sent().at(-2), /מה: אין חשמל במטבח/);
+  assert.match(sent().at(-2), /\*מה:\* אין חשמל במטבח/);
   assert.equal(toran.alerts.length, 0, 'a sample try tells no one');
 });

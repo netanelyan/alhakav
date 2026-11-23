@@ -1,7 +1,7 @@
 import { agoHe, dayMonth, hhmm } from './clock.js';
 import { CALL_OUTCOME, CHAT_STATE, CUST_STATUS, SETUP, TC, TRADE } from './copy.js';
 import { forwardCodes } from './customers.js';
-import { button, csrfField, empty, esc, flashLine, layout, ltr, tag } from './html.js';
+import { button, csrfField, empty, esc, flashLine, layout, ltr, tag, waHtml } from './html.js';
 import { billingCard, payCard, payState, waitingCard } from './payPages.js';
 import { assistSettings } from './meta.js';
 import { local } from './phones.js';
@@ -97,7 +97,7 @@ function chatsCard(chats, calls, at) {
     : '';
   const one = (x) => {
     const bubbles = x.messages
-      .map((m) => `<div class="b ${m.dir}${m.kind === 'auto' ? ' auto' : ''}${m.status === 'failed' ? ' failed' : ''}"><p dir="auto">${esc(m.body)}</p><time>${esc(`${hhmm(Date.parse(m.at))}${m.dir === 'out' && m.status ? ` · ${m.status}` : ''}`)}</time></div>`)
+      .map((m) => `<div class="b ${m.dir}${m.kind === 'auto' ? ' auto' : ''}${m.status === 'failed' ? ' failed' : ''}"><p dir="auto">${waHtml(m.body)}</p><time>${esc(`${hhmm(Date.parse(m.at))}${m.dir === 'out' && m.status ? ` · ${m.status}` : ''}`)}</time></div>`)
       .join('');
     const summary = [x.what && `מה: ${x.what}`, x.place && `איפה: ${x.place}`, x.urgency && `דחיפות: ${x.urgency}`].filter(Boolean).join(' · ');
     return `<details class="more"><summary>${ltr(local(x.caller))} · ${esc(agoHe(Date.parse(x.opened_at), at))} ${tag(CHAT_STATE[x.state], x.state === 'failed' || x.state === 'stopped' ? 'miss' : x.state === 'done' ? '' : 'wait')}${x.calls > 1 ? tag(TC.chats.calls(x.calls), 'where') : ''}</summary>${summary ? `<p>${esc(summary)}</p>` : ''}<div class="chat">${bubbles}</div></details>`;

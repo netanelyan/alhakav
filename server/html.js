@@ -5,6 +5,16 @@ import { T } from './copy.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
+/**
+ * A WhatsApp message as a page shows it, escaped: ```monospace``` as <code>, and *bold* as <strong> where WhatsApp
+ * would bold it (an * that opens before a letter and closes after one, on one line, outside the monospace).
+ */
+export const waHtml = (s) =>
+  String(s ?? '')
+    .split(/(```[^`\n]+```)/)
+    .map((part, i) => (i % 2 ? `<code dir="ltr">${esc(part.slice(3, -3))}</code>` : esc(part).replace(/(^|[^*\p{L}\p{N}])\*([^*\s](?:[^*\n]*[^*\s])?)\*(?![*\p{L}\p{N}])/gmu, '$1<strong>$2</strong>')))
+    .join('');
+
 export const csrfField = (csrf) => `<input type="hidden" name="csrf" value="${esc(csrf)}">`;
 
 const hidden = (fields) =>

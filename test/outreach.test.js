@@ -58,7 +58,7 @@ test("the first message opens with a moment from their trade once Meta approved 
   assert.equal(graph.sent().at(-1).body.template.name, 'alhakav_page');
   assert.match(msgs(db, lead.id)[0].body, /^שלום, כאן על הקו\. כשאתם באמצע עבודה ולא עונים, מי שהתקשר/);
   // By hand it is plain text from the admin's phone, so it is in their trade's words already.
-  assert.match(messageText('first', electrician, app.env, { byHand: true }), /^שלום, כאן על הקו\. כשאתם על סולם מול לוח חשמל ולא עונים, מי שהתקשר/);
+  assert.match(messageText('first', electrician, app.env, { byHand: true }), /^👋 שלום, כאן \*על הקו\*\.\n\n📞 כשאתם על סולם מול לוח חשמל ולא עונים, מי שהתקשר/);
   // Approved: it takes over by itself, with the moment as {{1}} and the name as {{2}}.
   forgetTemplates();
   graph.templates.alhakav_page_trade = 'APPROVED';
@@ -66,7 +66,7 @@ test("the first message opens with a moment from their trade once Meta approved 
   const t = graph.sent().at(-1).body.template;
   assert.equal(t.name, 'alhakav_page_trade');
   assert.deepEqual(t.components[0].parameters.map((p) => p.text), ['כשאתם על סולם מול לוח חשמל ולא עונים', `אצל ${leadOf(db, electrician.id).name}`]);
-  assert.match(msgs(db, electrician.id)[0].body, /^שלום, כאן על הקו\. כשאתם על סולם מול לוח חשמל ולא עונים, מי שהתקשר מקבל מאיתנו/);
+  assert.match(msgs(db, electrician.id)[0].body, /^👋 שלום, כאן \*על הקו\*\.\n\n📞 כשאתם על סולם מול לוח חשמל ולא עונים, מי שהתקשר מקבל מאיתנו/);
   // What the admin's page shows now is the same words.
   assert.match(messageText('first', leadOf(db, electrician.id), app.env), /כשאתם על סולם מול לוח חשמל/);
   forgetTemplates();
@@ -113,7 +113,7 @@ test('one reminder, four days on, only while they have not answered', async () =
   setNow(SUNDAY + 4 * DAY + HOUR);
   assert.ok(reminderDue(leadOf(db, lead.id)));
   assert.ok((await sendPitch(app, leadOf(db, lead.id), 'reminder')).ok);
-  assert.equal(graph.sent().at(-1).body.template.name, 'alhakav_page_reminder');
+  assert.equal(graph.sent().at(-1).body.template.name, 'alhakav_page_reminder_v2');
   assert.ok(!(await sendPitch(app, leadOf(db, lead.id), 'reminder')).ok);
 });
 
@@ -155,7 +155,7 @@ test('"כן, שלחו" gets the explanation at once, and a webhook sent twice se
   assert.ok(x.yes_at);
   const texts = graph.sent().filter((c) => c.body.type === 'text');
   assert.equal(texts.length, 1);
-  assert.match(texts[0].body.text.body, /149 ₪ לחודש, לא כולל מע״מ/);
+  assert.match(texts[0].body.text.body, /\*149 ₪ לחודש\*, לא כולל מע״מ/);
   assert.match(texts[0].body.text.body, /https:\/\/alhakav\.example/);
   assert.deepEqual(msgs(db, lead.id).map((m) => m.kind), ['first', 'in', 'pitch']);
   assert.equal(funnel(db).yes, 1);

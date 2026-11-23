@@ -46,10 +46,11 @@ export function ownerNumber(env) {
 
 /**
  * The templates an alert may go as, the preferred first (meta.js pickTemplate): alhakav_owner_alert, "מה קרה: {{1}}"
- * and "פרטים: {{2}}", reworded on 2026-11-22 after Meta made alhakav_update ("{{1}}" alone) a Marketing one.
+ * and "פרטים: {{2}}", reworded on 2026-11-22 after Meta made alhakav_update ("{{1}}" alone) a Marketing one; and
+ * alhakav_owner_alert_v2 before both, the same in the look of every message (copy.js).
  * TEMPLATE_UPDATE names one, and only that one is used.
  */
-export const updateTemplates = (env) => (String(env.TEMPLATE_UPDATE || '').trim() ? [String(env.TEMPLATE_UPDATE).trim()] : ['alhakav_owner_alert', 'alhakav_update']);
+export const updateTemplates = (env) => (String(env.TEMPLATE_UPDATE || '').trim() ? [String(env.TEMPLATE_UPDATE).trim()] : ['alhakav_owner_alert_v2', 'alhakav_owner_alert', 'alhakav_update']);
 
 /** A template's variables: alhakav_update takes the alert in one line, the others what happened and the details. */
 export const updateParams = (name, a) => (name === 'alhakav_update' ? [a.param] : [a.head, a.details || 'אין פרטים נוספים.']);
@@ -82,7 +83,7 @@ export function alertText(env, title, body) {
       .replace(/\s+/g, ' ')
       .slice(0, n);
   const end = (t) => (!t || /[.?!]$/.test(t) ? t : `${t}.`);
-  return { text: [head, ...lines].join('\n'), param: end(line([head, ...words], 900)), head: line([head], 200), details: end(line(words, 700)), button: page ? page.slice(admin.length) : 'leads' };
+  return { text: [`🔔 *${head}*`, ...lines].join('\n'), param: end(line([head, ...words], 900)), head: line([head], 200), details: end(line(words, 700)), button: page ? page.slice(admin.length) : 'leads' };
 }
 
 /** Said within its window already: true. Else marks it said now. */

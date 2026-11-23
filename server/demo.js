@@ -7,7 +7,8 @@ import { intakeTurn } from './claude.js';
 import { DAY, HOUR, hhmm, israelDate, now, nowIso } from './clock.js';
 import { ALERT, SVC, TRADE } from './copy.js';
 import { num } from './env.js';
-import { assistSettings, sendText } from './meta.js';
+import { waHtml } from './html.js';
+import { assistSettings, plainWords, sendText } from './meta.js';
 import { local, masked } from './phones.js';
 
 // Each lead's own page, and the try of המוקדן on it (docs/demo.md), the way openfrequency-toran builds each store a
@@ -127,7 +128,7 @@ export function pageHtml(env, lead) {
     ['in', ex.said(city), plus(sum.time, 2)],
     ['out', SVC.callerThanks(biz), plus(sum.time, 3)],
   ]
-    .map(([dir, text, time]) => `<li class="${dir === 'in' ? 'o' : ''}">${esc(text).replace(/\n+/g, '<br>')}<time>${time}</time></li>`)
+    .map(([dir, text, time]) => `<li class="${dir === 'in' ? 'o' : ''}">${waHtml(text).replace(/\n+/g, '<br>')}<time>${time}</time></li>`)
     .join('');
   const rows = [
     ['מה', sum.what],
@@ -352,7 +353,7 @@ async function turn(app, demoId) {
     if (!next.done) return;
     const fin = demoOf(db, d.id);
     db.run("UPDATE demos SET state = 'done', updated_at = ? WHERE id = ?", nowIso(), d.id);
-    const summary = SVC.summary({ time: hhmm(Date.parse(fin.started_at)), what: fin.what || SVC.unknown, place: fin.place || SVC.unknown, urgency: fin.urgency || SVC.unknown, phone: local(fin.phone) });
+    const summary = SVC.summary({ time: hhmm(Date.parse(fin.started_at)), what: plainWords(fin.what) || SVC.unknown, place: plainWords(fin.place) || SVC.unknown, urgency: plainWords(fin.urgency) || SVC.unknown, phone: local(fin.phone) });
     await say(app, d.id, d.phone, 'summary', `${DEMO.summaryLead}\n\n${summary}`);
     await say(app, d.id, d.phone, 'closing', DEMO.closing(biz, salesNumber()));
   } finally {
@@ -362,8 +363,8 @@ async function turn(app, demoId) {
 
 /** What המוקדן says around a try, in plain words (copy.js's voice). */
 export const DEMO = {
-  intro: (biz) => `היי, כאן המוקדן של על הקו. עכשיו אתם הלקוח: נגיד שהתקשרתם ל${biz} ולא ענו. זו ההודעה שמי שמתקשר אליכם מקבל, ואפשר לענות לי כמו לקוח.`,
-  summaryLead: 'וזה מה שהיה מגיע אליכם לוואטסאפ:',
-  closing: (biz, salesDigits) => `ככה זה עובד אצל ${biz}, על כל שיחה שלא עניתם. רוצים את זה על המספר שלכם?${salesDigits ? ` כתבו לנו כאן: https://wa.me/${salesDigits}` : ''}`,
-  full: (salesDigits) => `הרבה מנסים היום, אז הניסיון לא נפתח עכשיו. אפשר לנסות שוב מחר מהדף${salesDigits ? `, או לכתוב לנו: https://wa.me/${salesDigits}` : '.'}`,
+  intro: (biz) => `👋 היי, כאן המוקדן של *על הקו*. עכשיו אתם הלקוח: נגיד שהתקשרתם ל${biz} ולא ענו. זו ההודעה שמי שמתקשר אליכם מקבל, ואפשר לענות לי כמו לקוח.`,
+  summaryLead: '👇 וזה מה שהיה מגיע אליכם לוואטסאפ:',
+  closing: (biz, salesDigits) => `✅ ככה זה עובד אצל ${biz}, על כל שיחה שלא עניתם. *רוצים את זה על המספר שלכם?*${salesDigits ? ` כתבו לנו כאן: https://wa.me/${salesDigits}` : ''}`,
+  full: (salesDigits) => `⏳ הרבה מנסים היום, אז הניסיון לא נפתח עכשיו. אפשר לנסות שוב מחר מהדף${salesDigits ? `, או לכתוב לנו: https://wa.me/${salesDigits}` : '.'}`,
 };

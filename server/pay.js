@@ -4,7 +4,7 @@ import { addDays, billingOf, daysBetween, dateHe, money } from './billing.js';
 import { adminLink, alertOwner, whoIs } from './alerts.js';
 import { ALERT, PAY } from './copy.js';
 import { num } from './env.js';
-import { GraphError, downloadMedia, metaSettings, sendTemplate, sendText } from './meta.js';
+import { GraphError, downloadMedia, metaSettings, pickTemplate, sendTemplate, sendText } from './meta.js';
 import { invoiceReceipt } from './morning.js';
 import { masked } from './phones.js';
 import { giveNumber } from './numbers.js';
@@ -41,7 +41,9 @@ export const RECEIPTS_PER_DAY = 5;
 export const RECEIPT_FILE_DAYS = 90;
 
 export function paySettings(env) {
-  return { template: String(env.TEMPLATE_PAYMENT || 'alhakav_payment'), details: String(env.PAYMENT_DETAILS || '').replace(/\s+/g, ' ').trim() };
+  // alhakav_payment_v2, in the look of every message (copy.js), once Meta approves it; the approved one until then.
+  const named = String(env.TEMPLATE_PAYMENT || '').trim();
+  return { templates: named ? [named] : ['alhakav_payment_v2', 'alhakav_payment'], details: String(env.PAYMENT_DETAILS || '').replace(/\s+/g, ' ').trim() };
 }
 
 const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -133,7 +135,7 @@ export async function sendPayment(app, c, kind, today = israelDate()) {
   const body = payText(app.env, c, b);
   const until = b.paidUntil || 'new';
   try {
-    const id = windowOpen(app.db, c.phone) ? await sendText(m, app.graphFetch, c.phone, body) : await sendTemplate(m, app.graphFetch, c.phone, s.template, [line, money(b.owed.total), s.details]);
+    const id = windowOpen(app.db, c.phone) ? await sendText(m, app.graphFetch, c.phone, body) : await sendTemplate(m, app.graphFetch, c.phone, await pickTemplate(m, app.graphFetch, s.templates), [line, money(b.owed.total), s.details]);
     keep(app.db, c, { kind: 'pay', body, waId: id || null, status: 'sent' });
     app.db.run('INSERT INTO pay_notices (customer_id, until, kind, status, at) VALUES (?, ?, ?, ?, ?) ON CONFLICT (customer_id, until, kind) DO UPDATE SET status = excluded.status, at = excluded.at', c.id, until, kind, 'sent', nowIso());
     app.log(`[pay] ${kind} to customer ${c.id}`);

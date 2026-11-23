@@ -1,6 +1,6 @@
 import { agoHe, dayMonth, hhmm, whenHe } from './clock.js';
 import { CLOSED, LOST, T, TRADE } from './copy.js';
-import { button, csrfField, empty, esc, ext, flashLine, layout, ltr, tag } from './html.js';
+import { button, csrfField, empty, esc, ext, flashLine, layout, ltr, tag, waHtml } from './html.js';
 import { pageCodeOf, pageUrl } from './demo.js';
 import { laterDue } from './leads.js';
 import { metaSettings } from './meta.js';
@@ -155,7 +155,7 @@ function compose(app, csrf, x, stage, at) {
   const guard = b ? `<p class="note">${esc(blockedText(b, at))}</p>` : '';
   if (m.ready) {
     const hand = messageText(stage, x, app.env, { byHand: true });
-    return `<p class="muted">${esc(T.send.asRead)}</p><blockquote class="msg" dir="rtl">${esc(messageText(stage, x, app.env))}</blockquote>${guard}
+    return `<p class="muted">${esc(T.send.asRead)}</p><blockquote class="msg" dir="rtl">${waHtml(messageText(stage, x, app.env))}</blockquote>${guard}
 ${b ? '' : `<div class="row">${leadButton(csrf, x.id, 'send', stage === 'first' ? T.send.first : T.send.reminder, 'primary', { stage })}</div>`}
 <details class="more"><summary>${esc(T.send.copyOpen)}</summary><textarea id="msg-${stage}" rows="8" readonly dir="rtl" aria-label="${esc(T.send.asRead)}">${esc(hand)}</textarea><div class="row"><a class="button" href="${esc(waLink(x.mobile, hand))}" target="_blank" rel="noopener noreferrer" data-copy="#msg-${stage}">${esc(T.send.copyOpen)}</a>${leadButton(csrf, x.id, 'mark-sent', stage === 'first' ? T.send.markSent : T.send.markReminded, '', { stage })}</div></details>`;
   }
@@ -189,7 +189,7 @@ function bubble(msg) {
   const t = Date.parse(msg.at);
   const kind = msg.dir === 'out' ? T.chat.kind[msg.kind] : msg.kind === 'auto' ? T.chat.auto : '';
   const status = msg.dir === 'out' && msg.status ? ` · ${T.chat.status[msg.status] || msg.status}` : '';
-  return `<div class="b ${msg.dir}${msg.kind === 'auto' ? ' auto' : ''}${msg.status === 'failed' ? ' failed' : ''}">${kind ? `<small class="k">${esc(kind)}</small>` : ''}<p dir="auto">${esc(msg.body)}</p><time>${esc(`${dayMonth(t)} ${hhmm(t)}${status}`)}</time>${msg.error ? `<small class="bad">${esc(msg.error)}</small>` : ''}</div>`;
+  return `<div class="b ${msg.dir}${msg.kind === 'auto' ? ' auto' : ''}${msg.status === 'failed' ? ' failed' : ''}">${kind ? `<small class="k">${esc(kind)}</small>` : ''}<p dir="auto">${waHtml(msg.body)}</p><time>${esc(`${dayMonth(t)} ${hhmm(t)}${status}`)}</time>${msg.error ? `<small class="bad">${esc(msg.error)}</small>` : ''}</div>`;
 }
 
 function chatCard(app, csrf, x, messages, at) {

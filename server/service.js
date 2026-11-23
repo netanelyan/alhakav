@@ -4,7 +4,7 @@ import { DAY, HOUR, MINUTE, hhmm, now, nowIso } from './clock.js';
 import { SVC } from './copy.js';
 import { num } from './env.js';
 import { local, masked, normalize } from './phones.js';
-import { GraphError, assistSettings, pickTemplate, sendTemplate, sendText } from './meta.js';
+import { GraphError, assistSettings, pickTemplate, plainWords, sendTemplate, sendText } from './meta.js';
 import { demoMessage } from './demo.js';
 import { asksToStop, automatic } from './stopWords.js';
 import { callAction, telnyxSettings } from './telnyx.js';
@@ -41,13 +41,16 @@ export const CALLER_TURNS = 12;
 /** A call from the same number to the same customer this soon after the last one is the same call. */
 export const TWIN_MS = MINUTE;
 
+/** A TEMPLATE_* name alone, or the list to pick from, the preferred first (meta.js pickTemplate). */
+const templates = (name, list) => (String(name || '').trim() ? [String(name).trim()] : list);
+
 export function serviceSettings(env) {
   return {
-    caller: String(env.TEMPLATE_CALLER || 'alhakav_caller'),
-    summary: String(env.TEMPLATE_SUMMARY || 'alhakav_summary'),
-    // The note, the preferred first: alhakav_call_alert, reworded on 2026-11-22 after Meta made alhakav_call_note a
-    // Marketing one; meta.js pickTemplate takes it once it is approved. TEMPLATE_NOTE names one, and only that one.
-    notes: String(env.TEMPLATE_NOTE || '').trim() ? [String(env.TEMPLATE_NOTE).trim()] : ['alhakav_call_alert', 'alhakav_call_note'],
+    // Each in the look of every message (copy.js) first, the approved one until Meta approves it.
+    caller: templates(env.TEMPLATE_CALLER, ['alhakav_caller_v2', 'alhakav_caller']),
+    summary: templates(env.TEMPLATE_SUMMARY, ['alhakav_summary_v2', 'alhakav_summary']),
+    // The note: alhakav_call_alert was reworded on 2026-11-22 after Meta made alhakav_call_note a Marketing one.
+    notes: templates(env.TEMPLATE_NOTE, ['alhakav_call_alert_v2', 'alhakav_call_alert', 'alhakav_call_note']),
     greeting: String(env.GREETING_URL || '').trim(),
     wait: num(env.SUMMARY_WAIT_MINUTES, 20) * MINUTE,
     replyDelay: num(env.REPLY_DELAY_MS, 3000),
@@ -136,9 +139,9 @@ function note(app, c, { caller, at, line, chatId = null }) {
 export async function sendSummary(app, c, chat) {
   const v = {
     time: hhmm(Date.parse(chat.opened_at)),
-    what: chat.what || SVC.unknown,
-    place: chat.place || SVC.unknown,
-    urgency: chat.urgency || SVC.unknown,
+    what: plainWords(chat.what) || SVC.unknown,
+    place: plainWords(chat.place) || SVC.unknown,
+    urgency: plainWords(chat.urgency) || SVC.unknown,
     phone: local(chat.caller),
   };
   await toOwner(app, c, { chatId: chat.id, kind: 'summary', template: serviceSettings(app.env).summary, params: [v.time, v.what, v.place, v.urgency, v.phone], text: SVC.summary(v) });
@@ -202,7 +205,7 @@ export async function missedCall(app, c, raw) {
   try {
     const a = assistSettings(app.env);
     if (!a.ready) throw new Error('ASSIST_PHONE_ID is not set');
-    const id = await sendTemplate(a, app.graphFetch, caller, serviceSettings(app.env).caller, [c.business]);
+    const id = await sendTemplate(a, app.graphFetch, caller, await pickTemplate(a, app.graphFetch, serviceSettings(app.env).caller), [c.business]);
     keep(db, { chatId, customerId: c.id, peer: caller, dir: 'out', kind: 'first', body, msgId: id, status: 'sent' });
     db.run('UPDATE chats SET last_out_at = ? WHERE id = ?', nowIso(), chatId);
     app.log(`[call] customer ${c.id}: ${masked(caller)} got the first message`);

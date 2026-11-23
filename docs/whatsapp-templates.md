@@ -54,9 +54,11 @@ server sends it by itself once Meta approves it (outreach.js `firstTemplate`), a
 | Variables (sample) | `{{1}}` = `כשאתם מתחת לכיור ולא שומעים את הטלפון`; `{{2}}` = `אצל אבי אינסטלציה`; the link's `{{1}}` = `abcdefgh23` |
 
 ```
-שלום, כאן על הקו. {{1}}, מי שהתקשר מקבל מאיתנו הודעה בוואטסאפ בשם העסק, ואתם מקבלים סיכום של מה שהוא צריך.
+👋 שלום, כאן *על הקו*.
 
-הכנו דף קצר שמראה איך זה ייראה {{2}}. אפשר גם לנסות שם על עצמכם, לוקח דקה.
+📞 {{1}}, מי שהתקשר מקבל מאיתנו הודעה בוואטסאפ בשם העסק, ואתם מקבלים *סיכום של מה שהוא צריך*.
+
+👇 הכנו דף קצר שמראה איך זה ייראה {{2}}. אפשר גם לנסות שם על עצמכם, לוקח דקה.
 
 לא רלוונטי? לוחצים "לא, תודה" ולא נכתוב שוב.
 
@@ -157,6 +159,128 @@ the last 24 hours gets the same text as plain text, and anyone else's codes go t
 כדי שהוא יקבל שוב הודעות, כותבים למוקדן "לשלוח" ואת המספר.
 
 💬 אם משהו לא עובד, כותבים לנו כאן.
+````
+
+## The look of every message (_v2)
+
+Every message the system writes has the setup message's look (server/copy.js): an emoji at the head of each part,
+WhatsApp's *bold* for what to see first, short parts, and every line starting so it reads right to left. The owner,
+2026-11-23: "The format is nice though, i want it to bee in all system messages". Each template below is the one
+before it in that look, with the same variables in the same order, so the server sends it the moment Meta approves
+it and the one before until then (server/meta.js pickTemplate, read once an hour). The bodies come from the same
+functions as the plain text (server/templates.js); on the server, `node server/main.js templates /tmp/t.json` writes
+them with `SENDER_LINE`, ready for the API, and test/look.test.js holds them to Meta's rules.
+
+| New | Takes over from |
+|---|---|
+| `alhakav_page_reminder_v2` | `alhakav_page_reminder` |
+| `alhakav_caller_v2` | `alhakav_caller` |
+| `alhakav_summary_v2` | `alhakav_summary` |
+| `alhakav_call_alert_v2` | `alhakav_call_alert`, `alhakav_call_note` |
+| `alhakav_payment_v2` | `alhakav_payment` |
+| `alhakav_owner_alert_v2` | `alhakav_owner_alert`, `alhakav_update` (its button the same: "לפתוח את הפרטים") |
+
+The reminders' and the first message's buttons are the same two as before. While an older one still goes, the
+admin's copy of the message shows the new look.
+
+### alhakav_page_reminder_v2
+
+| | |
+|---|---|
+| Category | Marketing |
+| Variables (sample) | `{{1}}` = `אצל אבי אינסטלציה` |
+
+````
+👋 שלום שוב, כאן *על הקו*.
+
+📄 לפני כמה ימים שלחנו לכם דף שמראה איך זה ייראה {{1}}: מי שמתקשר ולא מקבל מענה מקבל מאיתנו הודעה בוואטסאפ, ואתם מקבלים סיכום.
+
+זו ההודעה האחרונה שלנו בנושא. לא רלוונטי? לוחצים "לא, תודה" ולא נכתוב שוב.
+
+[שם העסק], [שם מלא], [כתובת].
+````
+
+### alhakav_caller_v2
+
+| | |
+|---|---|
+| Category | Utility |
+| Variables (sample) | `{{1}}` = `אבי אינסטלציה` |
+
+````
+👋 שלום, כאן העוזר של {{1}}.
+
+ראינו שהתקשרת ולא הצליחו לענות. *מה קרה, ואיפה?* הפרטים יעברו אליהם, והם יחזרו אליך כשיתפנו.
+
+לא רלוונטי? אפשר לכתוב "הסר".
+````
+
+### alhakav_summary_v2
+
+| | |
+|---|---|
+| Category | Utility |
+| Variables (sample) | `{{1}}` = `10:41`, `{{2}}` = `נזילה חזקה מתחת לכיור`, `{{3}}` = `הרצל 15, אשדוד, קומה 3`, `{{4}}` = `דחוף, המים זורמים`, `{{5}}` = `054-123-4567` |
+
+````
+📋 *התקשרו אליכם ב־{{1}} ולא עניתם*
+
+📝 *מה:* {{2}}
+📍 *איפה:* {{3}}
+⏰ *כמה דחוף:* {{4}}
+📞 *טלפון:* {{5}}
+
+אפשר לחזור בטלפון או בוואטסאפ.
+````
+
+### alhakav_call_alert_v2
+
+| | |
+|---|---|
+| Category | Utility |
+| Variables (sample) | `{{1}}` = `10:41`, `{{2}}` = `050-000-0000`, `{{3}}` = `שלחנו הודעה בוואטסאפ ועוד אין תשובה.` |
+
+````
+📞 *התקשרו אליכם ב־{{1}} ולא עניתם*
+
+📱 *מספר:* {{2}}
+💬 *מה קרה:* {{3}}
+
+אם הוא יענה למוקדן, הסיכום יגיע לכאן.
+````
+
+### alhakav_payment_v2
+
+| | |
+|---|---|
+| Category | Utility |
+| Variables (sample) | `{{1}}` = `העוזר של אבי אינסטלציה משולם עד 24.11.2026. זה התשלום על החודש הבא, מ־25.11.2026 עד 24.12.2026.`, `{{2}}` = `175.82`, `{{3}}` = `בנק הפועלים (12), סניף 345, חשבון 678901, על שם ישראל ישראלי` |
+
+````
+👋 שלום, כאן *על הקו*.
+
+📅 {{1}}
+
+💰 *לתשלום:* {{2}} ₪ כולל מע״מ
+🏦 *בהעברה בנקאית:* {{3}}
+
+📸 אחרי ההעברה שולחים כאן צילום מסך או PDF של האישור, ונעדכן כשהתשלום הגיע.
+````
+
+### alhakav_owner_alert_v2
+
+| | |
+|---|---|
+| Category | Utility |
+| Variables (sample) | `{{1}}` = `אבי אינסטלציה (050-000-0000) ענו להודעה שלנו`, `{{2}}` = `הם כתבו: כמה זה עולה?` |
+
+````
+🔔 *התראה מהחשבון שלך בעל הקו*
+
+📌 *מה קרה:* {{1}}
+📝 *פרטים:* {{2}}
+
+👇 אפשר לראות הכול בדף הניהול.
 ````
 
 ## המוקדן's number (the service itself)

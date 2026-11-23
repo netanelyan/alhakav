@@ -1,7 +1,7 @@
 import { DAY, HOUR, MINUTE, afterQuiet, israelDate, now, nowIso, quiet, whenHe } from './clock.js';
 import { ALERT, CLOSED, DIGEST, MSG, SCENE, T } from './copy.js';
 import { num } from './env.js';
-import { GraphError, assistSettings, knownStatus, metaSettings, numberQuality, parseWebhook, review, sendTemplate, sendText } from './meta.js';
+import { GraphError, assistSettings, knownStatus, metaSettings, numberQuality, parseWebhook, pickTemplate, review, sendTemplate, sendText } from './meta.js';
 import { onAssistMessage, onAssistStatus } from './service.js';
 import { adminLink, alertOwner, ownerNumber, whoIs } from './alerts.js';
 import { dayCounts } from './digest.js';
@@ -43,7 +43,8 @@ export function outreachSettings(env) {
     first: String(env.TEMPLATE_FIRST || 'alhakav_page'),
     // The first message opening with a moment from their trade (copy.js SCENE); empty turns it off.
     firstTrade: String(env.TEMPLATE_FIRST_TRADE ?? 'alhakav_page_trade').trim(),
-    reminder: String(env.TEMPLATE_REMINDER || 'alhakav_page_reminder'),
+    // The reminder in the new look first, the approved one until Meta approves it (meta.js pickTemplate).
+    reminders: String(env.TEMPLATE_REMINDER || '').trim() ? [String(env.TEMPLATE_REMINDER).trim()] : ['alhakav_page_reminder_v2', 'alhakav_page_reminder'],
     sender: String(env.SENDER_LINE || '').trim(),
     site: String(env.SITE_URL || '').trim(),
   };
@@ -65,8 +66,8 @@ export const sceneOf = (lead) => SCENE[lead.trade] || SCENE.any;
  */
 export function messageText(stage, lead, env, { byHand = false, trade } = {}) {
   const o = outreachSettings(env);
-  const words = trade ?? (byHand || (Boolean(o.firstTrade) && knownStatus(o.firstTrade) === 'APPROVED'));
-  return MSG[stage](nameParam(lead), pageUrl(env, lead.page_code || ''), o.sender || MSG.senderMissing, byHand, words ? sceneOf(lead) : SCENE.any);
+  const words = stage === 'first' && (trade ?? (byHand || (Boolean(o.firstTrade) && knownStatus(o.firstTrade) === 'APPROVED')));
+  return MSG[words ? 'firstTrade' : stage](nameParam(lead), pageUrl(env, lead.page_code || ''), o.sender || MSG.senderMissing, byHand, sceneOf(lead));
 }
 
 /**
@@ -177,7 +178,7 @@ export async function sendPitch(app, lead, stage) {
   if (q && !['GREEN', 'UNKNOWN'].includes(q)) return { ok: false, why: 'quality', flash: T.guard.quality(q) };
   const o = outreachSettings(app.env);
   const code = pageCodeOf(app.db, lead);
-  const t = stage === 'first' ? await firstTemplate(app, lead) : { name: o.reminder, trade: false, params: [nameParam(lead)] };
+  const t = stage === 'first' ? await firstTemplate(app, lead) : { name: await pickTemplate(m, app.graphFetch, o.reminders), trade: false, params: [nameParam(lead)] };
   const body = messageText(stage, lead, app.env, { trade: t.trade });
   let id;
   try {
@@ -363,7 +364,7 @@ async function fromOwner(app, owner, m, at) {
   if (!keep(app.db, { leadId: null, phone: owner, dir: 'in', kind: 'owner', body: m.text, waId: m.id || null, at })) return;
   const mm = metaSettings(app.env);
   if (!/^\s*סיכום\s*[.?]*\s*$/.test(m.text) || !mm.ready) return;
-  const body = `${DIGEST.title.replace(/^על הקו:\s*/, '')}\n${DIGEST.text(dayCounts(app.db, app.env, at)) || DIGEST.quiet}`;
+  const body = `🔔 *${DIGEST.title.replace(/^על הקו:\s*/, '')}*\n${DIGEST.text(dayCounts(app.db, app.env, at)) || DIGEST.quiet}`;
   try {
     const id = await sendText(mm, app.graphFetch, owner, body);
     keep(app.db, { leadId: null, phone: owner, dir: 'out', kind: 'alert', body, waId: id || null, status: 'sent' });

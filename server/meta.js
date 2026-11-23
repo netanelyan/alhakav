@@ -78,6 +78,9 @@ export async function sendTemplate(m, f, to, name, params = [], lang = 'he', { u
   return String(out?.messages?.[0]?.id || '');
 }
 
+/** A caller's words as a value in a message: none of WhatsApp's marks (* _ ~ `), which would bold or strike its parts. */
+export const plainWords = (s) => String(s || '').replace(/[*_~`]+/g, '').replace(/\s+/g, ' ').trim();
+
 /** Plain text to `to`, inside the 24 hours after their last message. Answers Meta's message id. */
 export async function sendText(m, f, to, body) {
   const out = await graph(m, f, 'POST', `${m.phoneId}/messages`, { messaging_product: 'whatsapp', to, type: 'text', text: { body, preview_url: true } });
@@ -120,7 +123,9 @@ export async function pickTemplate(m, f, names, lang = 'he') {
   if (names.length < 2 || !m.wabaId) return names[0];
   const seen = [];
   for (const name of names) seen.push([name, await review(m, f, name, lang)]);
-  return (seen.find(([, r]) => r.status === 'APPROVED' && r.category === 'UTILITY') || seen.find(([, r]) => r.status === 'APPROVED') || seen[0])[0];
+  // None approved: the first; but when Meta could not be asked about any, the last, the oldest, which went before.
+  const none = seen.every(([, r]) => r.status === 'UNKNOWN') ? seen.at(-1) : seen[0];
+  return (seen.find(([, r]) => r.status === 'APPROVED' && r.category === 'UTILITY') || seen.find(([, r]) => r.status === 'APPROVED') || none)[0];
 }
 
 export async function numberQuality(m, f) {

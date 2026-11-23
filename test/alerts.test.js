@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, test } from 'node:test';
-import { alertOwner, alertText, ownerNumber } from '../server/alerts.js';
-import { forgetTemplates } from '../server/meta.js';
+import { alertOwner, alertText, ownerNumber, updateTemplates } from '../server/alerts.js';
+import { forgetTemplates, metaSettings, pickTemplate } from '../server/meta.js';
 import { nowIso, setNow } from '../server/clock.js';
 import { digestTick } from '../server/digest.js';
 import { forgetQuality, onWebhook, sendPitch } from '../server/outreach.js';
@@ -30,7 +30,7 @@ test('an alert as the template says it: one line without links, and the button t
   const a = alertText(ENV, 'על הקו: תורן העביר אליך את דני, 052-999-8877', 'הם שילמו בהעברה.\nהדף שלהם: https://alhakav.example/admin/leads/7');
   assert.equal(a.param, 'תורן העביר אליך את דני, 052-999-8877. הם שילמו בהעברה.');
   assert.equal(a.button, 'leads/7');
-  assert.match(a.text, /^תורן העביר אליך/);
+  assert.ok(a.text.startsWith('🔔 *תורן העביר אליך את דני, 052-999-8877*\n'), a.text);
   assert.match(a.text, /https:\/\/alhakav\.example\/admin\/leads\/7/);
   assert.equal(alertText(ENV, 'על הקו: משהו', '').button, 'leads', 'no page: the leads');
 });
@@ -41,7 +41,7 @@ test('with OWNER_WA, an alert goes from the business number as the template, onc
   assert.equal(await alertOwner(app, 'k1', 'על הקו: מישהו כתב', 'הדף שלהם: https://alhakav.example/admin/leads/3', 60), true);
   const [sent] = toOwner(graph);
   assert.equal(sent.body.type, 'template');
-  assert.equal(sent.body.template.name, 'alhakav_owner_alert');
+  assert.equal(sent.body.template.name, 'alhakav_owner_alert_v2');
   assert.deepEqual(sent.body.template.components[0].parameters.map((p) => p.text), ['מישהו כתב', 'אין פרטים נוספים.']);
   assert.deepEqual(sent.body.template.components[1].parameters, [{ type: 'text', text: 'leads/3' }]);
   assert.equal(toran.alerts.length, 0, 'Toran is not asked');
@@ -62,7 +62,7 @@ test("while the owner's chat with the business number is open, plain text with t
   await alertOwner(app, 'k2', 'על הקו: מישהו כתב', 'הדף שלהם: https://alhakav.example/admin/leads/3');
   const [sent] = toOwner(graph);
   assert.equal(sent.body.type, 'text');
-  assert.equal(sent.body.text.body, 'מישהו כתב\nהדף שלהם: https://alhakav.example/admin/leads/3');
+  assert.equal(sent.body.text.body, '🔔 *מישהו כתב*\nהדף שלהם: https://alhakav.example/admin/leads/3');
 });
 
 test('when the business number cannot send it (the template not approved yet), Toran takes it', async () => {
@@ -117,7 +117,7 @@ test("the owner writing to the business number: kept, never answered by the bot,
   await onWebhook(app, hook({ messages: [{ id: 'wamid.o3', from: OWNER, type: 'text', text: { body: 'סיכום' } }] }));
   const [sent] = toOwner(graph);
   assert.equal(sent.body.type, 'text', 'they just wrote: plain text');
-  assert.equal(sent.body.text.body, 'מה היה ב־24 השעות האחרונות\nלא קרה שום דבר חדש ב־24 השעות האחרונות.');
+  assert.equal(sent.body.text.body, '🔔 *מה היה ב־24 השעות האחרונות*\nלא קרה שום דבר חדש ב־24 השעות האחרונות.');
 });
 
 test('the reworded template goes once Meta approves it as Utility; until then the approved one', async () => {
@@ -135,4 +135,13 @@ test('the reworded template goes once Meta approves it as Utility; until then th
   t = await run({ alhakav_owner_alert: { status: 'APPROVED', category: 'UTILITY' }, alhakav_update: { status: 'APPROVED', category: 'MARKETING' } });
   assert.equal(t.name, 'alhakav_owner_alert');
   assert.deepEqual(t.components[0].parameters.map((p) => p.text), ['מישהו כתב', 'הם שאלו כמה זה עולה.']);
+  // The one in the look of every message, once approved, with the same two.
+  t = await run({ alhakav_owner_alert_v2: { status: 'APPROVED', category: 'UTILITY' }, alhakav_owner_alert: { status: 'APPROVED', category: 'UTILITY' } });
+  assert.equal(t.name, 'alhakav_owner_alert_v2');
+  assert.deepEqual(t.components[0].parameters.map((p) => p.text), ['מישהו כתב', 'הם שאלו כמה זה עולה.']);
+  // Meta could not be asked about any of them: the oldest, which went before.
+  forgetTemplates();
+  const down = async (url) => (String(url).includes('message_templates') ? Promise.reject(new Error('down')) : Response.json({}));
+  assert.equal(await pickTemplate(metaSettings(env), down, updateTemplates(env)), 'alhakav_update');
+  forgetTemplates();
 });

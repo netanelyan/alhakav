@@ -73,7 +73,7 @@ test('a missed call: the call ends at once, and the caller gets the first messag
   assert.deepEqual(tx.actions(), ['reject']);
   const [m] = sent();
   assert.equal(m.to, CALLER);
-  assert.equal(m.template.name, 'alhakav_caller');
+  assert.equal(m.template.name, 'alhakav_caller_v2');
   assert.deepEqual(m.template.components[0].parameters, [{ type: 'text', text: 'אבי אינסטלציה' }]);
   assert.equal(db.get('SELECT outcome FROM calls').outcome, 'messaged');
   // Telnyx hands the same call over again two seconds later, with an id of its own: ended, and nothing more.
@@ -112,14 +112,14 @@ test('the conversation: Claude asks, the caller answers, and the summary reaches
   await said(app, 'הרצל 15 אשדוד קומה 3, זורם חזק', 'in-2');
   await settle(app);
   // Claude saw the whole chat, with the first message, and the business's name in the system prompt.
-  assert.match(claude.seen[1].messages[0].content, /העוזר: שלום, כאן העוזר של אבי אינסטלציה/);
+  assert.match(claude.seen[1].messages[0].content, /העוזר: 👋 שלום, כאן העוזר של אבי אינסטלציה/);
   assert.match(claude.seen[1].messages[0].content, /הלקוח: הרצל 15 אשדוד/);
   assert.match(claude.seen[0].system[0].text, /"אבי אינסטלציה"/);
   const out = sent();
   assert.equal(out[1].text.body, 'מה הכתובת?');
   const summary = out.at(-1);
   assert.equal(summary.to, OWNER);
-  assert.equal(summary.template.name, 'alhakav_summary');
+  assert.equal(summary.template.name, 'alhakav_summary_v2');
   assert.deepEqual(
     summary.template.components[0].parameters.map((p) => p.text),
     ['10:41', 'נזילה חזקה מתחת לכיור', 'הרצל 15, אשדוד, קומה 3', 'דחוף, המים זורמים', '052-765-4321']
@@ -179,8 +179,8 @@ test('"הסר" puts the caller on the list, says so once, and tells the customer
   await settle(app);
   assert.ok(db.get('SELECT 1 FROM skips WHERE phone = ?', CALLER));
   const out = sent();
-  assert.equal(out[1].text.body, 'הסרנו את המספר, ולא נכתוב שוב.');
-  assert.equal(out[2].template.name, 'alhakav_call_alert');
+  assert.equal(out[1].text.body, '✅ הסרנו את המספר, ולא נכתוב שוב.');
+  assert.equal(out[2].template.name, 'alhakav_call_alert_v2');
   // They call again: nothing goes to them.
   setNow(SUNDAY + 2 * 24 * 60 * MINUTE);
   await onCall(app, call(CALLER, 'call-9'));
@@ -192,7 +192,7 @@ test('a hidden number, a test call from the customer, and a first message that n
   const { app, db, sent } = setup();
   await onCall(app, call('', 'hidden'));
   let note = sent().at(-1);
-  assert.equal(note.template.name, 'alhakav_call_alert');
+  assert.equal(note.template.name, 'alhakav_call_alert_v2');
   assert.deepEqual(note.template.components[0].parameters.map((p) => p.text).slice(1), ['חסוי', 'המספר חסוי, אז אי אפשר לכתוב אליו.']);
   await onCall(app, call(OWNER, 'test'));
   assert.match(sent().at(-1).template.components[0].parameters[2].text, /שיחת בדיקה/);
@@ -219,7 +219,7 @@ test('no answer after 20 minutes: the customer gets a note; a stalled chat gets 
   const toOwner = sent().filter((m) => m.to === OWNER);
   assert.equal(toOwner.length, 2);
   assert.match(toOwner[0].template.components[0].parameters[2].text, /עוד אין תשובה/);
-  assert.equal(toOwner[1].template.name, 'alhakav_summary');
+  assert.equal(toOwner[1].template.name, 'alhakav_summary_v2');
   assert.equal(toOwner[1].template.components[0].parameters[1].text, 'מזגן מטפטף');
   await serviceTick(app);
   assert.equal(sent().filter((m) => m.to === OWNER).length, 2, 'each goes once');
@@ -268,7 +268,7 @@ test('two customers share המוקדן: a caller is answered in the chat of thei
   await said(app, 'הלו?', 's2', '972509990001');
   const toStranger = sent().filter((m) => m.to === '972509990001');
   assert.equal(toStranger.length, 1);
-  assert.match(toStranger[0].text.body, /כאן המוקדן של על הקו/);
+  assert.match(toStranger[0].text.body, /כאן המוקדן של \*על הקו\*/);
   // The business number's messages never reach המוקדן.
   await onWebhook(app, hook({ messages: [{ id: 'biz-1', from: CALLER, type: 'text', text: { body: 'כמה זה עולה?' } }] }));
   assert.equal(db.get("SELECT count(*) AS n FROM chat_messages WHERE msg_id = 'biz-1'").n, 0);
@@ -309,7 +309,7 @@ test("Telnyx's webhook: signed with Ed25519, answered at once, and read", async 
     const ok = await fetch(url, { method: 'POST', body, headers: { 'telnyx-signature-ed25519': sig, 'telnyx-timestamp': ts } });
     assert.equal(ok.status, 200);
     await settle(app);
-    assert.equal(sent()[0].template.name, 'alhakav_caller');
+    assert.equal(sent()[0].template.name, 'alhakav_caller_v2');
   } finally {
     server.close();
   }
@@ -338,7 +338,7 @@ test('past 12 of their messages, המוקדן sends the summary once and stops a
     await settle(app);
   }
   assert.equal(claude.seen.length, 12, 'Claude answers twelve of their messages, no more');
-  const summaries = sent().filter((m) => m.type === 'template' && m.template.name === 'alhakav_summary');
+  const summaries = sent().filter((m) => m.type === 'template' && m.template.name === 'alhakav_summary_v2');
   assert.equal(summaries.length, 1);
   assert.equal(chats(db)[0].state, 'done');
 });

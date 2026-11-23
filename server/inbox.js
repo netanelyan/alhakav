@@ -1,7 +1,7 @@
 import { ownerNumber } from './alerts.js';
 import { dayMonth, hhmm, israelDate, now, nowIso, whenHe } from './clock.js';
 import { T } from './copy.js';
-import { csrfField, empty, esc, layout, ltr, tag } from './html.js';
+import { csrfField, empty, esc, layout, ltr, tag, waHtml } from './html.js';
 import { windowOpen, windowUntil } from './outreach.js';
 import { local } from './phones.js';
 
@@ -155,7 +155,7 @@ function bubble(m) {
   const t = Date.parse(m.at);
   const kind = m.dir === 'out' ? T.inbox.kind[m.kind] ?? T.chat.kind[m.kind] ?? '' : m.kind === 'auto' ? T.chat.auto : '';
   const status = m.dir === 'out' && m.status ? ` · ${T.chat.status[m.status] || m.status}` : '';
-  return `<div class="b ${m.dir}${m.kind === 'auto' ? ' auto' : ''}${m.status === 'failed' ? ' failed' : ''}">${kind ? `<small class="k">${esc(kind)}</small>` : ''}<p dir="auto">${esc(m.body)}</p><time>${esc(`${dayMonth(t)} ${hhmm(t)}${status}`)}</time>${m.error ? `<small class="bad">${esc(m.error)}</small>` : ''}</div>`;
+  return `<div class="b ${m.dir}${m.kind === 'auto' ? ' auto' : ''}${m.status === 'failed' ? ' failed' : ''}">${kind ? `<small class="k">${esc(kind)}</small>` : ''}<p dir="auto">${waHtml(m.body)}</p><time>${esc(`${dayMonth(t)} ${hhmm(t)}${status}`)}</time>${m.error ? `<small class="bad">${esc(m.error)}</small>` : ''}</div>`;
 }
 
 export function threadPage({ csrf, flash = '', bad = false, line, phone, who, messages, lead, metaReady, rows, at = now() }) {
