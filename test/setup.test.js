@@ -91,6 +91,12 @@ test('as text while they wrote in the last 24 hours, else the template with the 
   assert.equal(db.get("SELECT count(*) AS n FROM messages WHERE kind = 'setup' AND status = 'sent'").n, 2);
 });
 
+test('a message that came in to the business number other than as a lead opens the 24 hours too', async () => {
+  const { app, db, c } = setup();
+  db.run("INSERT INTO messages (phone, dir, kind, body, day, at) VALUES ('972541112222', 'in', 'owner', 'בדיקה', '2026-11-23', ?)", new Date(NOW - 20 * 60_000).toISOString());
+  assert.deepEqual(await sendSetup(app, c), { ok: true, how: 'text' });
+});
+
 test("when it cannot go, the owner gets the codes to send by hand; with no number, nothing goes", async () => {
   const { app, graph, c, toran } = setup();
   graph.fail = { code: 132001, message: 'Template name does not exist in the translation' };

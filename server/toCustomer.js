@@ -3,9 +3,12 @@ import { HOUR, israelDate, now, nowIso } from './clock.js';
 // Writing to a customer from the business number (pay.js, setup.js): whether plain text may go, and keeping what went in
 // `messages`, in the chat of their lead, where the admin's inbox shows it.
 
-/** Whether we may write to this number in plain text: within 24 hours of its last message to the business number. */
+/**
+ * Whether we may write to this number in plain text: within 24 hours of its last message to the business number, as
+ * a lead's or as anything else kept there (the owner's own "בדיקה", 2026-11-23, came in as theirs and opened nothing).
+ */
 export function windowOpen(db, phone, at = now()) {
-  const last = db.get('SELECT max(last_in_at) AS t FROM leads WHERE mobile = ?', phone)?.t;
+  const last = db.get("SELECT max(t) AS t FROM (SELECT max(last_in_at) AS t FROM leads WHERE mobile = ? UNION ALL SELECT max(at) FROM messages WHERE phone = ? AND dir = 'in')", phone, phone)?.t;
   return Boolean(last && at - Date.parse(last) < 24 * HOUR - 5 * 60_000);
 }
 
