@@ -427,12 +427,15 @@ export const TC = {
 // PAY.lines, {{2}} the amount, {{3}} PAYMENT_DETAILS. A variable never has a line break in it.
 
 // ---- The customer's setup message (setup.js), from the business number: the three codes that send their calls to
-// their number, and how to check it. Each code comes already set for a Hebrew line (setup.js codeLine). The template
-// alhakav_setup's body is SETUP.text with {{1}} the business and ```{{2}}```, ```{{3}}```, ```{{4}}``` the codes.
+// their number, how to check it, and how to keep a number off המוקדן's messages and put it back (service.js fromOwner:
+// "לא לשלוח" and "לשלוח" with the number, written to המוקדן, not here; the owner, 2026-11-23: "include also the
+// black/whitelist tutorial"). Each code comes already set for a Hebrew line (setup.js codeLine). The template
+// alhakav_setup's body is SETUP.text with {{1}} the business, ```{{2}}```, ```{{3}}```, ```{{4}}``` the codes and {{5}}
+// המוקדן's number.
 
 export const SETUP = {
-  text: ({ business, codes }) =>
-    `העוזר של ${business} מוכן. כדי שהשיחות שלא עניתם יעברו אליו, מקלידים בחייגן של הטלפון את שלושת הקודים האלה, כל אחד בדיוק כמו שהוא, ולוחצים חיוג אחרי כל אחד:\n\n${codes.join('\n')}\n\nהראשון מעביר שיחה שלא עניתם תוך 20 שניות, השני שיחה שמגיעה כשאתם באמצע שיחה אחרת, והשלישי שיחה שמגיעה כשהטלפון כבוי או בלי קליטה. אחר כך מבקשים ממישהו להתקשר אליכם ולא עונים, ותוך כמה שניות מגיעה אליו הודעה מהמוקדן. אם משהו לא עובד, כותבים לנו כאן.`,
+  text: ({ business, codes, assist }) =>
+    `העוזר של ${business} מוכן. כדי שהשיחות שלא עניתם יעברו אליו, מקלידים בחייגן של הטלפון את שלושת הקודים האלה, כל אחד בדיוק כמו שהוא, ולוחצים חיוג אחרי כל אחד:\n\n${codes.join('\n')}\n\nהראשון מעביר שיחה שלא עניתם תוך 20 שניות, השני שיחה שמגיעה כשאתם באמצע שיחה אחרת, והשלישי שיחה שמגיעה כשהטלפון כבוי או בלי קליטה. אחר כך מבקשים ממישהו להתקשר אליכם ולא עונים, ותוך כמה שניות מגיעה אליו הודעה מהמוקדן.\n\nמישהו לא צריך לקבל הודעה מהמוקדן, כמו אמא או ספק? כותבים למוקדן בוואטסאפ, למספר ${assist}, "לא לשלוח" ואת המספר שלו. למשל: לא לשלוח 0501234567. כדי שהוא יקבל שוב הודעות, כותבים למוקדן "לשלוח" ואת המספר.\n\nאם משהו לא עובד, כותבים לנו כאן.`,
   alert: {
     sent: (biz) => `על הקו: ${biz} קיבלו את הקודים להעברת השיחות`,
     sentBody: (n, page) => `הקודים מעבירים אל ${n} את השיחות שהם לא עונים להן. כשהשיחה הראשונה תגיע לעוזר, היא תופיע בדף שלהם.\n${page}`,
@@ -444,7 +447,7 @@ export const SETUP = {
     sent: (how) => (how === 'template' ? 'הקודים נשלחו ללקוח, בתבנית של וואטסאפ.' : 'הקודים נשלחו ללקוח.'),
     why: {
       code: 'הקודים לא יוצאים תקינים מהמספר הזה, אז לא נשלח כלום. כדאי לבדוק את המספר בפרטים.',
-      meta: 'הוואטסאפ של המספר של העסק לא מחובר (META_*).',
+      meta: 'הוואטסאפ של המספר של העסק או של המוקדן לא מחובר (META_*, ASSIST_NUMBER).',
       sent: 'הקודים כבר נשלחו.',
       failed: 'הקודים לא נשלחו:',
     },

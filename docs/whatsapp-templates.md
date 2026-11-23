@@ -122,6 +122,35 @@ for the leads that got them; "כן, שלחו" still brings their page.
 - Anything else they write: Toran's sales bot answers (docs/toran.md), and for 24 hours the admin can answer from the
   lead's page too.
 
+## alhakav_setup (to a customer, the moment their number works)
+
+From the business number (server/setup.js): the three codes that forward their calls, how to check it, and how to
+keep a number off המוקדן's messages ("לא לשלוח") and put it back ("לשלוח"). Each code is a variable on a line of its
+own inside WhatsApp's monospace, and its value carries a left-to-right mark (U+200E) on each side, so a Hebrew line
+neither reorders it nor turns `*61*` into bold. Until it is approved, a customer who wrote to the business number in
+the last 24 hours gets the same text as plain text, and anyone else's codes go to the owner to send by hand.
+
+| | |
+|---|---|
+| Name | `alhakav_setup` (or set `TEMPLATE_SETUP`) |
+| Category | Utility |
+| Language | Hebrew (he) |
+| Variables (sample) | `{{1}}` = `אבי אינסטלציה`; `{{2}}` `{{3}}` `{{4}}` = `**61*043763889**20#`, `**67*043763889#`, `**62*043763889#`; `{{5}}` = המוקדן's number, `055-273-5207` |
+
+````
+העוזר של {{1}} מוכן. כדי שהשיחות שלא עניתם יעברו אליו, מקלידים בחייגן של הטלפון את שלושת הקודים האלה, כל אחד בדיוק כמו שהוא, ולוחצים חיוג אחרי כל אחד:
+
+```{{2}}```
+```{{3}}```
+```{{4}}```
+
+הראשון מעביר שיחה שלא עניתם תוך 20 שניות, השני שיחה שמגיעה כשאתם באמצע שיחה אחרת, והשלישי שיחה שמגיעה כשהטלפון כבוי או בלי קליטה. אחר כך מבקשים ממישהו להתקשר אליכם ולא עונים, ותוך כמה שניות מגיעה אליו הודעה מהמוקדן.
+
+מישהו לא צריך לקבל הודעה מהמוקדן, כמו אמא או ספק? כותבים למוקדן בוואטסאפ, למספר {{5}}, "לא לשלוח" ואת המספר שלו. למשל: לא לשלוח 0501234567. כדי שהוא יקבל שוב הודעות, כותבים למוקדן "לשלוח" ואת המספר.
+
+אם משהו לא עובד, כותבים לנו כאן.
+````
+
 ## המוקדן's number (the service itself)
 
 Three **Utility** templates on על הקו's own WhatsApp Business Account (`META_WABA_ID`), the one both numbers are on:

@@ -87,7 +87,7 @@ export function fakeToran(answers = []) {
   return t;
 }
 
-export const TORAN_ENV = { ...ENV, OF_INTERNAL_TOKEN: 't'.repeat(40), TORAN_URL: 'http://toran.test', TORAN_DEBOUNCE_MS: '0', PAYMENT_DETAILS: 'בנק הפועלים (12), סניף 345, חשבון 678901, על שם ישראל ישראלי' };
+export const TORAN_ENV = { ...ENV, ASSIST_NUMBER: '972552735207', OF_INTERNAL_TOKEN: 't'.repeat(40), TORAN_URL: 'http://toran.test', TORAN_DEBOUNCE_MS: '0', PAYMENT_DETAILS: 'בנק הפועלים (12), סניף 345, חשבון 678901, על שם ישראל ישראלי' };
 
 /** A lead from a fixture, saved as discovery saves one, with another mobile when asked. */
 export function addLead(db, name = 'plumber', { mobile, domain } = {}) {

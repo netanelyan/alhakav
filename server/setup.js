@@ -1,7 +1,7 @@
 import { adminLink, alertOwner } from './alerts.js';
 import { SETUP } from './copy.js';
 import { forwardCodes } from './customers.js';
-import { metaSettings, sendTemplate, sendText } from './meta.js';
+import { assistSettings, metaSettings, sendTemplate, sendText } from './meta.js';
 import { local } from './phones.js';
 import { keep, windowOpen } from './toCustomer.js';
 
@@ -19,6 +19,8 @@ import { keep, windowOpen } from './toCustomer.js';
 //              inside WhatsApp's monospace (```), which also keeps "*61*" from turning into bold and eating asterisks.
 //   when       numbers.js: a number given that already works, or a bought one the moment Telnyx makes it active; and
 //              "לשלוח ללקוח את הקודים" on their page in the admin, which sends them again
+//   the list   how to keep a number off המוקדן's messages ("לא לשלוח") and put it back ("לשלוח"), written to המוקדן
+//              at its own number, which the message gives
 //   how        plain text while they wrote to the business number in the last 24 hours, else the template
 //              alhakav_setup (TEMPLATE_SETUP, docs/whatsapp-templates.md); if neither goes, the owner gets the codes
 //              to send by hand
@@ -41,8 +43,8 @@ export function setupCodes(assistant) {
 export const codeVariable = (code) => `${LRM}${code}${LRM}`;
 export const codeLine = (code) => `\`\`\`${codeVariable(code)}\`\`\``;
 
-/** The message as the customer reads it. */
-export const setupText = (c, codes) => SETUP.text({ business: c.business, codes: codes.map(codeLine) });
+/** The message as the customer reads it, with המוקדן's number (972...) to write "לא לשלוח" to. */
+export const setupText = (c, codes, assist) => SETUP.text({ business: c.business, codes: codes.map(codeLine), assist: local(assist) });
 
 /** Whether it already went to them, for the automatic sends (the admin's button sends it again). */
 export const setupSent = (db, c) => Boolean(db.get("SELECT 1 FROM messages WHERE phone = ? AND kind = 'setup' AND status = 'sent'", c.phone));
@@ -53,12 +55,13 @@ export async function sendSetup(app, c, { again = false } = {}) {
   if (!codes) return { ok: false, why: 'code' };
   if (!again && setupSent(app.db, c)) return { ok: false, why: 'sent' };
   const m = metaSettings(app.env);
-  if (!m.ready) return { ok: false, why: 'meta' };
+  const assist = assistSettings(app.env).number;
+  if (!m.ready || !assist) return { ok: false, why: 'meta' };
   const page = adminLink(app.env, `/admin/customers/${c.id}#setup`);
-  const body = setupText(c, codes);
+  const body = setupText(c, codes, assist);
   const open = windowOpen(app.db, c.phone);
   try {
-    const waId = open ? await sendText(m, app.graphFetch, c.phone, body) : await sendTemplate(m, app.graphFetch, c.phone, setupSettings(app.env).template, [c.business, ...codes.map(codeVariable)]);
+    const waId = open ? await sendText(m, app.graphFetch, c.phone, body) : await sendTemplate(m, app.graphFetch, c.phone, setupSettings(app.env).template, [c.business, ...codes.map(codeVariable), local(assist)]);
     keep(app.db, c, { kind: 'setup', body, waId: waId || null, status: 'sent' });
     await alertOwner(app, `setup:${c.id}`, SETUP.alert.sent(c.business), SETUP.alert.sentBody(local(c.assistant), page), 1);
     return { ok: true, how: open ? 'text' : 'template' };

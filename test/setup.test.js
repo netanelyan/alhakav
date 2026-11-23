@@ -23,7 +23,7 @@ test('the codes come out exactly right: the one the owner dialed and saw work, a
 
 test('in the Hebrew message each code stands alone on its line, left to right, in monospace, and nothing else touches it', () => {
   const codes = setupCodes('97243763889');
-  const text = setupText({ business: 'אבי אינסטלציה' }, codes);
+  const text = setupText({ business: 'אבי אינסטלציה' }, codes, '972552735207');
   const lines = text.split('\n');
   for (const code of codes) {
     // The whole line is the code: monospace, a left-to-right mark on each side, no Hebrew letter or space in it.
@@ -34,6 +34,14 @@ test('in the Hebrew message each code stands alone on its line, left to right, i
   // The three come in the order they are explained: not answered, busy, off.
   assert.ok(text.indexOf(codes[0]) < text.indexOf(codes[1]) && text.indexOf(codes[1]) < text.indexOf(codes[2]));
   assert.match(text, /^העוזר של אבי אינסטלציה מוכן\./);
+});
+
+test("it also says how to keep a number off המוקדן's messages and put it back, written to המוקדן at its own number", () => {
+  const text = setupText({ business: 'אבי אינסטלציה' }, setupCodes('97243763889'), '972552735207');
+  const [para] = text.split('\n\n').filter((x) => x.includes('לא לשלוח'));
+  assert.equal(para, 'מישהו לא צריך לקבל הודעה מהמוקדן, כמו אמא או ספק? כותבים למוקדן בוואטסאפ, למספר 055-273-5207, "לא לשלוח" ואת המספר שלו. למשל: לא לשלוח 0501234567. כדי שהוא יקבל שוב הודעות, כותבים למוקדן "לשלוח" ואת המספר.');
+  // After the codes and the check, before the way to reach us.
+  assert.ok(text.indexOf('**62*') < text.indexOf(para) && text.indexOf(para) < text.indexOf('אם משהו לא עובד'));
 });
 
 function setup() {
@@ -52,7 +60,7 @@ test('as text while they wrote in the last 24 hours, else the template with the 
   assert.equal(t.template.name, 'alhakav_setup');
   assert.deepEqual(
     t.template.components[0].parameters.map((p) => p.text),
-    ['אבי אינסטלציה', `${LRM}**61*043763889**20#${LRM}`, `${LRM}**67*043763889#${LRM}`, `${LRM}**62*043763889#${LRM}`]
+    ['אבי אינסטלציה', `${LRM}**61*043763889**20#${LRM}`, `${LRM}**67*043763889#${LRM}`, `${LRM}**62*043763889#${LRM}`, '055-273-5207']
   );
   assert.match(toran.alerts.at(-1).title, /אבי אינסטלציה קיבלו את הקודים/);
   // By itself, once.
@@ -61,7 +69,7 @@ test('as text while they wrote in the last 24 hours, else the template with the 
   // They wrote to the business number: the admin's button sends it again, as text.
   db.run("INSERT INTO leads (domain, name, mobile, source, last_in_at, created_at, updated_at) VALUES (NULL, 'אבי', '972541112222', 'whatsapp', ?, ?, ?)", new Date(NOW - 3600_000).toISOString(), new Date(NOW).toISOString(), new Date(NOW).toISOString());
   assert.deepEqual(await sendSetup(app, c, { again: true }), { ok: true, how: 'text' });
-  assert.equal(sent().at(-1).text.body, setupText(c, setupCodes(c.assistant)));
+  assert.equal(sent().at(-1).text.body, setupText(c, setupCodes(c.assistant), '972552735207'));
   assert.equal(db.get("SELECT count(*) AS n FROM messages WHERE kind = 'setup' AND status = 'sent'").n, 2);
 });
 
