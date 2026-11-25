@@ -297,7 +297,12 @@ async function onMessage(app, m) {
     if (customer) db.run('UPDATE customers SET lead_id = ? WHERE id = ? AND lead_id IS NULL', id, customer.id);
     app.log(`[in] a new ${customer ? 'chat with customer' : 'lead'} from ${masked(from)} (lead ${id})`);
   }
-  const auto = m.type === 'text' && automatic(m.text);
+  // A business's WhatsApp also answers by itself the moment a message comes in, in words of its own (a greeting, a
+  // business card): no one reads ours and types an answer within seconds ("אשל המיזוג - איך אפשר לעזור ?", one
+  // second after the first message, 2026-11-25), by the time Meta gives the message. A button pressed that fast is
+  // still them.
+  const instant = Boolean(lead.first_at && m.at) && m.at - Date.parse(lead.first_at) < 20_000;
+  const auto = m.type === 'text' && (automatic(m.text) || instant);
   if (!keep(db, { leadId: lead.id, phone: from, dir: 'in', kind: auto ? 'auto' : 'in', body: m.text, waId: m.id || null, at })) return; // seen before
   const stamp = nowIso(at);
   db.run('UPDATE leads SET last_in_at = ?, updated_at = ? WHERE id = ?', stamp, stamp, lead.id);

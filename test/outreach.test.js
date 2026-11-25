@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { afterEach, beforeEach, test } from 'node:test';
-import { DAY, HOUR, setNow } from '../server/clock.js';
+import { DAY, HOUR, now, setNow } from '../server/clock.js';
 import { countsNew, countsReached, funnel, listReached, purgeLeads } from '../server/leads.js';
 import { forgetQuality, markByHand, messageText, onWebhook, reminderDue, reply, sendPitch } from '../server/outreach.js';
 import { forgetTemplates } from '../server/meta.js';
@@ -186,6 +186,12 @@ test('an answer opens 24 hours to reply from the page; an away message counts fo
   let x = leadOf(db, lead.id);
   assert.equal(x.replied_at, null);
   assert.equal(x.stage, 'waiting');
+  // A greeting their WhatsApp sends by itself, in words of its own, a second after ours, is not them either.
+  const second = String(Math.floor(now() / 1000) + 1);
+  await onWebhook(app, hook({ messages: [{ id: 'wamid.g', from: '972541234567', timestamp: second, type: 'text', text: { body: 'Eshelhamizug.co.il אשל המיזוג - שלום לך ?' } }] }));
+  x = leadOf(db, lead.id);
+  assert.equal(x.replied_at, null);
+  assert.equal(db.get("SELECT kind FROM messages WHERE wa_id = 'wamid.g'").kind, 'auto');
   await onWebhook(app, hook({ messages: [{ id: 'wamid.b', from: '972541234567', type: 'text', text: { body: 'כמה זה עולה בדיוק?' } }] }));
   x = leadOf(db, lead.id);
   assert.equal(x.stage, 'talking');
