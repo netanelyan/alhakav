@@ -254,7 +254,7 @@ test('Telnyx approved our documents, and a lead found by a search gets the first
   const r = await press(`/admin/leads/${lead().id}`, `/admin/leads/${lead().id}/send`);
   assert.equal(r.location, `/admin/leads/${lead().id}#send`);
   const [first] = since();
-  assert.deepEqual([first.line, first.to, first.template, first.params], [BIZ, LEAD, 'alhakav_page', ['אצל אבי אינסטלציה']]);
+  assert.deepEqual([first.line, first.to, first.template, first.params], [BIZ, LEAD, 'alhakav_page_trade_v2', ['כשאתם מתחת לכיור ולא שומעים את הטלפון', 'אצל אבי אינסטלציה']]);
   assert.match(lead().page_code, /^[a-z0-9]{10}$/);
   assert.equal(first.button, lead().page_code, 'the button opens their own page');
   assert.equal(lead().stage, 'waiting');
@@ -414,7 +414,7 @@ test('the whole way, in order: every message to the tradesperson and the caller,
   assert.deepEqual(
     outs().map((m) => `${line[m.line]} -> ${who[m.to]}: ${m.template || m.type}`),
     [
-      'business -> tradesperson: alhakav_page',
+      'business -> tradesperson: alhakav_page_trade_v2',
       'business -> tradesperson: text', // the explanation, after "כן, שלחו"
       'המוקדן -> tradesperson: text', // the try: what it is
       'המוקדן -> tradesperson: text', // the try: the message a caller gets

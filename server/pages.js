@@ -21,7 +21,6 @@ function setupNotes(env, { list = 'leads' } = {}) {
   const notes = [];
   if (!m.ready) notes.push(T.setup.meta);
   else if (!m.appSecret || !m.verifyToken) notes.push(T.setup.webhook);
-  if (!String(env.SENDER_LINE || '').trim()) notes.push(T.setup.sender);
   if (list === 'leads' && !String(env.BRAVE_API_KEY || '').trim()) notes.push(T.setup.brave);
   return notes.length ? `<ul class="setup">${notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : '';
 }

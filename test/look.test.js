@@ -61,11 +61,11 @@ test('each starts with an emoji, every line reads right to left, and each bold p
 });
 
 test("the templates to submit: Meta's rules, a sample for each variable, and each the same words as its text", () => {
-  assert.throws(() => templateDefs({ ...ENV, SENDER_LINE: '' }), /SENDER_LINE/);
+  assert.throws(() => templateDefs({ ...ENV, SITE_URL: '' }), /SITE_URL/);
   const defs = templateDefs(ENV);
   assert.deepEqual(
     defs.map((t) => t.name),
-    ['alhakav_page_trade', 'alhakav_page_reminder_v2', 'alhakav_caller_v2', 'alhakav_summary_v2', 'alhakav_call_alert_v2', 'alhakav_payment_v2', 'alhakav_owner_alert_v2', 'alhakav_setup']
+    ['alhakav_page_trade_v2', 'alhakav_page_reminder_v3', 'alhakav_caller_v2', 'alhakav_summary_v2', 'alhakav_call_alert_v2', 'alhakav_payment_v2', 'alhakav_owner_alert_v2', 'alhakav_setup']
   );
   for (const t of defs) {
     const b = t.components.find((c) => c.type === 'BODY');
@@ -86,7 +86,7 @@ test("the templates to submit: Meta's rules, a sample for each variable, and eac
     return b.text.replace(/\{\{(\d+)\}\}/g, (_, n) => b.example.body_text[0][n - 1]);
   };
   assert.equal(filled('alhakav_caller_v2'), SVC.callerFirst('אבי אינסטלציה'));
-  assert.equal(filled('alhakav_page_trade'), MSG.firstTrade('אצל אבי אינסטלציה', URL, ENV.SENDER_LINE, false, SCENE.plumber));
+  assert.equal(filled('alhakav_page_trade_v2'), MSG.firstTrade('אצל אבי אינסטלציה', URL, MSG.signature(ENV.SITE_URL), false, SCENE.plumber));
 });
 
 test('a page shows the bold as bold and the codes as they are, never a stray *', () => {

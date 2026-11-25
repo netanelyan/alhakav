@@ -24,8 +24,8 @@ test('the first message goes as the approved template, with the name, and moves 
   const send = graph.sent()[0];
   assert.equal(send.url, 'https://graph.test/v23.0/123/messages');
   assert.equal(send.body.to, '972541234567');
-  assert.equal(send.body.template.name, 'alhakav_page');
-  assert.deepEqual(send.body.template.components[0].parameters, [{ type: 'text', text: 'אצל אבי אינסטלציה' }]);
+  assert.equal(send.body.template.name, 'alhakav_page_trade_v2');
+  assert.deepEqual(send.body.template.components[0].parameters, [{ type: 'text', text: 'כשאתם מתחת לכיור ולא שומעים את הטלפון' }, { type: 'text', text: 'אצל אבי אינסטלציה' }]);
   // The button opens their own page.
   const code = leadOf(db, lead.id).page_code;
   assert.match(code, /^[a-z0-9]{10}$/);
@@ -38,7 +38,9 @@ test('the first message goes as the approved template, with the name, and moves 
   assert.equal(m.kind, 'first');
   assert.equal(m.wa_id, 'wamid.1');
   assert.match(m.body, /הכנו דף קצר שמראה איך זה ייראה אצל אבי אינסטלציה\./);
-  assert.match(m.body, /ישראל ישראלי/);
+  // It ends with the business and its site, never the owner's name or address (SENDER_LINE is the page's footer only).
+  assert.match(m.body, /\n\nעל הקו · alhakav\.example$/);
+  assert.doesNotMatch(m.body, /ישראל ישראלי|רחוב הדוגמה/);
   assert.deepEqual(countsNew(db), { all: 0, fit: 0, below: 0 });
   assert.equal(countsReached(db).waiting, 1);
   // Once is all.
@@ -47,24 +49,21 @@ test('the first message goes as the approved template, with the name, and moves 
   assert.equal(graph.sent().length, 1);
 });
 
-test("the first message opens with a moment from their trade once Meta approved that template, and until then as before", async () => {
+test("the first message opens with a moment from their trade, and is never an older template with the owner's name and address", async () => {
   forgetTemplates();
   const { app, db, graph } = testApp({ env: { ...ENV, META_WABA_ID: 'waba' } });
-  const lead = addLead(db);
   db.run("UPDATE leads SET trade = 'electrician' WHERE id = ?", addLead(db, 'plumber', { mobile: '972501112233', domain: 'eli' }).id);
   const electrician = db.get("SELECT * FROM leads WHERE domain = 'eli.example'");
-  graph.templates.alhakav_page_trade = 'PENDING';
-  assert.ok((await sendPitch(app, lead, 'first')).ok);
-  assert.equal(graph.sent().at(-1).body.template.name, 'alhakav_page');
-  assert.match(msgs(db, lead.id)[0].body, /^שלום, כאן על הקו\. כשאתם באמצע עבודה ולא עונים, מי שהתקשר/);
-  // By hand it is plain text from the admin's phone, so it is in their trade's words already.
-  assert.match(messageText('first', electrician, app.env, { byHand: true }), /^👋 שלום, כאן \*על הקו\*\.\n\n📞 כשאתם על סולם מול לוח חשמל ולא עונים, מי שהתקשר/);
-  // Approved: it takes over by itself, with the moment as {{1}} and the name as {{2}}.
-  forgetTemplates();
-  graph.templates.alhakav_page_trade = 'APPROVED';
+  // Meta approved the old ones and not the new one yet: still only the new one (Meta refuses it until then).
+  Object.assign(graph.templates, { alhakav_page: 'APPROVED', alhakav_page_trade: 'APPROVED', alhakav_page_trade_v2: 'PENDING' });
+  // By hand it is plain text from the admin's phone, in their trade's words, ending the same way.
+  const byHand = messageText('first', electrician, app.env, { byHand: true });
+  assert.match(byHand, /^👋 שלום, כאן \*על הקו\*\.\n\n📞 כשאתם על סולם מול לוח חשמל ולא עונים, מי שהתקשר/);
+  assert.match(byHand, /\n\nעל הקו · alhakav\.example$/);
+  // The moment as {{1}} and the name as {{2}}.
   assert.ok((await sendPitch(app, electrician, 'first')).ok);
   const t = graph.sent().at(-1).body.template;
-  assert.equal(t.name, 'alhakav_page_trade');
+  assert.equal(t.name, 'alhakav_page_trade_v2');
   assert.deepEqual(t.components[0].parameters.map((p) => p.text), ['כשאתם על סולם מול לוח חשמל ולא עונים', `אצל ${leadOf(db, electrician.id).name}`]);
   assert.match(msgs(db, electrician.id)[0].body, /^👋 שלום, כאן \*על הקו\*\.\n\n📞 כשאתם על סולם מול לוח חשמל ולא עונים, מי שהתקשר מקבל מאיתנו/);
   // What the admin's page shows now is the same words.
@@ -113,7 +112,7 @@ test('one reminder, four days on, only while they have not answered', async () =
   setNow(SUNDAY + 4 * DAY + HOUR);
   assert.ok(reminderDue(leadOf(db, lead.id)));
   assert.ok((await sendPitch(app, leadOf(db, lead.id), 'reminder')).ok);
-  assert.equal(graph.sent().at(-1).body.template.name, 'alhakav_page_reminder_v2');
+  assert.equal(graph.sent().at(-1).body.template.name, 'alhakav_page_reminder_v3');
   assert.ok(!(await sendPitch(app, leadOf(db, lead.id), 'reminder')).ok);
 });
 

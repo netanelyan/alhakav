@@ -53,7 +53,7 @@ test('nothing goes until Meta approved the first message; then it goes with thei
     assert.equal(st.on, true);
     assert.equal(st.quiet, false);
     assert.equal(st.half, 'morning');
-    assert.deepEqual(st.template, { name: 'alhakav_page', status: 'MISSING' });
+    assert.deepEqual(st.template, { name: 'alhakav_page_trade_v2', status: 'MISSING' });
     assert.equal(st.pool.ready, 2);
     assert.equal(st.room, 1);
     const list = (await call('GET', '/autopilot/candidates')).json;
@@ -64,7 +64,7 @@ test('nothing goes until Meta approved the first message; then it goes with thei
     assert.deepEqual((await call('POST', '/autopilot/send', { id: lead.id })).json, { sent: false, why: 'template_pending', template: 'MISSING' });
     assert.equal(graph.sent().length, 0);
 
-    graph.templates.alhakav_page = 'APPROVED';
+    graph.templates.alhakav_page_trade_v2 = 'APPROVED';
     forgetReview();
     const r = (await call('POST', '/autopilot/send', { id: lead.id, name: 'אבי', reason: 'אינסטלטור עצמאי באשדוד' })).json;
     assert.equal(r.sent, true);
@@ -72,7 +72,7 @@ test('nothing goes until Meta approved the first message; then it goes with thei
     const x = db.get('SELECT * FROM leads WHERE id = ?', lead.id);
     assert.equal(r.page, `https://alhakav.example/p/${x.page_code}`);
     const t = graph.sent()[0].body.template;
-    assert.equal(t.name, 'alhakav_page');
+    assert.equal(t.name, 'alhakav_page_trade_v2');
     assert.deepEqual(t.components[1].parameters, [{ type: 'text', text: x.page_code }]);
     assert.match(x.notes, /הטייס שלח את ההודעה הראשונה: אינסטלטור עצמאי באשדוד/);
     assert.equal(x.stage, 'waiting');
@@ -88,7 +88,7 @@ test('nothing goes until Meta approved the first message; then it goes with thei
 test('set aside, sites added by address, and the guardrails: off, quiet', async () => {
   const toran = fakeToran();
   const { app, db, graph } = testApp({ env: AENV, toranFetch: toran.f });
-  graph.templates.alhakav_page = 'APPROVED';
+  graph.templates.alhakav_page_trade_v2 = 'APPROVED';
   const lead = addLead(db, 'plumber', { mobile: '972541110001', domain: 'first' });
   await door(app, async (call) => {
     const added = (await call('POST', '/autopilot/add', { urls: ['new-plumber.example', 'https://new-plumber.example/'] })).json;

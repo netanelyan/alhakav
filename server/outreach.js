@@ -1,7 +1,7 @@
 import { DAY, HOUR, MINUTE, afterQuiet, israelDate, now, nowIso, quiet, whenHe } from './clock.js';
 import { ALERT, CLOSED, DIGEST, MSG, SCENE, T } from './copy.js';
 import { num } from './env.js';
-import { GraphError, assistSettings, knownStatus, metaSettings, numberQuality, parseWebhook, pickTemplate, review, sendTemplate, sendText } from './meta.js';
+import { GraphError, assistSettings, metaSettings, numberQuality, parseWebhook, pickTemplate, sendTemplate, sendText } from './meta.js';
 import { onAssistMessage, onAssistStatus } from './service.js';
 import { adminLink, alertOwner, ownerNumber, whoIs } from './alerts.js';
 import { dayCounts } from './digest.js';
@@ -40,12 +40,12 @@ export const WINDOW_MS = 24 * HOUR;
 export function outreachSettings(env) {
   return {
     daily: num(env.OUTREACH_DAILY, 10),
-    first: String(env.TEMPLATE_FIRST || 'alhakav_page'),
-    // The first message opening with a moment from their trade (copy.js SCENE); empty turns it off.
-    firstTrade: String(env.TEMPLATE_FIRST_TRADE ?? 'alhakav_page_trade').trim(),
-    // The reminder in the new look first, the approved one until Meta approves it (meta.js pickTemplate).
-    reminders: String(env.TEMPLATE_REMINDER || '').trim() ? [String(env.TEMPLATE_REMINDER).trim()] : ['alhakav_page_reminder_v2', 'alhakav_page_reminder'],
-    sender: String(env.SENDER_LINE || '').trim(),
+    // The first message, opening with a moment from their trade (copy.js SCENE), and the reminder. Only these: the
+    // ones before them (alhakav_page, alhakav_page_trade, alhakav_page_reminder and _v2) ended with the owner's name
+    // and address, so none of them is ever a fallback.
+    firstTrade: String(env.TEMPLATE_FIRST_TRADE || 'alhakav_page_trade_v2').trim(),
+    reminders: [String(env.TEMPLATE_REMINDER || 'alhakav_page_reminder_v3').trim()],
+    sender: MSG.signature(env.SITE_URL),
     site: String(env.SITE_URL || '').trim(),
   };
 }
@@ -66,21 +66,18 @@ export const sceneOf = (lead) => SCENE[lead.trade] || SCENE.any;
  */
 export function messageText(stage, lead, env, { byHand = false, trade } = {}) {
   const o = outreachSettings(env);
-  const words = stage === 'first' && (trade ?? (byHand || (Boolean(o.firstTrade) && knownStatus(o.firstTrade) === 'APPROVED')));
-  return MSG[words ? 'firstTrade' : stage](nameParam(lead), pageUrl(env, lead.page_code || ''), o.sender || MSG.senderMissing, byHand, sceneOf(lead));
+  const words = stage === 'first' && (trade ?? true);
+  return MSG[words ? 'firstTrade' : stage](nameParam(lead), pageUrl(env, lead.page_code || ''), o.sender, byHand, sceneOf(lead));
 }
 
 /**
- * The first message's template: the one that opens with their trade's moment once Meta approved it, until then the
- * one everyone gets. Answers its name and its body's variables for this lead.
+ * The first message's template and its body's variables for this lead. There is one: until Meta approves it, the
+ * autopilot sends nothing (autopilot.js, template_pending) and a send by hand is refused by Meta, rather than an older
+ * template going out with the owner's name and address in it.
  */
 export async function firstTemplate(app, lead) {
   const o = outreachSettings(app.env);
-  const m = metaSettings(app.env);
-  if (o.firstTrade && m.wabaId && (await review(m, app.graphFetch, o.firstTrade)).status === 'APPROVED') {
-    return { name: o.firstTrade, trade: true, params: lead ? [sceneOf(lead), nameParam(lead)] : [] };
-  }
-  return { name: o.first, trade: false, params: lead ? [nameParam(lead)] : [] };
+  return { name: o.firstTrade, trade: true, params: lead ? [sceneOf(lead), nameParam(lead)] : [] };
 }
 
 export const stopped = (db, phone) => Boolean(phone && db.get('SELECT 1 FROM stops WHERE phone = ?', phone));

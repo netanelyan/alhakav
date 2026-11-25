@@ -3,22 +3,23 @@ import { ALERT, MSG, PAY, SCENE, SETUP, SVC } from './copy.js';
 // The templates in the look of every message (copy.js), as Meta's API takes them (POST <META_WABA_ID>/message_templates),
 // made by the same functions that write the plain text, so a template and its text never part. Each takes over from
 // the one before it by itself once Meta approves it (meta.js pickTemplate). docs/whatsapp-templates.md has them, and
-// `node server/main.js templates [file]` writes them on the server, where SENDER_LINE is.
+// `node server/main.js templates [file]` writes them.
 
 const AVI = 'אבי אינסטלציה';
 
-/** Every template to submit, with a sample for each variable. Throws without SENDER_LINE or SITE_URL. */
+/** Every template to submit, with a sample for each variable. Throws without SITE_URL. */
 export function templateDefs(env) {
-  const sender = String(env.SENDER_LINE || '').trim();
   const site = String(env.SITE_URL || '').trim().replace(/\/+$/, '');
-  if (!sender || !site) throw new Error('templates: SENDER_LINE and SITE_URL are needed');
+  if (!site) throw new Error('templates: SITE_URL is needed');
+  // The first message and the reminder end with the business and its site, never the owner's name or address.
+  const sender = MSG.signature(site);
   const body = (text, sample) => ({ type: 'BODY', text, example: { body_text: [sample] } });
   const page = { type: 'BUTTONS', buttons: [{ type: 'URL', text: 'לראות את הדף שלכם', url: `${site}/p/{{1}}`, example: [`${site}/p/abcdefgh23`] }, { type: 'QUICK_REPLY', text: 'לא, תודה' }] };
   const admin = { type: 'BUTTONS', buttons: [{ type: 'URL', text: 'לפתוח את הפרטים', url: `${site}/admin/{{1}}`, example: [`${site}/admin/leads/12`] }] };
   const t = (name, category, components) => ({ name, language: 'he', category, components });
   return [
-    t('alhakav_page_trade', 'MARKETING', [body(MSG.firstTrade('{{2}}', '', sender, false, '{{1}}'), [SCENE.plumber, `אצל ${AVI}`]), page]),
-    t('alhakav_page_reminder_v2', 'MARKETING', [body(MSG.reminder('{{1}}', '', sender, false), [`אצל ${AVI}`]), page]),
+    t('alhakav_page_trade_v2', 'MARKETING', [body(MSG.firstTrade('{{2}}', '', sender, false, '{{1}}'), [SCENE.plumber, `אצל ${AVI}`]), page]),
+    t('alhakav_page_reminder_v3', 'MARKETING', [body(MSG.reminder('{{1}}', '', sender, false), [`אצל ${AVI}`]), page]),
     t('alhakav_caller_v2', 'UTILITY', [body(SVC.callerFirst('{{1}}'), [AVI])]),
     t('alhakav_summary_v2', 'UTILITY', [
       body(SVC.summary({ time: '{{1}}', what: '{{2}}', place: '{{3}}', urgency: '{{4}}', phone: '{{5}}' }), ['10:41', 'נזילה חזקה מתחת לכיור', 'הרצל 15, אשדוד, קומה 3', 'דחוף, המים זורמים', '054-123-4567']),

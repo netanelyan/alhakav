@@ -19,7 +19,23 @@ address, and the link comes before the quick reply. The link's address is fixed 
 is the site's real domain (`SITE_URL`); a new domain means submitting both again under new names and setting
 `TEMPLATE_FIRST` and `TEMPLATE_REMINDER`.
 
-## alhakav_page (the first message)
+## Without the owner's name and address (2026-11-25)
+
+The owner, 2026-11-23: no name or address in the message, a small line at the bottom of the page is enough; and on
+2026-11-25, when the first five went out with them: "why the hell is my name and adress in the ad message? we had a
+rule!". Every template below that ends with SENDER_LINE (alhakav_page, alhakav_page_trade, alhakav_page_reminder and
+_v2) is retired: the server never sends them, not even as a fallback. Their place is taken by two that end with
+"על הקו · alhakav.com" (copy.js MSG.signature), submitted on 2026-11-25:
+
+| | Meta's id | Category |
+|---|---|---|
+| `alhakav_page_trade_v2`, the first message: `{{1}}` the moment from their trade, `{{2}}` "אצל <name>", the button their page | 1205548752144197 | Marketing |
+| `alhakav_page_reminder_v3`, the one reminder, only by the admin: `{{1}}` "אצל <name>", the button their page | 2258120958080433 | Marketing |
+
+Until Meta approves the first, the autopilot's send answers `template_pending` and sends nothing. Their text is
+`node server/main.js templates`.
+
+## alhakav_page (the first message, retired)
 
 | | |
 |---|---|

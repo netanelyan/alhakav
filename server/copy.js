@@ -97,7 +97,10 @@ export const MSG = {
       .filter(Boolean)
       .join('\n\n'),
   stopped: '✅ הסרנו את המספר שלכם, ולא נכתוב אליכם שוב.',
-  senderMissing: '[שורת הזיהוי: שם העסק, שם מלא, כתובת ואתר]',
+  // The last line of the first message and the reminder: the business and its site, never the owner's name or address
+  // (the owner, 2026-11-25: "why the hell is my name and adress in the ad message? we had a rule!"). Those stay on the
+  // page's footer only (demo.js), as they said on 2026-11-23.
+  signature: (site) => ['על הקו', String(site || '').trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '')].filter(Boolean).join(' · '),
 };
 
 // ---- The admin pages
@@ -140,7 +143,6 @@ export const T = {
     meta: 'השליחה מהמספר של העסק עוד לא מחוברת (META_TOKEN ו־META_PHONE_ID). עד אז שולחים מהטלפון: מעתיקים, פותחים את הצ׳אט, ואז לוחצים "שלחתי".',
     webhook: 'התשובות מוואטסאפ עוד לא מגיעות לכאן (META_APP_SECRET ו־META_VERIFY_TOKEN), אז מי שעונה או לוחץ "לא, תודה" לא יסומן לבד.',
     brave: 'החיפוש האוטומטי לא מחובר (BRAVE_API_KEY), אז לידים חדשים נכנסים רק מכתובת שמוסיפים כאן.',
-    sender: 'שורת הזיהוי בסוף ההודעה עוד לא מוגדרת (SENDER_LINE). החוק מחייב שם וכתובת של מי ששולח, והיא צריכה להיות זהה לשורה בתבנית שאושרה.',
   },
   leads: {
     title: 'לידים',
